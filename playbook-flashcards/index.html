@@ -294,9 +294,11 @@ function saveEvents(){lsSet(evKey(),JSON.stringify(events))}
 /* ===== Network ===== */
 function getJSON(params){
   var qs=Object.keys(params).map(function(k){return encodeURIComponent(k)+"="+encodeURIComponent(params[k])}).join("&");
+  if(window.google&&google.script&&google.script.run)return new Promise(function(res,rej){google.script.run.withSuccessHandler(res).withFailureHandler(rej).apiGet(params)});
   return fetch(ENDPOINT+(ENDPOINT.indexOf("?")>-1?"&":"?")+qs).then(function(r){return r.json()});
 }
 function postJSON(obj){
+  if(window.google&&google.script&&google.script.run)return new Promise(function(res,rej){google.script.run.withSuccessHandler(res).withFailureHandler(rej).apiPost(JSON.stringify(obj))});
   return fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(obj)}).then(function(r){if(!r.ok)throw new Error("http "+r.status);return r.text()});
 }
 function flush(){
@@ -311,13 +313,13 @@ window.addEventListener("online",flush);
 
 /* ===== Views ===== */
 function loginView(){
-  var h='<div class="top"><span class="lbl">Deer Creek</span></div><h1>Playbook Flashcards</h1><p class="muted" style="margin:8px 0 18px">Quiz yourself on every play. Pick your name to start.</p>';
+  var h='<div class="top"><span class="lbl"</span></div><h1>Playbook Flashcards</h1><p class="muted" style="margin:8px 0 18px">Quiz yourself on every play. Pick your name to start.</p>';
   if(!ENDPOINT){
     h+='<div class="panel"><div class="stack"><div><label class="lbl" for="nm">Your name</label><input id="nm" type="text" autocomplete="name" autocapitalize="words"></div><div><label class="lbl" for="ps">Position</label><select id="ps">'+POSLIST.map(function(p){return '<option value="'+p+'">'+PLABEL[p]+'</option>'}).join("")+'</select></div><button class="btn" data-act="newme">Start</button></div><p class="small muted" style="margin:12px 0 0">Progress is saved on this phone only.</p></div>';
     return h;
   }
   if(roster===null&&!rosterErr)return h+'<div class="empty">Loading the roster…</div>';
-  if(rosterErr)h+='<div class="notice">Could not load the roster. Check your signal, or add yourself below.</div>';
+  if(rosterErr)h+='<div class="notice">Could not load the roster. Check your signal, or add yourself below.<div class="small muted" style="margin-top:6px">Detail: '+esc(String(rosterErr))+(window.google&&google.script&&google.script.run?' (Google route)':' (direct)')+'</div></div>';
   if(roster&&roster.length){
     h+='<div class="panel"><label class="lbl" for="flt">Find your name</label><input id="flt" type="text" autocomplete="off" value="'+esc(filter)+'" style="margin:8px 0 12px"><div class="stack" id="rlist">'+rosterList()+'</div></div>';
   } else if(roster){
@@ -424,7 +426,7 @@ function coachView(){
   stats.sort(function(a,b){return b.w/b.t-a.w/a.t||b.w-a.w});
   h+='<div class="panel"><h2 style="font-size:22px;margin-bottom:12px">Cards the team misses most</h2>';
   if(!stats.length)h+='<div class="empty">No misses yet.</div>';
-  else h+='<div class="hard">'+stats.slice(0,6).map(function(s){return '<div class="item"><span class="pct">'+Math.round(s.w/s.t*100)+'%</span><span>'+esc(s.c.q)+' <span class="muted small">('+esc(s.c.pos.join(", "))+' · '+s.w+' missed of '+s.t+')</span></span></div>'}).join("")+'</div>';
+  else h+='<div class="hard">'+stats.slice(0,6).map(function(s){return '<div class="item"><span class="pct">'+Math.round(s.w/s.t*100)+'%</span><span>'+esc(s.c.q)+' <b>→ '+esc(s.c.a)+'</b> <span class="muted small">('+esc(s.c.pos.join(", "))+' · '+s.w+' missed of '+s.t+')</span></span></div>'}).join("")+'</div>';
   h+='</div><button class="btn alt" data-act="coachgo">Refresh</button>';
   return h;
 }
@@ -491,7 +493,7 @@ document.addEventListener("input",function(e){
 function loadRoster(){
   if(!ENDPOINT)return;
   roster=null;rosterErr=false;
-  getJSON({action:"roster"}).then(function(r){roster=Array.isArray(r)?r.map(function(x){return {name:x.name,pos:np(x.pos)}}):[];if(view==="login")render()}).catch(function(){rosterErr=true;roster=[];if(view==="login")render()});
+  getJSON({action:"roster"}).then(function(r){roster=Array.isArray(r)?r.map(function(x){return {name:x.name,pos:np(x.pos)}}):[];if(view==="login")render()}).catch(function(err){rosterErr=String((err&&(err.message||err))||"unknown");roster=[];if(view==="login")render()});
 }
 
 /* ===== Boot ===== */
