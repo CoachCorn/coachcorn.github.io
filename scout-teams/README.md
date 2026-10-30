@@ -1,4 +1,4 @@
-# Call Sheet
+# Scout Teams
 
 A phone quiz for your own playbook. You type plays into a Google Sheet; players quiz themselves on their phones; their progress lands back in your Sheet.
 
@@ -6,9 +6,9 @@ A phone quiz for your own playbook. You type plays into a Google Sheet; players 
 1. Make a new Google Sheet. Open **Extensions > Apps Script**.
 2. Delete what is there, paste in everything from `Code.gs` (in this folder), and save.
 3. Pick **setupSheet** in the function dropdown and click **Run**. Approve the permissions. Your Sheet now has Settings, Cards, Roster and Log tabs filled with sample data.
-4. **Settings** tab: change the team name, positions, and the **Coach code**. Put this page's link in **Page URL**: `https://coachcorn.github.io/call-sheet/`
+4. **Settings** tab: change the team name, positions, and the **Coach code**. Put this page's link in **Page URL**: `https://coachcorn.github.io/scout-teams/`
 5. **Deploy > New deployment > Web app**. Execute as: Me. Who has access: Anyone. Deploy and approve.
-6. Reload the Sheet. Use the new **Call Sheet** menu > **Show my player link**. Send that link to your players.
+6. Reload the Sheet. Use the new **Scout Teams** menu > **Show my player link**. Send that link to your players.
 
 ## Your playbook
 One row per card on the **Cards** tab.
@@ -18,6 +18,6 @@ One row per card on the **Cards** tab.
 - Leave **ID** blank. It fills itself in. Clearing an ID resets everyone's progress on that card.
 
 ## Coach dashboard
-In the Sheet: **Call Sheet > Refresh dashboard** builds **Mastery** and **Most Missed**. On the phone: open the link, tap **Coach view**, enter your coach code.
+In the Sheet: **Scout Teams > Refresh dashboard** builds **Mastery** and **Most Missed**. On the phone: open the link, tap **Coach view**, enter your coach code.
 
 A card is mastered after 3 correct in a row on at least 2 different days (change in Settings). A miss resets the streak.
