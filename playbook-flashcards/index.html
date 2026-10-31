@@ -76,6 +76,14 @@ h1{font-size:40px;font-weight:700} h2{font-size:28px;font-weight:700}
 .dock .btn{max-width:560px;margin:0 auto}
 .notice{margin:0 0 14px;padding:10px 14px;border:2px solid var(--amber);background:var(--amber-bg)}
 .empty{padding:22px 16px;border:2px dashed var(--line);text-align:center;color:var(--ink2)}
+.lb{width:100%;border-collapse:collapse;min-width:0;font-size:16px}
+.lb td{padding:9px 6px}
+.lb tr.me td{background:var(--turf-bg);font-weight:600}
+.lb .rk{font:700 20px/1 var(--font-display);width:34px}
+.lb .sc{font:700 22px/1 var(--font-display);text-align:right;font-variant-numeric:tabular-nums}
+.lbtabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 10px}
+.lbtabs button{padding:10px 4px;border:2px solid var(--line);background:var(--card);font:600 13px/1 var(--font-mono);letter-spacing:.05em;text-transform:uppercase}
+.lbtabs button.on{border-color:var(--ink);background:var(--ink);color:var(--paper)}
 .tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:14px}
 .tile{border:2px solid var(--ink);background:var(--card);padding:10px 12px}
 .tile .n{font:700 36px/1 var(--font-display);font-variant-numeric:tabular-nums}
@@ -438,6 +446,45 @@ function coachView(){
 }
 /* ===== 2 Min Drill ===== */
 var drill=null, drillTimer=null, drillAdv=null;
+var lb={rows:null,err:false,tab:"today",mine:null};
+function weekStart(){var d=new Date();var k=(d.getDay()+6)%7;d.setDate(d.getDate()-k);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function loadBoard(){
+  if(!ENDPOINT){return}
+  lb.err=false;
+  getJSON({action:"leaderboard"}).then(function(r){
+    if(!Array.isArray(r))throw new Error("no board");
+    lb.rows=r;if(view==="drill"&&drill&&drill.phase!=="play")render();
+  }).catch(function(){lb.err=true;if(lb.rows===null)lb.rows=[];if(view==="drill"&&drill&&drill.phase!=="play")render()});
+}
+function boardRows(){
+  var rows=(lb.rows||[]).slice();
+  if(lb.mine&&!rows.some(function(r){return r.did===lb.mine.did}))rows.push(lb.mine);
+  var t=today(), ws=weekStart();
+  rows=rows.filter(function(r){return lb.tab==="all"||(lb.tab==="today"?r.day===t:r.day>=ws)});
+  var best={};
+  rows.forEach(function(r){var k=r.name.toLowerCase();if(!best[k]||r.score>best[k].score)best[k]=r});
+  return Object.keys(best).map(function(k){return best[k]}).sort(function(a,b){return b.score-a.score||b.td-a.td||a.t-b.t});
+}
+function boardHtml(){
+  if(!ENDPOINT)return "";
+  var h='<div class="panel"><h2 style="font-size:22px;margin-bottom:12px">Leaderboard</h2><div class="lbtabs">';
+  [["today","Today"],["week","This week"],["all","All time"]].forEach(function(x){h+='<button class="'+(lb.tab===x[0]?'on':'')+'" data-act="lbtab" data-id="'+x[0]+'">'+x[1]+'</button>'});
+  h+='</div>';
+  if(lb.rows===null)return h+'<p class="muted small" style="margin:0">Loading…</p></div>';
+  var rows=boardRows(), mine=me.name.toLowerCase();
+  if(!rows.length)h+='<p class="muted small" style="margin:0">'+(lb.err?'Could not load the board. ':'')+'No scores yet. Be the first on the board.</p>';
+  else{
+    var top=rows.slice(0,10), myi=-1;
+    rows.forEach(function(r,i){if(r.name.toLowerCase()===mine)myi=i});
+    h+='<table class="lb"><tbody>';
+    var row=function(r,i){return '<tr'+(r.name.toLowerCase()===mine?' class="me"':'')+'><td class="rk">'+(i+1)+'</td><td>'+esc(r.name)+' <span class="muted small">'+esc(r.pos)+'</span><div class="muted small">'+r.td+' TD · '+(r.ans?Math.round(r.right/r.ans*100):0)+'% · streak '+r.longest+'</div></td><td class="sc">'+r.score+'</td></tr>'};
+    top.forEach(function(r,i){h+=row(r,i)});
+    if(myi>=10)h+='<tr><td colspan="3" class="muted small" style="text-align:center">…</td></tr>'+row(rows[myi],myi);
+    h+='</tbody></table>';
+    if(myi<0)h+='<p class="muted small" style="margin:8px 0 0">Run a drill to get on this board.</p>';
+  }
+  return h+'<p class="muted small" style="margin:10px 0 0">Best single drill per player. Drills use the decks you pick, so the board is a fun comparison, not a test.</p></div>';
+}
 function ytxt(y){y=Math.round(y);return y<=50?"Own "+y:"Opp "+(100-y)}
 function fmtClock(ms){var s=Math.ceil(Math.max(0,ms)/1000);return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
 function drillStop(){if(drillTimer){clearInterval(drillTimer);drillTimer=null}if(drillAdv){clearTimeout(drillAdv);drillAdv=null}}
@@ -456,7 +503,7 @@ function drillPick(){
 function drillSetup(){
   drillStop();
   var d={};DECKS.forEach(function(x){d[x.id]=cardsFor(me.pos,x.id).length>0});
-  drill={phase:"setup",decks:d,err:""};view="drill";cur=null;render();window.scrollTo(0,0);
+  drill={phase:"setup",decks:d,err:""};view="drill";cur=null;lb.mine=null;render();window.scrollTo(0,0);loadBoard();
 }
 function drillStart(){
   var pool=cardsFor(me.pos).filter(function(c){return drill.decks[c.deck]});
@@ -480,6 +527,13 @@ function drillEnd(){
   var best=+lsGet(bestKey())||0, nb=drill.ans>0&&drill.score>best;
   if(nb)lsSet(bestKey(),String(drill.score));
   drill.phase="end";drill.best=nb?drill.score:best;drill.newBest=nb;
+  if(drill.ans>0){
+    var t=Date.now(), did="dd-"+t+"-"+Math.random().toString(36).slice(2,7);
+    lb.mine={name:me.name,pos:me.pos,score:drill.score,td:drill.td,ans:drill.ans,right:drill.right,longest:drill.longest,day:today(),did:did,t:t};
+    if(ENDPOINT){queue.push({type:"drill",did:did,t:t,name:me.name,pos:me.pos,score:drill.score,td:drill.td,ans:drill.ans,right:drill.right,longest:drill.longest,day:today()});lsSet("pbf2.queue",JSON.stringify(queue));flush()}
+    lb.tab="today";
+    setTimeout(loadBoard,2500);
+  }
   render();window.scrollTo(0,0);
 }
 function drillAnswer(i){
@@ -519,7 +573,7 @@ function drillView(){
     if(D.err)h+='<div class="notice">'+esc(D.err)+'</div>';
     h+='<div class="panel"><div class="lbl" style="margin-bottom:10px">Decks to pull from</div><div class="stack">';
     DECKS.forEach(function(d){var n=cardsFor(me.pos,d.id).length;h+='<button class="pickbtn'+(D.decks[d.id]?' on':n?'':' off')+'" data-act="dtoggle" data-id="'+d.id+'"><span>'+esc(d.title)+'</span><span class="chip">'+n+' cards</span></button>'});
-    h+='</div></div><button class="btn" data-act="dstart">Start the clock</button>';
+    h+='</div></div><button class="btn" data-act="dstart">Start the clock</button><div style="height:14px"></div>'+boardHtml();
     return h;
   }
   if(D.phase==="end"){
@@ -535,6 +589,7 @@ function drillView(){
        +D.missOrder.map(function(id){var c=CARDS.filter(function(x){return x.id===id})[0];return c?'<div>'+esc(c.q)+' <b>→ '+esc(c.a)+'</b></div>':''}).join("")+'</div></div>';
       h+='<button class="btn" data-act="dmiss">Drill these '+D.missOrder.length+' card'+(D.missOrder.length===1?'':'s')+'</button>';
     }
+    h+=boardHtml();
     h+='<button class="btn alt" data-act="dagain" style="margin-top:10px">Run it back</button><p style="text-align:center"><button class="link" data-act="home">Done</button></p>';
     return h;
   }
@@ -601,6 +656,7 @@ document.addEventListener("click",function(e){
   else if(a==="drillsetup"){drillSetup()}
   else if(a==="dtoggle"){var di=b.getAttribute("data-id");if(drill&&cardsFor(me.pos,di).length){drill.decks[di]=!drill.decks[di];drill.err="";render()}}
   else if(a==="dstart"||a==="dagain"){drillStart()}
+  else if(a==="lbtab"){lb.tab=b.getAttribute("data-id");render()}
   else if(a==="dopt"){drillAnswer(+b.getAttribute("data-i"))}
   else if(a==="dnext"){if(drillAdv){clearTimeout(drillAdv);drillAdv=null}drillAdvance()}
   else if(a==="dquit"){drillStop();drill=null;view="home";render();window.scrollTo(0,0)}
