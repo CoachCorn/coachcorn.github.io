@@ -446,7 +446,9 @@ function coachView(){
 }
 /* ===== 2 Min Drill ===== */
 var drill=null, drillTimer=null, drillAdv=null;
-var lb={rows:null,err:false,tab:"today",mine:null};
+var lb={rows:null,err:false,tab:"today",mine:null,set:"mix",manual:false};
+function selSet(){var sel=DECKS.filter(function(d){return drill&&drill.decks&&drill.decks[d.id]&&cardsFor(me.pos,d.id).length});return sel.length===1?sel[0].id:"mix"}
+function setName(id){if(id==="mix")return "Mixed (2+ decks)";var d=DECKS.filter(function(x){return x.id===id})[0];return d?d.title:id}
 function weekStart(){var d=new Date();var k=(d.getDay()+6)%7;d.setDate(d.getDate()-k);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
 function loadBoard(){
   if(!ENDPOINT){return}
@@ -460,6 +462,7 @@ function boardRows(){
   var rows=(lb.rows||[]).slice();
   if(lb.mine&&!rows.some(function(r){return r.did===lb.mine.did}))rows.push(lb.mine);
   var t=today(), ws=weekStart();
+  rows=rows.filter(function(r){return (r.set||"mix")===lb.set});
   rows=rows.filter(function(r){return lb.tab==="all"||(lb.tab==="today"?r.day===t:r.day>=ws)});
   var best={};
   rows.forEach(function(r){var k=r.name.toLowerCase();if(!best[k]||r.score>best[k].score)best[k]=r});
@@ -467,7 +470,9 @@ function boardRows(){
 }
 function boardHtml(){
   if(!ENDPOINT)return "";
-  var h='<div class="panel"><h2 style="font-size:22px;margin-bottom:12px">Leaderboard</h2><div class="lbtabs">';
+  var h='<div class="panel"><h2 style="font-size:22px;margin-bottom:10px">Leaderboard</h2><label class="lbl" for="lbset">Set</label><select id="lbset" data-act="lbset" style="margin:6px 0 12px">';
+  DECKS.map(function(d){return d.id}).concat(["mix"]).forEach(function(id){h+='<option value="'+esc(id)+'"'+(lb.set===id?' selected':'')+'>'+esc(setName(id))+'</option>'});
+  h+='</select><div class="lbtabs">';
   [["today","Today"],["week","This week"],["all","All time"]].forEach(function(x){h+='<button class="'+(lb.tab===x[0]?'on':'')+'" data-act="lbtab" data-id="'+x[0]+'">'+x[1]+'</button>'});
   h+='</div>';
   if(lb.rows===null)return h+'<p class="muted small" style="margin:0">Loading…</p></div>';
@@ -483,7 +488,7 @@ function boardHtml(){
     h+='</tbody></table>';
     if(myi<0)h+='<p class="muted small" style="margin:8px 0 0">Run a drill to get on this board.</p>';
   }
-  return h+'<p class="muted small" style="margin:10px 0 0">Best single drill per player. Drills use the decks you pick, so the board is a fun comparison, not a test.</p></div>';
+  return h+'<p class="muted small" style="margin:10px 0 0">Best single drill per player. Each deck has its own board. A drill on 2 or more decks counts toward Mixed.</p></div>';
 }
 function ytxt(y){y=Math.round(y);return y<=50?"Own "+y:"Opp "+(100-y)}
 function fmtClock(ms){var s=Math.ceil(Math.max(0,ms)/1000);return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
@@ -503,13 +508,13 @@ function drillPick(){
 function drillSetup(){
   drillStop();
   var d={};DECKS.forEach(function(x){d[x.id]=cardsFor(me.pos,x.id).length>0});
-  drill={phase:"setup",decks:d,err:""};view="drill";cur=null;lb.mine=null;render();window.scrollTo(0,0);loadBoard();
+  drill={phase:"setup",decks:d,err:""};view="drill";cur=null;lb.mine=null;lb.manual=false;lb.set=selSet();render();window.scrollTo(0,0);loadBoard();
 }
 function drillStart(){
   var pool=cardsFor(me.pos).filter(function(c){return drill.decks[c.deck]});
   if(!pool.length){drill.err="Pick at least one deck.";render();return}
   drillStop();
-  drill={phase:"play",decks:drill.decks,pool:pool,end:Date.now()+DRILL_SECS*1000,yard:25,prev:25,score:0,td:0,streak:0,longest:0,ans:0,right:0,missed:{},missOrder:[],flash:""};
+  drill={phase:"play",set:selSet(),decks:drill.decks,pool:pool,end:Date.now()+DRILL_SECS*1000,yard:25,prev:25,score:0,td:0,streak:0,longest:0,ans:0,right:0,missed:{},missOrder:[],flash:""};
   drillPick();
   drillTimer=setInterval(drillTick,200);
   view="drill";render();window.scrollTo(0,0);
@@ -529,9 +534,9 @@ function drillEnd(){
   drill.phase="end";drill.best=nb?drill.score:best;drill.newBest=nb;
   if(drill.ans>0){
     var t=Date.now(), did="dd-"+t+"-"+Math.random().toString(36).slice(2,7);
-    lb.mine={name:me.name,pos:me.pos,score:drill.score,td:drill.td,ans:drill.ans,right:drill.right,longest:drill.longest,day:today(),did:did,t:t};
-    if(ENDPOINT){queue.push({type:"drill",did:did,t:t,name:me.name,pos:me.pos,score:drill.score,td:drill.td,ans:drill.ans,right:drill.right,longest:drill.longest,day:today()});lsSet("pbf2.queue",JSON.stringify(queue));flush()}
-    lb.tab="today";
+    lb.mine={set:drill.set,name:me.name,pos:me.pos,score:drill.score,td:drill.td,ans:drill.ans,right:drill.right,longest:drill.longest,day:today(),did:did,t:t};
+    if(ENDPOINT){queue.push({type:"drill",did:did,t:t,name:me.name,pos:me.pos,score:drill.score,td:drill.td,ans:drill.ans,right:drill.right,longest:drill.longest,day:today(),set:drill.set});lsSet("pbf2.queue",JSON.stringify(queue));flush()}
+    lb.tab="today";lb.set=drill.set;
     setTimeout(loadBoard,2500);
   }
   render();window.scrollTo(0,0);
@@ -654,8 +659,9 @@ document.addEventListener("click",function(e){
   else if(a==="deck"){deck=b.getAttribute("data-id");cur=null;view="quiz";render();window.scrollTo(0,0)}
   else if(a==="mine"){var mm2=myMissed(derive(events));if(!mm2.length)return;SPECIAL["__mine"]=mm2.map(function(x){return x.c.id});deck="__mine";cur=null;view="quiz";render();window.scrollTo(0,0)}
   else if(a==="drillsetup"){drillSetup()}
-  else if(a==="dtoggle"){var di=b.getAttribute("data-id");if(drill&&cardsFor(me.pos,di).length){drill.decks[di]=!drill.decks[di];drill.err="";render()}}
+  else if(a==="dtoggle"){var di=b.getAttribute("data-id");if(drill&&cardsFor(me.pos,di).length){drill.decks[di]=!drill.decks[di];drill.err="";if(!lb.manual)lb.set=selSet();render()}}
   else if(a==="dstart"||a==="dagain"){drillStart()}
+  else if(a==="lbset"){}
   else if(a==="lbtab"){lb.tab=b.getAttribute("data-id");render()}
   else if(a==="dopt"){drillAnswer(+b.getAttribute("data-i"))}
   else if(a==="dnext"){if(drillAdv){clearTimeout(drillAdv);drillAdv=null}drillAdvance()}
@@ -676,6 +682,7 @@ document.addEventListener("click",function(e){
     }).catch(function(){coachMsg="Could not reach the Sheet.";render()});
   }
 });
+document.addEventListener("change",function(e){if(e.target&&e.target.id==="lbset"){lb.set=e.target.value;lb.manual=true;render()}});
 document.addEventListener("input",function(e){
   if(e.target&&e.target.id==="flt"){filter=e.target.value;var l=document.getElementById("rlist");if(l)l.innerHTML=rosterList()}
 });
