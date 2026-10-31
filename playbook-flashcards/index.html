@@ -441,7 +441,7 @@ function coachView(){
   if(!stats.length)h+='<div class="empty">No card has '+MISS_MIN_TEAM+' attempts with a miss yet.</div>';
   else h+='<div class="hard">'+stats.slice(0,8).map(function(s){return '<div class="item"><span class="pct">'+Math.round(s.w/s.t*100)+'%</span><span>'+esc(s.c.q)+' <b>→ '+esc(s.c.a)+'</b> <span class="muted small">('+esc(s.c.pos.join(", "))+' · '+s.w+' missed of '+s.t+')</span></span></div>'}).join("")+'</div>';
   if(below)h+='<p class="small muted" style="margin:12px 0 0">'+below+' more card'+(below===1?' has':'s have')+' misses but fewer than '+MISS_MIN_TEAM+' attempts so far.</p>';
-  h+='</div><button class="btn alt" data-act="coachgo">Refresh</button>';
+  h+='</div>'+boardHtml()+'<button class="btn alt" data-act="coachgo">Refresh</button>';
   return h;
 }
 /* ===== 2 Min Drill ===== */
@@ -455,8 +455,8 @@ function loadBoard(){
   lb.err=false;
   getJSON({action:"leaderboard"}).then(function(r){
     if(!Array.isArray(r))throw new Error("no board");
-    lb.rows=r;if(view==="drill"&&drill&&drill.phase!=="play")render();
-  }).catch(function(){lb.err=true;if(lb.rows===null)lb.rows=[];if(view==="drill"&&drill&&drill.phase!=="play")render()});
+    lb.rows=r;if((view==="drill"&&drill&&drill.phase!=="play")||view==="coach")render();
+  }).catch(function(){lb.err=true;if(lb.rows===null)lb.rows=[];if((view==="drill"&&drill&&drill.phase!=="play")||view==="coach")render()});
 }
 function boardRows(){
   var rows=(lb.rows||[]).slice();
@@ -476,7 +476,7 @@ function boardHtml(){
   [["today","Today"],["week","This week"],["all","All time"]].forEach(function(x){h+='<button class="'+(lb.tab===x[0]?'on':'')+'" data-act="lbtab" data-id="'+x[0]+'">'+x[1]+'</button>'});
   h+='</div>';
   if(lb.rows===null)return h+'<p class="muted small" style="margin:0">Loading…</p></div>';
-  var rows=boardRows(), mine=me.name.toLowerCase();
+  var rows=boardRows(), mine=me?me.name.toLowerCase():"";
   if(!rows.length)h+='<p class="muted small" style="margin:0">'+(lb.err?'Could not load the board. ':'')+'No scores yet. Be the first on the board.</p>';
   else{
     var top=rows.slice(0,10), myi=-1;
@@ -677,7 +677,7 @@ document.addEventListener("click",function(e){
     coachMsg="";
     getJSON({action:"all",code:code}).then(function(d){
       if(d&&d.error){coachMsg="That code did not work.";coachData=null}
-      else{d.roster=d.roster.map(function(x){return {name:x.name,pos:np(x.pos)}});d.log=d.log.map(function(x){x.pos=np(x.pos);return x});coachData=d;lsSet("pbf2.code",code)}
+      else{d.roster=d.roster.map(function(x){return {name:x.name,pos:np(x.pos)}});d.log=d.log.map(function(x){x.pos=np(x.pos);return x});coachData=d;lsSet("pbf2.code",code);lb.rows=null;loadBoard()}
       render();
     }).catch(function(){coachMsg="Could not reach the Sheet.";render()});
   }
