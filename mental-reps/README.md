@@ -6,7 +6,7 @@ A phone quiz for your own playbook. You type plays into a Google Sheet; players 
 1. Make a new Google Sheet. Open **Extensions > Apps Script**.
 2. Delete what is there, paste in everything from `Code.gs` (in this folder), and save.
 3. Pick **setupSheet** in the function dropdown and click **Run**. Approve the permissions. Your Sheet now has Settings, Cards, Roster and Log tabs filled with sample data.
-4. **Settings** tab: change the team name, positions, and the **Coach code**. Put this page's link in **Page URL**: `https://coachcorn.github.io/mental-reps/`
+4. **Settings** tab: change the team name, positions (a plain list, up to 15, any order), and the **Coach code**. To rename a position everywhere, type pairs like `M > Y, T > TE` in **Rename positions**. Put this page's link in **Page URL**: `https://coachcorn.github.io/mental-reps/`
 5. **Deploy > New deployment > Web app**. Execute as: Me. Who has access: Anyone. Deploy and approve.
 6. Reload the Sheet. Use the new **Mental Reps** menu > **Show my player link**. Send that link to your players.
 
