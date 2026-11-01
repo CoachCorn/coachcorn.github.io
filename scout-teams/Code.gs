@@ -147,7 +147,49 @@ function assignIds_() {
     if (changed) sh.getRange(2, c.id + 1, n, 1).setValues(ids);
   });
 }
-function onEdit(e) { try { if (isDeckName_(e.range.getSheet().getName())) assignIds_(); } catch (x) {} }
+function onEdit(e) {
+  try {
+    var name = e.range.getSheet().getName();
+    if (name.toLowerCase() === 'settings') settingsEdit_(e);
+    else if (isDeckName_(name)) assignIds_();
+  } catch (x) {}
+}
+
+/* When someone edits the Positions row in Settings, rename those positions everywhere (cards and roster).
+   Works when the new list has the same number of positions: the 1st old name becomes the 1st new name, and so on.
+   Adding positions at the end needs nothing. Other changes are left alone and flagged. */
+function settingsEdit_(e) {
+  var r = e.range;
+  if (r.getNumRows() !== 1 || r.getNumColumns() !== 1 || r.getColumn() !== 2) return;
+  if (String(r.getSheet().getRange(r.getRow(), 1).getValue()).trim().toLowerCase() !== 'positions') return;
+  if (e.oldValue === undefined || e.value === undefined) return;
+  var a = split_(e.oldValue).map(function (x) { return x.toUpperCase(); }), b = split_(e.value);
+  if (!a.length || a.join() === b.join()) return;
+  if (a.length !== b.length) {
+    var appended = b.length > a.length && a.every(function (x, i) { return x === b[i].toUpperCase(); });
+    if (!appended) ss_().toast('The number of positions changed, so cards were not renamed. Update the Positions column on your cards to match (Edit > Find and replace).', 'Positions', 12);
+    return;
+  }
+  var map = {}, n = 0;
+  a.forEach(function (x, i) { if (x !== b[i].toUpperCase()) map[x] = b[i]; });
+  if (!Object.keys(map).length) return;
+  var swap = function (v) {
+    var s = String(v == null ? '' : v); if (!s.trim()) return v;
+    return split_(s).map(function (t) { var u = t.toUpperCase(); return (u in map) ? map[u] : t; }).join(', ');
+  };
+  allDeckSheets_(true).forEach(function (sh) {
+    var c = cols_(sh); if (!('positions' in c) || sh.getLastRow() < 2) return;
+    var rng = sh.getRange(2, c.positions + 1, sh.getLastRow() - 1, 1), vals = rng.getValues();
+    var out = vals.map(function (row) { var nv = swap(row[0]); if (nv !== row[0]) n++; return [nv]; });
+    rng.setValues(out);
+  });
+  var ro = ss_().getSheetByName('Roster');
+  if (ro && ro.getLastRow() > 1) {
+    var rr = ro.getRange(2, 2, ro.getLastRow() - 1, 1), rv = rr.getValues();
+    rr.setValues(rv.map(function (row) { var nv = swap(row[0]); if (nv !== row[0]) n++; return [nv]; }));
+  }
+  ss_().toast('Renamed positions on ' + n + ' cards and roster rows.', 'Positions', 8);
+}
 
 function split_(s) { return String(s || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean); }
 function yes_(v) { v = String(v == null ? '' : v).trim().toLowerCase(); return v === '' || ['yes', 'y', 'true', '1', 'x'].indexOf(v) > -1; }
