@@ -71,10 +71,10 @@ function setupSheet() {
 }
 
 function showLink() {
-  var set = settings_(), page = String(set['Page URL'] || '').trim();
+  var set = settings_(), page = String(set['Page URL'] || set['Player URL'] || '').trim();
   var url = ScriptApp.getService().getUrl();
   var id = (/\/s\/([^\/]+)\//.exec(url) || [])[1] || '';
-  var msg = !page ? 'Put your page link in Settings > Page URL first.'
+  var msg = !page ? 'Put your page link in Settings > Page URL (or Player URL) first.'
     : !id ? 'Deploy this script as a Web app first (Deploy > New deployment).'
     : 'Send players this link:\n\n' + page + (page.indexOf('?') > -1 ? '&' : '?') + 's=' + id;
   SpreadsheetApp.getUi().alert(msg);
