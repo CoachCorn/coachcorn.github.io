@@ -2,5 +2,5 @@
 
 Football tools:
 
-- /playbook-flashcards/
+- /mental-reps/
 - /long-term-wigs/
