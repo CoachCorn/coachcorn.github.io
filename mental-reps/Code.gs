@@ -31,7 +31,9 @@ function onOpen() {
     .addItem('Stop automatic refresh', 'autoRefreshOff')
     .addItem('New deck tab', 'newDeckTab')
     .addItem('Show my player link', 'showLink')
+    .addItem('Turn on position checking', 'positionChecks')
     .addToUi();
+  try { allDeckSheets_(true).forEach(posGuard_); } catch (x) {}
 }
 function autoRefreshOn() { autoRefreshOff(); ScriptApp.newTrigger('refreshDashboard').timeBased().everyHours(1).create(); }
 function autoRefreshOff() {
@@ -117,7 +119,27 @@ function makeDeckTab_(name) {
   [70, 90, 380, 200, 160, 160, 160, 320, 200, 60].forEach(function (w, i) { t.setColumnWidth(i + 1, w); });
   t.getRange(1, 1).setNote('Leave ID blank on new rows. The app fills it in. To reset progress on a card, clear its ID.');
   t.getRange(1, 2).setNote('ALL, or a comma list like WR, TE. Blank means ALL.');
+  posGuard_(t);
   return t;
+}
+
+/* Rejects a Positions entry that is not ALL or a comma list of positions from Settings (catches typos).
+   Reads the list live from the Settings tab, so changing the list needs no re-run. */
+function posGuard_(sh) {
+  var c = cols_(sh); if (!('positions' in c)) return;
+  var st = ss_().getSheetByName('Settings'), row = 0;
+  if (!st) return;
+  st.getRange(1, 1, Math.max(st.getLastRow(), 1), 1).getValues().forEach(function (r, i) { if (!row && String(r[0]).trim().toLowerCase() === 'positions') row = i + 1; });
+  if (!row) return;
+  var a1 = sh.getRange(2, c.positions + 1).getA1Notation();
+  var f = '=OR(TRIM(' + a1 + ')="",SUMPRODUCT(--NOT(ISNUMBER(SEARCH(","&SPLIT(UPPER(SUBSTITUTE(' + a1 + '," ","")),",")&",",",ALL,"&UPPER(SUBSTITUTE(INDIRECT("Settings!B' + row + '")," ",""))&","))))=0)';
+  var rule = SpreadsheetApp.newDataValidation().requireFormulaSatisfied(f).setAllowInvalid(false)
+    .setHelpText('Use ALL, or positions from the Settings list separated by commas, for example WR, TE.').build();
+  sh.getRange(2, c.positions + 1, Math.max(sh.getMaxRows() - 1, 1), 1).setDataValidation(rule);
+}
+function positionChecks() {
+  var n = 0; allDeckSheets_(true).forEach(function (sh) { posGuard_(sh); n++; });
+  ss_().toast('Position checking is on for ' + n + ' deck tabs.', 'Mental Reps', 6);
 }
 
 function newDeckTab() {
