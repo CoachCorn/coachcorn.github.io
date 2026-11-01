@@ -14,6 +14,7 @@
  */
 var SAMPLE = {"settings": {"App name": "Scout Teams", "Team name": "Sample Team", "Positions": "QB, RB, WR, TE, OL", "Coach code": "CHANGE-ME", "Mastery streak": 3, "Mastery days": 2, "Page URL": ""}, "roster": [["Sample Quarterback", "QB"], ["Sample Back", "RB"], ["Sample Receiver", "WR"], ["Sample Tight End", "TE"], ["Sample Lineman", "OL"]], "cards": [["Formations", "ALL", "How many receivers are lined up on the trips side of a Trips formation?", "3", "2", "4", "1", "Trips means three receivers to one side of the ball.", ""], ["Formations", "ALL", "Which formation has two receivers on each side of the ball?", "Doubles", "Trips", "Empty", "Bunch", "Doubles is a 2x2 set.", ""], ["Formations", "ALL", "What does the word Bunch describe?", "Three receivers lined up tightly together", "Two receivers split far apart", "A back lined up behind the guard", "All five linemen on one side", "Bunch sets are often used to create natural picks and crossing routes.", ""], ["Formations", "ALL", "What is an Empty formation?", "No running back in the backfield", "Two tight ends and no receivers", "The quarterback under center with no one behind him", "A formation with only four linemen", "Empty puts all five eligible players out wide or on the line, so the QB is alone in the backfield.", ""], ["Formations", "QB, RB", "Where does the running back line up in a Pistol set?", "Directly behind the quarterback", "Beside the quarterback in the shotgun", "On the line next to the tackle", "Split wide as a receiver", "In the Pistol the QB is a few yards back and the running back lines up directly behind him.", ""], ["Pass Concepts", "ALL", "Which two routes make up the Smash concept?", "A corner route over a hitch route", "A post over a dig", "A go over an out", "A curl over a flat", "The hitch holds the cornerback while the corner route attacks over the top.", ""], ["Pass Concepts", "QB", "On Smash, who is the QB's key defender?", "The cornerback over the hitch route", "The middle linebacker", "The free safety", "The defensive end", "If the corner sits on the hitch, throw the corner route. If the corner drops, throw the hitch.", ""], ["Pass Concepts", "ALL", "What does the Mesh concept do?", "Two shallow routes cross each other in opposite directions", "Four receivers run straight up the field", "Two receivers run curl routes", "The tight end blocks and the back runs a go", "The crossing routes are designed to rub off or confuse man coverage.", ""], ["Pass Concepts", "WR, TE", "On Mesh, what is the key to the two crossing routes?", "Cross at different depths and stay low to the ground", "Run into the same spot at the same time", "Stop in the middle and wait for the ball", "Run a vertical route first", "Crossing at different depths keeps the defenders from covering both routes.", ""], ["Pass Concepts", "ALL", "How many receivers run vertical routes on Four Verticals?", "4", "2", "3", "5", "Four Verticals stretches the deep part of the field with four receivers running streaks or seams.", ""], ["Pass Concepts", "QB", "On Four Verticals, what do you read first?", "The deep safeties", "The nearest linebacker", "The defensive tackles", "The sideline", "The safeties tell you which vertical will be open. Throw away from a safety who is covering the route.", ""], ["Pass Concepts", "ALL", "On a Curl-Flat concept, what does the flat route do?", "Runs to the sideline at shallow depth to stretch the underneath defender", "Runs a deep post", "Stays in to block", "Runs a seam up the middle", "The flat route pulls the flat defender out so the curl has room behind him.", ""], ["Pass Concepts", "ALL", "The Stick concept features which type of route from the inside receiver?", "A short stick route, a quick stop about 5 yards deep", "A deep post", "A fade", "A wheel", "Stick is a quick-game concept designed to get the ball out fast against zone coverage.", ""], ["Pass Concepts", "QB", "On Stick, how fast should the ball come out?", "On rhythm, after a quick 3-step drop", "After holding it for five seconds", "Only after the QB scrambles", "After a full 7-step drop", "Quick-game concepts are built to be thrown in about 2 seconds.", ""], ["Pass Concepts", "WR", "A cornerback is playing off, 7 yards from you. What kind of route is usually open?", "A quick hitch or stick", "A deep go route every time", "A block on the safety", "A late curl", "Off coverage gives up the short routes, so the quick hitch or stick is usually open.", ""], ["Protection", "OL", "A defender shows blitz over your gap. What do you do?", "Block him and pass off anyone who crosses your face", "Run to the flat", "Wait to see who comes", "Chip him and release to a route", "Stay square, keep your inside shoulder free, and communicate the blitz.", ""], ["Protection", "RB", "Nobody rushes to your side. What is your job?", "Check release to the flat", "Stay in and block the nearest lineman", "Run a deep post", "Take the handoff", "If the back is not needed in protection, he releases as a check-down option.", ""], ["Protection", "QB", "How many pass rushers can your five linemen block without help from the back?", "Five (the number of linemen)", "Three", "Seven", "None", "Count the rushers. If there are more than the linemen can block, the back or the QB has to account for the extra rusher.", ""], ["Signals", "ALL", "In this sample playbook, what does the call 'Rip' tell the offensive line to do?", "Slide protection to the right", "", "", "", "Rip means the line slides protection to the right. Liz means slide to the left.", ""], ["Signals", "ALL", "In this sample playbook, what does the call 'Liz' tell the offensive line to do?", "Slide protection to the left", "", "", "", "Liz means slide protection to the left. Rip means slide to the right.", ""], ["Signals", "QB", "In this sample playbook, what does a QB tap on the helmet mean?", "Quick snap count", "", "", "", "The QB tap on the helmet is the sample signal for a quick snap count. Change it to your own signal in the Cards tab.", ""], ["Signals", "ALL", "What word do you say when you change the play at the line of scrimmage?", "Your own audible word (replace this)", "", "", "", "This card is a template. Replace it with your own audible word and what it means.", ""]]};
 var LOG_HEAD = ['Time', 'Name', 'Pos', 'Card', 'Correct', 'Day', 'EventId', 't'];
+var DRILL_HEAD = ['Time', 'Name', 'Pos', 'Score', 'TDs', 'Answered', 'Right', 'Longest streak', 'Day', 'DrillId', 't', 'Set'];
 var CARD_HEAD = ['ID', 'Deck', 'Positions', 'Question', 'Answer', 'Wrong 1', 'Wrong 2', 'Wrong 3', 'Explanation', 'Image', 'Active'];
 
 function ss_() { return SpreadsheetApp.getActiveSpreadsheet(); }
@@ -136,8 +137,19 @@ function logRows_() {
   });
 }
 
+function drillRows_() {
+  var s = ss_().getSheetByName('Drills');
+  if (!s || s.getLastRow() < 2) return [];
+  return s.getRange(2, 1, s.getLastRow() - 1, DRILL_HEAD.length).getValues().map(function (r) {
+    var day = r[8] instanceof Date ? Utilities.formatDate(r[8], Session.getScriptTimeZone(), 'yyyy-MM-dd') : String(r[8]);
+    return { name: String(r[1]), pos: String(r[2]).toUpperCase(), score: +r[3] || 0, td: +r[4] || 0, ans: +r[5] || 0,
+      right: +r[6] || 0, longest: +r[7] || 0, day: day, did: String(r[9]), t: +r[10] || 0, set: String(r[11] || 'mix') };
+  });
+}
+
 function route_(p) {
   var a = p.action;
+  if (a === 'leaderboard') return drillRows_();
   if (a === 'config') return config_();
   if (a === 'roster') return rosterRows_();
   if (a === 'progress') {
@@ -159,6 +171,15 @@ function handlePost_(o) {
       var name = String(o.name || '').trim(); if (name.length < 2) return 'skip';
       var have = rosterRows_().some(function (r) { return r.name.toLowerCase() === name.toLowerCase(); });
       if (!have) tab_('Roster').appendRow([name, String(o.pos || '').toUpperCase()]);
+      return 'ok';
+    }
+    if (o.type === 'drill') {
+      var d = tab_('Drills');
+      if (d.getLastRow() < 1) d.getRange(1, 1, 1, DRILL_HEAD.length).setValues([DRILL_HEAD]).setFontWeight('bold');
+      var did = String(o.did || '');
+      var dup = did && d.getLastRow() > 1 && d.getRange(2, 10, d.getLastRow() - 1, 1).createTextFinder(did).matchEntireCell(true).findNext();
+      if (dup || !(+o.ans > 0)) return 'dup';
+      d.appendRow([new Date(), String(o.name), String(o.pos).toUpperCase(), +o.score || 0, +o.td || 0, +o.ans || 0, +o.right || 0, +o.longest || 0, String(o.day), did, +o.t || Date.now(), String(o.set || 'mix')]);
       return 'ok';
     }
     if (o.type === 'answer') {
@@ -190,7 +211,7 @@ function apiPost(s) { return handlePost_(JSON.parse(s)); }
 function mastery_(cards, roster, log, streak, days) {
   var by = {};
   roster.forEach(function (r) { by[r.name.toLowerCase()] = { name: r.name, pos: r.pos, ev: [] }; });
-  log.forEach(function (e) { var k = e.name.toLowerCase(); (by[k] || (by[k] = { name: e.name, pos: e.pos, ev: [] })).ev.push(e); });
+  log.forEach(function (e) { if (String(e.eid).indexOf('dr-') === 0) return; var k = e.name.toLowerCase(); (by[k] || (by[k] = { name: e.name, pos: e.pos, ev: [] })).ev.push(e); });
   return Object.keys(by).map(function (k) {
     var p = by[k], st = {};
     p.ev.slice().sort(function (a, b) { return a.t - b.t; }).forEach(function (e) {
@@ -236,7 +257,7 @@ function refreshDashboard() {
   mm.getCharts().forEach(function (c) { mm.removeChart(c); });
   mm.clear();
   var cnt = {};
-  logRows_().forEach(function (e) { var x = cnt[e.card] || (cnt[e.card] = { a: 0, m: 0 }); x.a++; if (!e.ok) x.m++; });
+  logRows_().forEach(function (e) { if (String(e.eid).indexOf('dr-') === 0) return; var x = cnt[e.card] || (cnt[e.card] = { a: 0, m: 0 }); x.a++; if (!e.ok) x.m++; });
   var list = cards.map(function (c) { var x = cnt[c.id] || { a: 0, m: 0 }; return [c.q + '  →  ' + c.a, x.m, x.a, x.a ? x.m / x.a : 0]; })
     .filter(function (r) { return r[1] > 0; }).sort(function (a, b) { return b[1] - a[1] || b[3] - a[3]; });
   mm.getRange('A1').setValue('Most missed cards').setFontWeight('bold').setFontSize(12);

@@ -83,6 +83,21 @@ td{padding:10px 8px;border-bottom:1px solid var(--line)}
 td.num{font-family:var(--font-mono);font-size:13px;font-variant-numeric:tabular-nums}
 .st{font:600 11px/1 var(--font-mono);letter-spacing:.06em;text-transform:uppercase;padding:5px 7px;display:inline-block}
 .st.none{background:var(--miss-bg);color:var(--miss)} .st.mid{background:var(--amber-bg);color:var(--amber)} .st.done{background:var(--turf-bg);color:var(--turf)}
+.clock{font:700 44px/1 var(--font-display);font-variant-numeric:tabular-nums;text-align:center}
+.clock.low{color:var(--miss)}
+.field{position:relative;height:34px;border:2px solid var(--ink);background:repeating-linear-gradient(90deg,var(--turf-bg) 0,var(--turf-bg) 9.4%,var(--card) 9.4%,var(--card) 10%);margin:10px 0 6px;overflow:hidden}
+.field .ez{position:absolute;right:0;top:0;bottom:0;width:8px;background:var(--turf)}
+.field .ball{position:absolute;top:50%;width:24px;height:14px;margin:-7px 0 0 -12px;background:var(--ink);border-radius:50%;transition:left .4s ease-out}
+.pickbtn.on{border-color:var(--turf);background:var(--turf-bg)}
+.pickbtn.off{opacity:.55}
+.lb{width:100%;border-collapse:collapse;min-width:0;font-size:16px}
+.lb td{padding:9px 6px}
+.lb tr.me td{background:var(--turf-bg);font-weight:600}
+.lb .rk{font:700 20px/1 var(--font-display);width:34px}
+.lb .sc{font:700 22px/1 var(--font-display);text-align:right;font-variant-numeric:tabular-nums}
+.lbtabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 10px}
+.lbtabs button{padding:10px 4px;border:2px solid var(--line);background:var(--card);font:600 13px/1 var(--font-mono);letter-spacing:.05em;text-transform:uppercase}
+.lbtabs button.on{border-color:var(--ink);background:var(--ink);color:var(--paper)}
 .hard{display:grid;gap:12px}
 .hard .item{display:grid;grid-template-columns:58px minmax(0,1fr);gap:10px;align-items:baseline}
 .hard .pct{font:700 28px/1 var(--font-display);color:var(--miss)}
@@ -168,12 +183,14 @@ function imgSrc(u){
 }
 function cardsFor(pos,deck){
   if(!cfg)return [];
+  if(deck==="__drill")return cfg.cards.filter(function(c){return drillMissed.indexOf(c.id)>-1});
   var p=np(pos);
   return cfg.cards.filter(function(c){return (c.pos.indexOf("ALL")>-1||c.pos.indexOf(p)>-1)&&(!deck||c.deck===deck)});
 }
 function derive(evs){
   var m={};
   evs.slice().sort(function(a,b){return a.t-b.t}).forEach(function(e){
+    if(e.dr)return;   /* 2 Min Drill answers never count toward mastery */
     var x=m[e.c]||(m[e.c]={s:0,d:[],r:0,w:0,m:false});
     if(e.ok){x.r++;x.s++;if(x.d.indexOf(e.d)<0)x.d.push(e.d);if(x.s>=MASTER.streak&&x.d.length>=MASTER.days)x.m=true}
     else{x.w++;x.s=0;x.d=[]}
@@ -276,7 +293,8 @@ function homeView(){
     h+='<button class="deck" data-act="deck" data-id="'+esc(d)+'"><div class="row"><h2>'+esc(d)+'</h2><span class="nums">'+k+'/'+n+'</span></div><div class="meter"><i style="width:'+p+'%"></i></div><div class="small muted">'+(k===n?'All mastered. Tap to review.':n-k+' to go')+'</div></button>';
   });
   if(!any)h+='<div class="empty">No cards for your position yet. Ask your coach.</div>';
-  h+='</div><p class="small muted" style="margin-top:18px">A card is mastered after '+MASTER.streak+' correct in a row on at least '+MASTER.days+' different days. A miss resets the streak.</p>';
+  if(drillPool(null).length)h+='<button class="deck" data-act="drillsetup"><div class="row"><h2>2 Min Drill</h2><span class="nums">Best '+(+lsGet(bestKey())||0)+'</span></div><div class="small muted">Race the clock. Right answers move the ball.</div></button>';
+  h+='</div><p class="small muted" style="margin-top:18px">A card is mastered after '+MASTER.streak+' correct in a row on at least '+MASTER.days+' different days. A miss resets the streak. 2 Min Drill answers do not count toward mastery.</p>';
   return h;
 }
 function nextCard(){
@@ -340,7 +358,7 @@ function coachView(){
   }
   var byName={};
   coachData.roster.forEach(function(r){byName[r.name.toLowerCase()]={name:r.name,pos:r.pos,evs:[]}});
-  coachData.log.forEach(function(r){var k=String(r.name).toLowerCase();if(!byName[k])byName[k]={name:r.name,pos:r.pos,evs:[]};byName[k].evs.push({c:r.card,ok:+r.ok,d:normDay(r.day,+r.t||Date.parse(r.ts)||0),t:+r.t||Date.parse(r.ts)||0})});
+  coachData.log.forEach(function(r){if(String(r.eid||"").indexOf("dr-")===0)return;var k=String(r.name).toLowerCase();if(!byName[k])byName[k]={name:r.name,pos:r.pos,evs:[]};byName[k].evs.push({c:r.card,ok:+r.ok,d:normDay(r.day,+r.t||Date.parse(r.ts)||0),t:+r.t||Date.parse(r.ts)||0})});
   var rows=Object.keys(byName).map(function(k){
     var p=byName[k], m=derive(p.evs), n=cardsFor(p.pos).length, k2=mastered(m,p.pos), a=p.evs.length, last=null;
     p.evs.forEach(function(e){if(!last||e.d>last)last=e.d});
@@ -363,11 +381,186 @@ function coachView(){
   h+='<div class="panel"><h2 style="font-size:22px;margin-bottom:12px">Cards the team misses most</h2>';
   if(!stats.length)h+='<div class="empty">No misses yet.</div>';
   else h+='<div class="hard">'+stats.slice(0,6).map(function(s){return '<div class="item"><span class="pct">'+Math.round(s.w/s.t*100)+'%</span><span>'+esc(s.c.q)+' <b>→ '+esc(s.c.a)+'</b> <span class="muted small">('+esc(s.c.pos.join(", "))+' · '+s.w+' missed of '+s.t+')</span></span></div>'}).join("")+'</div>';
-  h+='</div><button class="btn alt" data-act="coachgo">Refresh</button>';
+  h+='</div>'+boardHtml()+'<button class="btn alt" data-act="coachgo">Refresh</button>';
+  return h;
+}
+
+/* ===== 2 Min Drill ===== */
+var DRILL_SECS=120;
+var drill=null, drillTimer=null, drillAdv=null;
+var lb={rows:null,err:false,tab:"today",mine:null,set:"mix",manual:false};
+var drillMissed=[];
+function bestKey(){return NS+"best."+me.name.toLowerCase()}
+function ytxt(y){y=Math.round(y);return y<=50?"Own "+y:"Opp "+(100-y)}
+function fmtClock(ms){var s=Math.ceil(Math.max(0,ms)/1000);return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
+function drillStop(){if(drillTimer){clearInterval(drillTimer);drillTimer=null}if(drillAdv){clearTimeout(drillAdv);drillAdv=null}}
+/* Drills use multiple choice cards only. Flip cards have no options to tap. */
+function drillPool(d){return cardsFor(me.pos,d).filter(function(c){return c.wrong.length>0})}
+function selSet(){var sel=cfg.decks.filter(function(d){return drill&&drill.decks&&drill.decks[d]&&drillPool(d).length});return sel.length===1?sel[0]:"mix"}
+function setName(id){return id==="mix"?"Mixed (2+ decks)":id}
+function weekStart(){var d=new Date();var k=(d.getDay()+6)%7;d.setDate(d.getDate()-k);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function loadBoard(){
+  if(!ONLINE)return;
+  lb.err=false;
+  getJSON({action:"leaderboard"}).then(function(r){
+    if(!Array.isArray(r))throw new Error("no board");
+    lb.rows=r;if((view==="drill"&&drill&&drill.phase!=="play")||view==="coach")render();
+  }).catch(function(){lb.err=true;if(lb.rows===null)lb.rows=[];if((view==="drill"&&drill&&drill.phase!=="play")||view==="coach")render()});
+}
+function boardRows(){
+  var rows=(lb.rows||[]).slice();
+  if(lb.mine&&!rows.some(function(r){return r.did===lb.mine.did}))rows.push(lb.mine);
+  var t=today(), ws=weekStart();
+  rows=rows.filter(function(r){return (r.set||"mix")===lb.set});
+  rows=rows.filter(function(r){return lb.tab==="all"||(lb.tab==="today"?r.day===t:r.day>=ws)});
+  var best={};
+  rows.forEach(function(r){var k=r.name.toLowerCase();if(!best[k]||r.score>best[k].score)best[k]=r});
+  return Object.keys(best).map(function(k){return best[k]}).sort(function(a,b){return b.score-a.score||b.td-a.td||a.t-b.t});
+}
+function boardHtml(){
+  if(!ONLINE)return "";
+  var h='<div class="panel"><h2 style="font-size:22px;margin-bottom:10px">Leaderboard</h2><label class="lbl" for="lbset">Set</label><select id="lbset" style="margin:6px 0 12px">';
+  cfg.decks.concat(["mix"]).forEach(function(id){h+='<option value="'+esc(id)+'"'+(lb.set===id?' selected':'')+'>'+esc(setName(id))+'</option>'});
+  h+='</select><div class="lbtabs">';
+  [["today","Today"],["week","This week"],["all","All time"]].forEach(function(x){h+='<button class="'+(lb.tab===x[0]?'on':'')+'" data-act="lbtab" data-id="'+x[0]+'">'+x[1]+'</button>'});
+  h+='</div>';
+  if(lb.rows===null)return h+'<p class="muted small" style="margin:0">Loading…</p></div>';
+  var rows=boardRows(), mine=me?me.name.toLowerCase():"";
+  if(!rows.length)h+='<p class="muted small" style="margin:0">'+(lb.err?'Could not load the board. ':'')+'No scores yet. Be the first on the board.</p>';
+  else{
+    var myi=-1;rows.forEach(function(r,i){if(r.name.toLowerCase()===mine)myi=i});
+    var row=function(r,i){return '<tr'+(r.name.toLowerCase()===mine?' class="me"':'')+'><td class="rk">'+(i+1)+'</td><td>'+esc(r.name)+' <span class="muted small">'+esc(posLabel(r.pos))+'</span><div class="muted small">'+r.td+' TD · '+(r.ans?Math.round(r.right/r.ans*100):0)+'% · streak '+r.longest+'</div></td><td class="sc">'+r.score+'</td></tr>'};
+    h+='<table class="lb"><tbody>';
+    rows.slice(0,10).forEach(function(r,i){h+=row(r,i)});
+    if(myi>=10)h+='<tr><td colspan="3" class="muted small" style="text-align:center">…</td></tr>'+row(rows[myi],myi);
+    h+='</tbody></table>';
+    if(mine&&myi<0)h+='<p class="muted small" style="margin:8px 0 0">Run a drill to get on this board.</p>';
+  }
+  return h+'<p class="muted small" style="margin:10px 0 0">Best single drill per player. Each deck has its own board. A drill on 2 or more decks counts toward Mixed.</p></div>';
+}
+function drillPick(){
+  var m=derive(events), pool=drill.pool, bag=[];
+  pool.forEach(function(c){
+    if(pool.length>1&&c.id===lastCard)return;
+    var x=st(m,c.id), w=1+(x.w>x.r?2:0)+(x.s===0&&x.w>0?2:0)+(x.r+x.w===0?1:0);
+    for(var k=0;k<w;k++)bag.push(c);
+  });
+  var card=bag[Math.floor(Math.random()*bag.length)]||pool[0];
+  lastCard=card.id;
+  drill.cur={card:card,order:shuffle([card.a].concat(shuffle(card.wrong).slice(0,3))),picked:null};
+}
+function drillSetup(){
+  drillStop();
+  var d={};cfg.decks.forEach(function(x){d[x]=drillPool(x).length>0});
+  drill={phase:"setup",decks:d,err:""};view="drill";cur=null;lb.mine=null;lb.manual=false;lb.set=selSet();render();window.scrollTo(0,0);loadBoard();
+}
+function drillStart(){
+  var pool=drillPool(null).filter(function(c){return drill.decks[c.deck]});
+  if(!pool.length){drill.err="Pick at least one deck.";render();return}
+  drillStop();
+  drill={phase:"play",set:selSet(),decks:drill.decks,pool:pool,end:Date.now()+DRILL_SECS*1000,yard:25,prev:25,score:0,td:0,streak:0,longest:0,ans:0,right:0,missed:{},missOrder:[],flash:""};
+  drillPick();
+  drillTimer=setInterval(drillTick,200);
+  view="drill";render();window.scrollTo(0,0);
+}
+function drillTick(){
+  if(!drill||drill.phase!=="play"){drillStop();return}
+  var left=drill.end-Date.now();
+  if(left<=0){drillEnd();return}
+  var c=document.getElementById("clock"),b=document.getElementById("clockbar");
+  if(c){c.textContent=fmtClock(left);c.className="clock"+(left<=15000?" low":"")}
+  if(b)b.style.width=(left/(DRILL_SECS*1000)*100)+"%";
+}
+function drillEnd(){
+  drillStop();
+  var best=+lsGet(bestKey())||0, nb=drill.ans>0&&drill.score>best;
+  if(nb)lsSet(bestKey(),String(drill.score));
+  drill.phase="end";drill.best=nb?drill.score:best;drill.newBest=nb;
+  if(drill.ans>0){
+    var t=Date.now(), did="dd-"+t+"-"+Math.random().toString(36).slice(2,7);
+    lb.mine={set:drill.set,name:me.name,pos:me.pos,score:drill.score,td:drill.td,ans:drill.ans,right:drill.right,longest:drill.longest,day:today(),did:did,t:t};
+    if(ONLINE){queue.push({type:"drill",did:did,t:t,name:me.name,pos:me.pos,score:drill.score,td:drill.td,ans:drill.ans,right:drill.right,longest:drill.longest,day:today(),set:drill.set});lsSet(NS+"queue",JSON.stringify(queue));flush()}
+    lb.tab="today";lb.set=drill.set;
+    setTimeout(loadBoard,2500);
+  }
+  render();window.scrollTo(0,0);
+}
+function drillAnswer(i){
+  if(!drill||drill.phase!=="play"||drill.cur.picked!==null||Date.now()>=drill.end)return;
+  var cu=drill.cur, ok=cu.order[i]===cu.card.a?1:0, t=Date.now();
+  cu.picked=i;
+  /* "dr-" prefix on the event id marks a drill answer everywhere it is stored, so it never counts toward mastery or Most Missed */
+  var ev={id:"dr-"+t+"-"+Math.random().toString(36).slice(2,7),t:t,c:cu.card.id,ok:ok,d:today(),dr:1};
+  events.push(ev);saveEvents();
+  if(ONLINE){queue.push({type:"answer",eid:ev.id,t:t,name:me.name,pos:me.pos,card:ev.c,ok:ok,day:ev.d,mode:"drill"});lsSet(NS+"queue",JSON.stringify(queue));flush()}
+  drill.ans++;drill.prev=drill.yard;
+  if(ok){
+    drill.right++;drill.streak++;if(drill.streak>drill.longest)drill.longest=drill.streak;
+    var g=drill.streak>=5?16:drill.streak>=3?12:8;
+    drill.yard=Math.min(100,drill.yard+g);drill.score+=g;drill.flash="+"+g+" yds";
+    if(drill.yard>=100){drill.td++;drill.score+=20;drill.flash="Touchdown! +"+(g+20)}
+  }else{
+    drill.streak=0;drill.flash="Incomplete";
+    if(!drill.missed[cu.card.id]){drill.missed[cu.card.id]=1;drill.missOrder.push(cu.card.id)}
+  }
+  render();
+  if(drillAdv)clearTimeout(drillAdv);
+  drillAdv=setTimeout(drillAdvance,ok?650:2400);
+}
+function drillAdvance(){
+  drillAdv=null;
+  if(!drill||drill.phase!=="play"||Date.now()>=drill.end)return;
+  if(drill.yard>=100)drill.yard=25;
+  drill.prev=drill.yard;drill.flash="";
+  drillPick();render();
+}
+function drillView(){
+  var D=drill, h="";
+  if(D.phase==="setup"){
+    h+='<div class="top"><button class="link" data-act="home">‹ Decks</button><span class="nums">Best '+(+lsGet(bestKey())||0)+'</span></div><h1>2 Min Drill</h1>';
+    h+='<p class="muted" style="margin:8px 0 14px">Two minutes on the clock. A right answer moves the ball 8 yards, 12 on a streak of 3, 16 on a streak of 5. Reach the goal line for a touchdown (+20) and restart from your own 25. A miss ends your streak. Only multiple choice cards are used. Drill answers do not count toward mastery.</p>';
+    if(D.err)h+='<div class="notice">'+esc(D.err)+'</div>';
+    h+='<div class="panel"><div class="lbl" style="margin-bottom:10px">Decks to pull from</div><div class="stack">';
+    cfg.decks.forEach(function(d){var n=drillPool(d).length;h+='<button class="pickbtn'+(D.decks[d]?' on':n?'':' off')+'" data-act="dtoggle" data-id="'+esc(d)+'"><span>'+esc(d)+'</span><span class="chip">'+n+' cards</span></button>'});
+    h+='</div></div><button class="btn" data-act="dstart">Start the clock</button><div style="height:14px"></div>'+boardHtml();
+    return h;
+  }
+  if(D.phase==="end"){
+    var acc=D.ans?Math.round(D.right/D.ans*100):0;
+    h+='<h1 style="margin-bottom:14px">Final whistle</h1><div class="tiles">'
+     +'<div class="tile"><div class="lbl">Score</div><div class="n">'+D.score+'</div></div>'
+     +'<div class="tile"><div class="lbl">Touchdowns</div><div class="n">'+D.td+'</div></div>'
+     +'<div class="tile"><div class="lbl">Accuracy</div><div class="n">'+acc+'%</div></div>'
+     +'<div class="tile"><div class="lbl">Longest streak</div><div class="n">'+D.longest+'</div></div></div>';
+    h+=D.newBest?'<div class="notice"><b>New best score.</b> '+D.right+' right of '+D.ans+'.</div>':'<p class="small muted" style="margin:0 0 14px">'+D.right+' right of '+D.ans+'. Your best: '+D.best+'.</p>';
+    if(D.missOrder.length){
+      h+='<div class="panel"><h2 style="font-size:22px;margin-bottom:12px">Missed this drill</h2><div class="stack">'
+       +D.missOrder.map(function(id){var c=cfg.cards.filter(function(x){return x.id===id})[0];return c?'<div>'+esc(c.q)+' <b>→ '+esc(c.a)+'</b></div>':''}).join("")+'</div></div>';
+      h+='<button class="btn" data-act="dmiss">Drill these '+D.missOrder.length+' card'+(D.missOrder.length===1?'':'s')+'</button>';
+    }
+    h+=boardHtml();
+    h+='<button class="btn alt" data-act="dagain" style="margin-top:10px">Run it back</button><p style="text-align:center"><button class="link" data-act="home">Done</button></p>';
+    return h;
+  }
+  var left=Math.max(0,D.end-Date.now()), cu=D.cur, card=cu.card, ok=cu.picked!==null&&cu.order[cu.picked]===card.a;
+  h+='<div class="top"><button class="link" data-act="dquit">Quit</button><div class="clock'+(left<=15000?' low':'')+'" id="clock">'+fmtClock(left)+'</div><span class="nums">Score '+D.score+'</span></div>';
+  h+='<div class="meter"><i id="clockbar" style="width:'+(left/(DRILL_SECS*1000)*100)+'%"></i></div>';
+  h+='<div class="field" aria-hidden="true"><i class="ez"></i><i class="ball" id="ball" style="left:'+D.prev+'%"></i></div>';
+  h+='<div class="nums" style="display:flex;justify-content:space-between;gap:8px;margin-bottom:12px"><span style="white-space:nowrap">Ball on '+ytxt(D.yard)+'</span><span style="white-space:nowrap">Streak '+D.streak+'</span><span style="white-space:nowrap;text-align:right;min-width:110px">'+esc(D.flash||"")+'</span></div>';
+  var src=imgSrc(card.img);
+  if(src)h+='<div class="diagram"><img src="'+esc(src)+'" alt="Diagram" onerror="this.parentNode.style.display=\'none\'"></div>';
+  h+='<div class="q">'+esc(card.q)+'</div><div class="opts">';
+  cu.order.forEach(function(o,i){
+    var cls="opt";
+    if(cu.picked!==null){if(o===card.a)cls+=" right";else if(i===cu.picked)cls+=" wrong"}
+    h+='<button class="'+cls+'" data-act="dopt" data-i="'+i+'"><b>'+"ABCD"[i]+'</b><span>'+esc(o)+'</span></button>';
+  });
+  h+='</div>';
+  if(cu.picked!==null&&!ok)h+='<div class="back no"><div class="lbl">Missed. Answer: '+esc(card.a)+'</div></div><div class="dock"><div class="in"><button class="btn" data-act="dnext">Next card</button></div></div>';
   return h;
 }
 function render(){
-  var h=view==="login"?loginView():(!cfg?loginView():view==="home"?homeView():view==="quiz"?quizView():coachView());
+  var h=view==="login"?loginView():(!cfg?loginView():view==="home"?homeView():view==="quiz"?quizView():view==="drill"?drillView():coachView());
   $app.innerHTML=h;
   if(view==="quiz"&&cur&&(cur.picked!==null||cur.shown)){var b=document.getElementById("back");if(b&&b.scrollIntoView)b.scrollIntoView({block:"center"})}
 }
@@ -381,7 +574,7 @@ function signIn(name,pos){
     getJSON({action:"progress",name:me.name}).then(function(rows){
       if(!Array.isArray(rows))return;
       var have={};events.forEach(function(e){have[e.id]=1});
-      rows.forEach(function(r){if(!have[r.eid]){events.push({id:r.eid,t:+r.t||Date.parse(r.ts)||0,c:r.card,ok:+r.ok,d:normDay(r.day,+r.t||Date.parse(r.ts)||0)});have[r.eid]=1}});
+      rows.forEach(function(r){if(!have[r.eid]){events.push({id:r.eid,t:+r.t||Date.parse(r.ts)||0,c:r.card,ok:+r.ok,d:normDay(r.day,+r.t||Date.parse(r.ts)||0),dr:String(r.eid).indexOf("dr-")===0?1:0});have[r.eid]=1}});
       saveEvents();
       if(view==="home")render();
     }).catch(function(){});
@@ -411,24 +604,33 @@ document.addEventListener("click",function(e){
     signIn(nm,ps);
   }
   else if(a==="deck"){deck=b.getAttribute("data-id");cur=null;view="quiz";render();window.scrollTo(0,0)}
-  else if(a==="home"){view="home";cur=null;render();window.scrollTo(0,0)}
+  else if(a==="drillsetup"){drillSetup()}
+  else if(a==="dtoggle"){var di=b.getAttribute("data-id");if(drill&&drillPool(di).length){drill.decks[di]=!drill.decks[di];drill.err="";if(!lb.manual)lb.set=selSet();render()}}
+  else if(a==="dstart"||a==="dagain"){drillStart()}
+  else if(a==="dopt"){drillAnswer(+b.getAttribute("data-i"))}
+  else if(a==="dnext"){if(drillAdv){clearTimeout(drillAdv);drillAdv=null}drillAdvance()}
+  else if(a==="dquit"){drillStop();drill=null;view="home";render();window.scrollTo(0,0)}
+  else if(a==="dmiss"){drillMissed=drill.missOrder.slice();deck="__drill";cur=null;view="quiz";render();window.scrollTo(0,0)}
+  else if(a==="lbtab"){lb.tab=b.getAttribute("data-id");render()}
+  else if(a==="home"){drillStop();view="home";cur=null;render();window.scrollTo(0,0)}
   else if(a==="opt"){answer(+b.getAttribute("data-i"))}
   else if(a==="show"){cur.shown=true;render()}
   else if(a==="flip"){if(cur.picked!==null)return;cur.picked=+b.getAttribute("data-ok");record(cur.picked);render()}
   else if(a==="next"){nextCard();render();window.scrollTo(0,0)}
   else if(a==="retry"){loadConfig();render()}
-  else if(a==="logout"){me=null;lsSet(NS+"me","");events=[];cur=null;coachData=null;view="login";render();loadRoster();loadConfig()}
+  else if(a==="logout"){drillStop();drill=null;me=null;lsSet(NS+"me","");events=[];cur=null;coachData=null;view="login";render();loadRoster();loadConfig()}
   else if(a==="coach"){view="coach";render()}
   else if(a==="coachgo"){
     var c=document.getElementById("code"); var code=c?c.value:lsGet("cs.code")||"";
     coachMsg="";
     getJSON({action:"all",code:code}).then(function(d){
       if(d&&d.error){coachMsg="That code did not work.";coachData=null}
-      else{d.roster=d.roster.map(function(x){return {name:x.name,pos:np(x.pos)}});d.log=d.log.map(function(x){x.pos=np(x.pos);return x});coachData=d;lsSet("cs.code",code)}
+      else{d.roster=d.roster.map(function(x){return {name:x.name,pos:np(x.pos)}});d.log=d.log.map(function(x){x.pos=np(x.pos);return x});coachData=d;lsSet("cs.code",code);lb.rows=null;loadBoard()}
       render();
     }).catch(function(){coachMsg="Could not reach the Sheet.";render()});
   }
 });
+document.addEventListener("change",function(e){if(e.target&&e.target.id==="lbset"){lb.set=e.target.value;lb.manual=true;render()}});
 document.addEventListener("input",function(e){
   if(e.target&&e.target.id==="flt"){filter=e.target.value;var l=document.getElementById("rlist");if(l)l.innerHTML=rosterList()}
 });

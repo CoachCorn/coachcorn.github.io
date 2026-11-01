@@ -21,3 +21,6 @@ One row per card on the **Cards** tab.
 In the Sheet: **Scout Teams > Refresh dashboard** builds **Mastery** and **Most Missed**. On the phone: open the link, tap **Coach view**, enter your coach code.
 
 A card is mastered after 3 correct in a row on at least 2 different days (change in Settings). A miss resets the streak.
+
+## 2 Min Drill and leaderboard
+Players get a timed drill (multiple choice cards only) with a leaderboard per deck, plus Mixed. Scores go to a **Drills** tab, created automatically. Drill answers never count toward mastery. After updating Code.gs, deploy a new version.
