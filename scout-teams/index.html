@@ -161,6 +161,9 @@ function applyCfg(c){
   var m=document.querySelector('meta[name="apple-mobile-web-app-title"]');if(m)m.setAttribute("content",c.name);
 }
 var MASTER={streak:3,days:2};
+/* Most Missed: a card needs this many attempts (and at least one miss) before it can be ranked. */
+var MISS_MIN_TEAM=5, MISS_MIN_ME=3;
+var mineIds=[];
 
 /* ===== Helpers ===== */
 var $app=document.getElementById("app");
@@ -183,6 +186,7 @@ function imgSrc(u){
 }
 function cardsFor(pos,deck){
   if(!cfg)return [];
+  if(deck==="__mine")return cfg.cards.filter(function(c){return mineIds.indexOf(c.id)>-1});
   if(deck==="__drill")return cfg.cards.filter(function(c){return drillMissed.indexOf(c.id)>-1});
   var p=np(pos);
   return cfg.cards.filter(function(c){return (c.pos.indexOf("ALL")>-1||c.pos.indexOf(p)>-1)&&(!deck||c.deck===deck)});
@@ -198,6 +202,12 @@ function derive(evs){
   return m;
 }
 function st(m,id){return m[id]||{s:0,d:[],r:0,w:0,m:false}}
+function myMissed(m){
+  var l=[];
+  cardsFor(me.pos).forEach(function(c){var x=st(m,c.id),t=x.r+x.w;if(x.w>0&&t>=MISS_MIN_ME)l.push({c:c,w:x.w,t:t,rate:x.w/t})});
+  l.sort(function(a,b){return b.rate-a.rate||b.t-a.t});
+  return l.slice(0,12);
+}
 function mastered(m,pos,deck){var n=0;cardsFor(pos,deck).forEach(function(c){if(st(m,c.id).m)n++});return n}
 
 /* ===== State ===== */
@@ -293,8 +303,10 @@ function homeView(){
     h+='<button class="deck" data-act="deck" data-id="'+esc(d)+'"><div class="row"><h2>'+esc(d)+'</h2><span class="nums">'+k+'/'+n+'</span></div><div class="meter"><i style="width:'+p+'%"></i></div><div class="small muted">'+(k===n?'All mastered. Tap to review.':n-k+' to go')+'</div></button>';
   });
   if(!any)h+='<div class="empty">No cards for your position yet. Ask your coach.</div>';
+  var mm=myMissed(m);
+  if(mm.length)h+='<button class="deck" data-act="mine"><div class="row"><h2>My most missed</h2><span class="nums">'+mm.length+'</span></div><div class="small muted">Your weakest cards, worst miss rate first</div></button>';
   if(drillPool(null).length)h+='<button class="deck" data-act="drillsetup"><div class="row"><h2>2 Min Drill</h2><span class="nums">Best '+(+lsGet(bestKey())||0)+'</span></div><div class="small muted">Race the clock. Right answers move the ball.</div></button>';
-  h+='</div><p class="small muted" style="margin-top:18px">A card is mastered after '+MASTER.streak+' correct in a row on at least '+MASTER.days+' different days. A miss resets the streak. 2 Min Drill answers do not count toward mastery.</p>';
+  h+='</div><p class="small muted" style="margin-top:18px">A card is mastered after '+MASTER.streak+' correct in a row on at least '+MASTER.days+' different days. A miss resets the streak. My most missed lists cards you have tried at least '+MISS_MIN_ME+' times and missed, worst miss rate first. 2 Min Drill answers do not count toward mastery.</p>';
   return h;
 }
 function nextCard(){
@@ -377,10 +389,13 @@ function coachView(){
   }
   h+='</div>';
   var stats=cfg.cards.map(function(c){var r=0,w=0;rows.forEach(function(x){var s=x.m[c.id];if(s){r+=s.r;w+=s.w}});return {c:c,r:r,w:w,t:r+w}}).filter(function(s){return s.w>0});
+  var below=stats.filter(function(s){return s.t<MISS_MIN_TEAM}).length;
+  stats=stats.filter(function(s){return s.t>=MISS_MIN_TEAM});
   stats.sort(function(a,b){return b.w/b.t-a.w/a.t||b.w-a.w});
-  h+='<div class="panel"><h2 style="font-size:22px;margin-bottom:12px">Cards the team misses most</h2>';
-  if(!stats.length)h+='<div class="empty">No misses yet.</div>';
-  else h+='<div class="hard">'+stats.slice(0,6).map(function(s){return '<div class="item"><span class="pct">'+Math.round(s.w/s.t*100)+'%</span><span>'+esc(s.c.q)+' <b>→ '+esc(s.c.a)+'</b> <span class="muted small">('+esc(s.c.pos.join(", "))+' · '+s.w+' missed of '+s.t+')</span></span></div>'}).join("")+'</div>';
+  h+='<div class="panel"><h2 style="font-size:22px;margin-bottom:12px">Cards the team misses most</h2><p class="small muted" style="margin:0 0 12px">Ranked by miss rate. A card needs '+MISS_MIN_TEAM+' or more attempts to appear. Drill answers are not counted.</p>';
+  if(!stats.length)h+='<div class="empty">No card has '+MISS_MIN_TEAM+' attempts with a miss yet.</div>';
+  else h+='<div class="hard">'+stats.slice(0,8).map(function(s){return '<div class="item"><span class="pct">'+Math.round(s.w/s.t*100)+'%</span><span>'+esc(s.c.q)+' <b>→ '+esc(s.c.a)+'</b> <span class="muted small">('+esc(s.c.pos.join(", "))+' · '+s.w+' missed of '+s.t+')</span></span></div>'}).join("")+'</div>';
+  if(below)h+='<p class="small muted" style="margin:12px 0 0">'+below+' more card'+(below===1?' has':'s have')+' misses but fewer than '+MISS_MIN_TEAM+' attempts so far.</p>';
   h+='</div>'+boardHtml()+'<button class="btn alt" data-act="coachgo">Refresh</button>';
   return h;
 }
@@ -604,6 +619,7 @@ document.addEventListener("click",function(e){
     signIn(nm,ps);
   }
   else if(a==="deck"){deck=b.getAttribute("data-id");cur=null;view="quiz";render();window.scrollTo(0,0)}
+  else if(a==="mine"){var mm2=myMissed(derive(events));if(!mm2.length)return;mineIds=mm2.map(function(x){return x.c.id});deck="__mine";cur=null;view="quiz";render();window.scrollTo(0,0)}
   else if(a==="drillsetup"){drillSetup()}
   else if(a==="dtoggle"){var di=b.getAttribute("data-id");if(drill&&drillPool(di).length){drill.decks[di]=!drill.decks[di];drill.err="";if(!lb.manual)lb.set=selSet();render()}}
   else if(a==="dstart"||a==="dagain"){drillStart()}
