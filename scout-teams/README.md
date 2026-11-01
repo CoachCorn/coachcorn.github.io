@@ -10,12 +10,13 @@ A phone quiz for your own playbook. You type plays into a Google Sheet; players 
 5. **Deploy > New deployment > Web app**. Execute as: Me. Who has access: Anyone. Deploy and approve.
 6. Reload the Sheet. Use the new **Scout Teams** menu > **Show my player link**. Send that link to your players.
 
-## Your playbook
-One row per card on the **Cards** tab.
-- **Deck**: the group it shows under. **Positions**: comma list like `QB, WR`, or `ALL`.
-- **Question / Answer / Wrong 1-3**: leave the Wrong columns empty to make a flip card (show answer, then Knew it / Missed it).
-- **Explanation**: shown after they answer. **Image**: a link to a play diagram (a Google Drive share link works). **Active**: put `no` to hide a card.
-- Leave **ID** blank. It fills itself in. Clearing an ID resets everyone's progress on that card.
+## Your playbook: one tab per deck
+Every tab other than Settings, Roster, Log and Drills is a deck. The tab name is the deck name players see, and tab order is deck order.
+- **Add a deck:** Scout Teams menu > **New deck tab**, or copy any deck tab and rename it. Only a **Question** column is required, so a tab you build by hand works too.
+- **Retire a deck:** hide the tab (right-click > Hide sheet), or start its name with `_`. Players' progress stays in the Log.
+- **Columns:** Positions is `ALL` or a comma list like `WR, TE` (blank means ALL). Leave Wrong 1-3 empty for a flip card. Explanation shows after answering. Image is a Google Drive share link ("Anyone with the link") or any https image link. Active `no` hides one card. Leave ID blank; the app fills it in.
+- **Split the work:** give each coach their own tab, for example `WR Pass Install`, `OL1 Run Install`. Share the Sheet with them as an editor.
+- **Lock the base offense:** right-click its tab > **Protect sheet** > Set permissions > Restrict who can edit > Only you. Coaches can still add rows to their own tabs. New IDs are still filled in on protected tabs.
 
 ## Coach dashboard
 In the Sheet: **Scout Teams > Refresh dashboard** builds **Mastery** and **Most Missed**. On the phone: open the link, tap **Coach view**, enter your coach code.

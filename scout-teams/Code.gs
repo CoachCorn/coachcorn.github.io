@@ -2,20 +2,24 @@
  * Scout Teams: backend for the quiz page. One file. Paste over everything in Code.gs.
  *
  * FIRST TIME: pick setupSheet in the function dropdown, click Run, approve the permissions.
- * It builds the tabs (Settings, Cards, Roster, Log) with sample data you can overwrite.
+ * It builds Settings, Roster, Log and three sample deck tabs you can overwrite.
  * Then Deploy > New deployment > Web app: Execute as Me, Who has access: Anyone. Copy the Web app URL.
  *
  * Tabs
  *   Settings  app name, team name, positions, coach code, mastery rule
- *   Cards     your playbook. One row per card. ID is filled in for you; never type it.
+ *   Every other tab is a DECK. The tab name is the deck name, and tab order is deck order.
+ *             One row per card. ID is filled in for you; never type it.
+ *             Hide a tab (or start its name with _) to take that deck off the players' screens.
+ *             Scout Teams > New deck tab makes a ready-to-fill one.
  *   Roster    player names and positions (players can also add themselves)
  *   Log       every answer, written by the app (do not edit)
  *   Mastery, Most Missed   built by "Scout Teams > Refresh dashboard"
  */
-var SAMPLE = {"settings": {"App name": "Scout Teams", "Team name": "Sample Team", "Positions": "QB, RB, WR, TE, OL", "Coach code": "CHANGE-ME", "Mastery streak": 3, "Mastery days": 2, "Page URL": ""}, "roster": [["Sample Quarterback", "QB"], ["Sample Back", "RB"], ["Sample Receiver", "WR"], ["Sample Tight End", "TE"], ["Sample Lineman", "OL"]], "cards": [["Formations", "ALL", "How many receivers are lined up on the trips side of a Trips formation?", "3", "2", "4", "1", "Trips means three receivers to one side of the ball.", ""], ["Formations", "ALL", "Which formation has two receivers on each side of the ball?", "Doubles", "Trips", "Empty", "Bunch", "Doubles is a 2x2 set.", ""], ["Formations", "ALL", "What does the word Bunch describe?", "Three receivers lined up tightly together", "Two receivers split far apart", "A back lined up behind the guard", "All five linemen on one side", "Bunch sets are often used to create natural picks and crossing routes.", ""], ["Formations", "ALL", "What is an Empty formation?", "No running back in the backfield", "Two tight ends and no receivers", "The quarterback under center with no one behind him", "A formation with only four linemen", "Empty puts all five eligible players out wide or on the line, so the QB is alone in the backfield.", ""], ["Formations", "QB, RB", "Where does the running back line up in a Pistol set?", "Directly behind the quarterback", "Beside the quarterback in the shotgun", "On the line next to the tackle", "Split wide as a receiver", "In the Pistol the QB is a few yards back and the running back lines up directly behind him.", ""], ["Pass Concepts", "ALL", "Which two routes make up the Smash concept?", "A corner route over a hitch route", "A post over a dig", "A go over an out", "A curl over a flat", "The hitch holds the cornerback while the corner route attacks over the top.", ""], ["Pass Concepts", "QB", "On Smash, who is the QB's key defender?", "The cornerback over the hitch route", "The middle linebacker", "The free safety", "The defensive end", "If the corner sits on the hitch, throw the corner route. If the corner drops, throw the hitch.", ""], ["Pass Concepts", "ALL", "What does the Mesh concept do?", "Two shallow routes cross each other in opposite directions", "Four receivers run straight up the field", "Two receivers run curl routes", "The tight end blocks and the back runs a go", "The crossing routes are designed to rub off or confuse man coverage.", ""], ["Pass Concepts", "WR, TE", "On Mesh, what is the key to the two crossing routes?", "Cross at different depths and stay low to the ground", "Run into the same spot at the same time", "Stop in the middle and wait for the ball", "Run a vertical route first", "Crossing at different depths keeps the defenders from covering both routes.", ""], ["Pass Concepts", "ALL", "How many receivers run vertical routes on Four Verticals?", "4", "2", "3", "5", "Four Verticals stretches the deep part of the field with four receivers running streaks or seams.", ""], ["Pass Concepts", "QB", "On Four Verticals, what do you read first?", "The deep safeties", "The nearest linebacker", "The defensive tackles", "The sideline", "The safeties tell you which vertical will be open. Throw away from a safety who is covering the route.", ""], ["Pass Concepts", "ALL", "On a Curl-Flat concept, what does the flat route do?", "Runs to the sideline at shallow depth to stretch the underneath defender", "Runs a deep post", "Stays in to block", "Runs a seam up the middle", "The flat route pulls the flat defender out so the curl has room behind him.", ""], ["Pass Concepts", "ALL", "The Stick concept features which type of route from the inside receiver?", "A short stick route, a quick stop about 5 yards deep", "A deep post", "A fade", "A wheel", "Stick is a quick-game concept designed to get the ball out fast against zone coverage.", ""], ["Pass Concepts", "QB", "On Stick, how fast should the ball come out?", "On rhythm, after a quick 3-step drop", "After holding it for five seconds", "Only after the QB scrambles", "After a full 7-step drop", "Quick-game concepts are built to be thrown in about 2 seconds.", ""], ["Pass Concepts", "WR", "A cornerback is playing off, 7 yards from you. What kind of route is usually open?", "A quick hitch or stick", "A deep go route every time", "A block on the safety", "A late curl", "Off coverage gives up the short routes, so the quick hitch or stick is usually open.", ""], ["Protection", "OL", "A defender shows blitz over your gap. What do you do?", "Block him and pass off anyone who crosses your face", "Run to the flat", "Wait to see who comes", "Chip him and release to a route", "Stay square, keep your inside shoulder free, and communicate the blitz.", ""], ["Protection", "RB", "Nobody rushes to your side. What is your job?", "Check release to the flat", "Stay in and block the nearest lineman", "Run a deep post", "Take the handoff", "If the back is not needed in protection, he releases as a check-down option.", ""], ["Protection", "QB", "How many pass rushers can your five linemen block without help from the back?", "Five (the number of linemen)", "Three", "Seven", "None", "Count the rushers. If there are more than the linemen can block, the back or the QB has to account for the extra rusher.", ""], ["Signals", "ALL", "In this sample playbook, what does the call 'Rip' tell the offensive line to do?", "Slide protection to the right", "", "", "", "Rip means the line slides protection to the right. Liz means slide to the left.", ""], ["Signals", "ALL", "In this sample playbook, what does the call 'Liz' tell the offensive line to do?", "Slide protection to the left", "", "", "", "Liz means slide protection to the left. Rip means slide to the right.", ""], ["Signals", "QB", "In this sample playbook, what does a QB tap on the helmet mean?", "Quick snap count", "", "", "", "The QB tap on the helmet is the sample signal for a quick snap count. Change it to your own signal in the Cards tab.", ""], ["Signals", "ALL", "What word do you say when you change the play at the line of scrimmage?", "Your own audible word (replace this)", "", "", "", "This card is a template. Replace it with your own audible word and what it means.", ""]]};
+var SAMPLE = {"settings": {"App name": "Scout Teams", "Team name": "Sample Team", "Positions": "QB, RB, WR, TE, OL", "Coach code": "CHANGE-ME", "Mastery streak": 3, "Mastery days": 2, "Page URL": ""}, "roster": [["Sample Quarterback", "QB"], ["Sample Back", "RB"], ["Sample Receiver", "WR"], ["Sample Tight End", "TE"], ["Sample Lineman", "OL"]], "cards": [["Base Offense", "ALL", "How many receivers are lined up on the trips side of a Trips formation?", "3", "2", "4", "1", "Trips means three receivers to one side of the ball.", ""], ["Base Offense", "ALL", "Which formation has two receivers on each side of the ball?", "Doubles", "Trips", "Empty", "Bunch", "Doubles is a 2x2 set.", ""], ["Base Offense", "ALL", "What does the word Bunch describe?", "Three receivers lined up tightly together", "Two receivers split far apart", "A back lined up behind the guard", "All five linemen on one side", "Bunch sets are often used to create natural picks and crossing routes.", ""], ["Base Offense", "ALL", "What is an Empty formation?", "No running back in the backfield", "Two tight ends and no receivers", "The quarterback under center with no one behind him", "A formation with only four linemen", "Empty puts all five eligible players out wide or on the line, so the QB is alone in the backfield.", ""], ["Base Offense", "QB, RB", "Where does the running back line up in a Pistol set?", "Directly behind the quarterback", "Beside the quarterback in the shotgun", "On the line next to the tackle", "Split wide as a receiver", "In the Pistol the QB is a few yards back and the running back lines up directly behind him.", ""], ["Base Offense", "ALL", "In this sample playbook, what does the call 'Rip' tell the offensive line to do?", "Slide protection to the right", "", "", "", "Rip means the line slides protection to the right. Liz means slide to the left.", ""], ["Base Offense", "ALL", "In this sample playbook, what does the call 'Liz' tell the offensive line to do?", "Slide protection to the left", "", "", "", "Liz means slide protection to the left. Rip means slide to the right.", ""], ["Base Offense", "QB", "In this sample playbook, what does a QB tap on the helmet mean?", "Quick snap count", "", "", "", "The QB tap on the helmet is the sample signal for a quick snap count. Change it to your own signal in the Cards tab.", ""], ["Base Offense", "ALL", "What word do you say when you change the play at the line of scrimmage?", "Your own audible word (replace this)", "", "", "", "This card is a template. Replace it with your own audible word and what it means.", ""], ["Pass Game Install", "ALL", "Which two routes make up the Smash concept?", "A corner route over a hitch route", "A post over a dig", "A go over an out", "A curl over a flat", "The hitch holds the cornerback while the corner route attacks over the top.", ""], ["Pass Game Install", "QB", "On Smash, who is the QB's key defender?", "The cornerback over the hitch route", "The middle linebacker", "The free safety", "The defensive end", "If the corner sits on the hitch, throw the corner route. If the corner drops, throw the hitch.", ""], ["Pass Game Install", "ALL", "What does the Mesh concept do?", "Two shallow routes cross each other in opposite directions", "Four receivers run straight up the field", "Two receivers run curl routes", "The tight end blocks and the back runs a go", "The crossing routes are designed to rub off or confuse man coverage.", ""], ["Pass Game Install", "WR, TE", "On Mesh, what is the key to the two crossing routes?", "Cross at different depths and stay low to the ground", "Run into the same spot at the same time", "Stop in the middle and wait for the ball", "Run a vertical route first", "Crossing at different depths keeps the defenders from covering both routes.", ""], ["Pass Game Install", "ALL", "How many receivers run vertical routes on Four Verticals?", "4", "2", "3", "5", "Four Verticals stretches the deep part of the field with four receivers running streaks or seams.", ""], ["Pass Game Install", "QB", "On Four Verticals, what do you read first?", "The deep safeties", "The nearest linebacker", "The defensive tackles", "The sideline", "The safeties tell you which vertical will be open. Throw away from a safety who is covering the route.", ""], ["Pass Game Install", "ALL", "On a Curl-Flat concept, what does the flat route do?", "Runs to the sideline at shallow depth to stretch the underneath defender", "Runs a deep post", "Stays in to block", "Runs a seam up the middle", "The flat route pulls the flat defender out so the curl has room behind him.", ""], ["Pass Game Install", "ALL", "The Stick concept features which type of route from the inside receiver?", "A short stick route, a quick stop about 5 yards deep", "A deep post", "A fade", "A wheel", "Stick is a quick-game concept designed to get the ball out fast against zone coverage.", ""], ["Pass Game Install", "QB", "On Stick, how fast should the ball come out?", "On rhythm, after a quick 3-step drop", "After holding it for five seconds", "Only after the QB scrambles", "After a full 7-step drop", "Quick-game concepts are built to be thrown in about 2 seconds.", ""], ["Pass Game Install", "WR", "A cornerback is playing off, 7 yards from you. What kind of route is usually open?", "A quick hitch or stick", "A deep go route every time", "A block on the safety", "A late curl", "Off coverage gives up the short routes, so the quick hitch or stick is usually open.", ""], ["OL Install", "OL", "A defender shows blitz over your gap. What do you do?", "Block him and pass off anyone who crosses your face", "Run to the flat", "Wait to see who comes", "Chip him and release to a route", "Stay square, keep your inside shoulder free, and communicate the blitz.", ""], ["OL Install", "RB", "Nobody rushes to your side. What is your job?", "Check release to the flat", "Stay in and block the nearest lineman", "Run a deep post", "Take the handoff", "If the back is not needed in protection, he releases as a check-down option.", ""], ["OL Install", "QB", "How many pass rushers can your five linemen block without help from the back?", "Five (the number of linemen)", "Three", "Seven", "None", "Count the rushers. If there are more than the linemen can block, the back or the QB has to account for the extra rusher.", ""]]};
 var LOG_HEAD = ['Time', 'Name', 'Pos', 'Card', 'Correct', 'Day', 'EventId', 't'];
 var DRILL_HEAD = ['Time', 'Name', 'Pos', 'Score', 'TDs', 'Answered', 'Right', 'Longest streak', 'Day', 'DrillId', 't', 'Set'];
-var CARD_HEAD = ['ID', 'Deck', 'Positions', 'Question', 'Answer', 'Wrong 1', 'Wrong 2', 'Wrong 3', 'Explanation', 'Image', 'Active'];
+var DECK_HEAD = ['ID', 'Positions', 'Question', 'Answer', 'Wrong 1', 'Wrong 2', 'Wrong 3', 'Explanation', 'Image', 'Active'];
+var RESERVED = ['settings', 'roster', 'log', 'drills', 'mastery', 'most missed', 'help'];
 
 function ss_() { return SpreadsheetApp.getActiveSpreadsheet(); }
 function tab_(n) { var s = ss_(); return s.getSheetByName(n) || s.insertSheet(n); }
@@ -25,6 +29,7 @@ function onOpen() {
     .addItem('Refresh dashboard', 'refreshDashboard')
     .addItem('Refresh automatically every hour', 'autoRefreshOn')
     .addItem('Stop automatic refresh', 'autoRefreshOff')
+    .addItem('New deck tab', 'newDeckTab')
     .addItem('Show my player link', 'showLink')
     .addToUi();
 }
@@ -43,15 +48,14 @@ function setupSheet() {
     s.getRange(2, 1, rows.length, 2).setValues(rows);
     s.setColumnWidth(1, 160); s.setColumnWidth(2, 420); s.setFrozenRows(1);
   }
-  var c = tab_('Cards');
-  if (c.getLastRow() < 2) {
-    c.clear();
-    c.getRange(1, 1, 1, CARD_HEAD.length).setValues([CARD_HEAD]).setFontWeight('bold');
-    var rows2 = SAMPLE.cards.map(function (r) { return [''].concat(r).concat(['yes']); });
-    c.getRange(2, 1, rows2.length, CARD_HEAD.length).setValues(rows2);
-    c.setFrozenRows(1);
-    [60, 110, 90, 380, 200, 160, 160, 160, 320, 200, 60].forEach(function (w, i) { c.setColumnWidth(i + 1, w); });
-    c.getRange(1, 1).setNote('Leave ID blank on new rows. The app fills it in. To reset progress on a card, clear its ID.');
+  if (!allDeckSheets_(true).length) {
+    var byDeck = {}, names = [];
+    SAMPLE.cards.forEach(function (x) { if (!byDeck[x[0]]) { byDeck[x[0]] = []; names.push(x[0]); } byDeck[x[0]].push(x); });
+    names.forEach(function (n) {
+      var t = makeDeckTab_(n);
+      var rows = byDeck[n].map(function (x) { return [''].concat(x.slice(1)).concat(['yes']); });
+      t.getRange(2, 1, rows.length, DECK_HEAD.length).setValues(rows);
+    });
   }
   var r = tab_('Roster');
   if (r.getLastRow() < 2) {
@@ -85,20 +89,65 @@ function settings_() {
 }
 function newId_() { return 'c' + Utilities.getUuid().replace(/-/g, '').slice(0, 8); }
 
-/* Gives every card with a blank or repeated ID a new one. Safe to run any time. */
-function assignIds_() {
-  var c = ss_().getSheetByName('Cards');
-  if (!c || c.getLastRow() < 2) return;
-  var n = c.getLastRow() - 1, v = c.getRange(2, 1, n, 4).getValues(), seen = {}, ids = [], changed = false;
-  v.forEach(function (r) {
-    var id = String(r[0]).trim(), has = String(r[3]).trim() !== '';
-    if (!has) { ids.push([id]); if (id) seen[id] = 1; return; }
-    if (!id || seen[id]) { id = newId_(); changed = true; }
-    seen[id] = 1; ids.push([id]);
+function isDeckName_(n) { return RESERVED.indexOf(String(n).toLowerCase()) < 0 && String(n).charAt(0) !== '_'; }
+
+/* Reads row 1 of a tab into {question: 3, ...} (0-based). Header names are not case sensitive, so coaches can reorder columns. */
+function cols_(sh) {
+  if (sh.getLastColumn() < 1) return {};
+  var out = {};
+  sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].forEach(function (h, i) {
+    var k = String(h).trim().toLowerCase(); if (k === 'position') k = 'positions'; if (k && !(k in out)) out[k] = i;
   });
-  if (changed) c.getRange(2, 1, n, 1).setValues(ids);
+  return out;
 }
-function onEdit(e) { try { if (e.range.getSheet().getName() === 'Cards') assignIds_(); } catch (x) {} }
+
+/* Every tab that looks like a deck (has a Question column). Tab order = deck order. */
+function allDeckSheets_(includeHidden) {
+  return ss_().getSheets().filter(function (sh) {
+    if (!isDeckName_(sh.getName())) return false;
+    if (!includeHidden && sh.isSheetHidden()) return false;
+    return 'question' in cols_(sh);
+  });
+}
+
+function makeDeckTab_(name) {
+  var t = ss_().insertSheet(name);
+  t.getRange(1, 1, 1, DECK_HEAD.length).setValues([DECK_HEAD]).setFontWeight('bold');
+  t.setFrozenRows(1);
+  [70, 90, 380, 200, 160, 160, 160, 320, 200, 60].forEach(function (w, i) { t.setColumnWidth(i + 1, w); });
+  t.getRange(1, 1).setNote('Leave ID blank on new rows. The app fills it in. To reset progress on a card, clear its ID.');
+  t.getRange(1, 2).setNote('ALL, or a comma list like WR, TE. Blank means ALL.');
+  return t;
+}
+
+function newDeckTab() {
+  var ui = SpreadsheetApp.getUi();
+  var res = ui.prompt('New deck tab', 'Deck name (this is what players see), for example "Week 10 vs Guthrie":', ui.ButtonSet.OK_CANCEL);
+  if (res.getSelectedButton() !== ui.Button.OK) return;
+  var n = res.getResponseText().trim();
+  if (!n || !isDeckName_(n)) { ui.alert('Pick a different name. That one is reserved or empty.'); return; }
+  if (ss_().getSheetByName(n)) { ui.alert('A tab with that name already exists.'); return; }
+  ss_().setActiveSheet(makeDeckTab_(n));
+}
+
+/* Gives every card with a blank or repeated ID a new one, across all deck tabs. Safe to run any time. */
+function assignIds_() {
+  var seen = {};
+  allDeckSheets_(true).forEach(function (sh) {
+    var c = cols_(sh);
+    if (!('id' in c)) { sh.insertColumnBefore(1); sh.getRange(1, 1).setValue('ID'); c = cols_(sh); }
+    var n = sh.getLastRow() - 1; if (n < 1) return;
+    var width = sh.getLastColumn(), v = sh.getRange(2, 1, n, width).getValues(), ids = [], changed = false;
+    v.forEach(function (r) {
+      var id = String(r[c.id]).trim(), has = String(r[c.question]).trim() !== '';
+      if (!has) { ids.push([id]); if (id) seen[id] = 1; return; }
+      if (!id || seen[id]) { id = newId_(); changed = true; }
+      seen[id] = 1; ids.push([id]);
+    });
+    if (changed) sh.getRange(2, c.id + 1, n, 1).setValues(ids);
+  });
+}
+function onEdit(e) { try { if (isDeckName_(e.range.getSheet().getName())) assignIds_(); } catch (x) {} }
 
 function split_(s) { return String(s || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean); }
 function yes_(v) { v = String(v == null ? '' : v).trim().toLowerCase(); return v === '' || ['yes', 'y', 'true', '1', 'x'].indexOf(v) > -1; }
@@ -106,16 +155,23 @@ function yes_(v) { v = String(v == null ? '' : v).trim().toLowerCase(); return v
 function config_() {
   var lock = LockService.getScriptLock(); lock.waitLock(20000);
   try { assignIds_(); } finally { lock.releaseLock(); }
-  var set = settings_(), c = ss_().getSheetByName('Cards');
-  if (!c || c.getLastRow() < 2) return { error: 'Cards tab is empty. Run setupSheet.' };
-  var cards = c.getRange(2, 1, c.getLastRow() - 1, CARD_HEAD.length).getValues().filter(function (r) {
-    return String(r[3]).trim() && (String(r[4]).trim() || String(r[8]).trim()) && yes_(r[10]);
-  }).map(function (r) {
-    if (!String(r[4]).trim()) { r[4] = r[8]; r[8] = ''; }   /* blank Answer: show the Explanation as the answer */
-    return { id: String(r[0]), deck: String(r[1] || 'General').trim(), pos: split_(r[2]).length ? split_(r[2]) : ['ALL'],
-      q: String(r[3]), a: String(r[4]), wrong: [r[5], r[6], r[7]].map(String).filter(function (x) { return x.trim(); }),
-      back: String(r[8] || ''), img: String(r[9] || '') };
+  var set = settings_(), cards = [];
+  allDeckSheets_(false).forEach(function (sh) {
+    if (sh.getLastRow() < 2) return;
+    var c = cols_(sh), g = function (r, k) { return k in c ? r[c[k]] : ''; };
+    sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getValues().forEach(function (r) {
+      var q = String(g(r, 'question')).trim(), a = String(g(r, 'answer')).trim(), back = String(g(r, 'explanation') || '');
+      if (!a && back.trim()) { a = back.trim(); back = ''; }   /* blank Answer: show the Explanation as the answer */
+      if (!q || !a || !yes_(g(r, 'active'))) return;
+      var pos = split_(g(r, 'positions'));
+      cards.push({
+        id: String(g(r, 'id')), deck: String(g(r, 'deck') || '').trim() || sh.getName(), pos: pos.length ? pos : ['ALL'],
+        q: q, a: a, wrong: [g(r, 'wrong 1'), g(r, 'wrong 2'), g(r, 'wrong 3')].map(String).filter(function (x) { return x.trim(); }),
+        back: back, img: String(g(r, 'image') || '')
+      });
+    });
   });
+  if (!cards.length) return { error: 'No cards found. Add a deck tab with a Question column, or run setupSheet.' };
   return {
     name: String(set['App name'] || 'Scout Teams'), team: String(set['Team name'] || ''),
     positions: split_(set['Positions']), streak: +set['Mastery streak'] || 3, days: +set['Mastery days'] || 2, cards: cards
