@@ -298,6 +298,7 @@ function rosterList(){
   return l.map(function(r){return '<button class="pickbtn" data-act="pick" data-n="'+esc(r.name)+'" data-p="'+esc(r.pos)+'"><span>'+esc(r.name)+'</span><span class="chip">'+esc(posLabel(r.pos))+'</span></button>'}).join("");
 }
 function homeView(){
+  if(ONLINE&&lb.rows===null&&!lb.asked){lb.asked=true;setTimeout(loadBoard,0)}
   var m=derive(events);
   var h='<div class="top"><div><div class="lbl">Signed in as</div><div style="font-weight:600;font-size:19px">'+esc(me.name)+' <span class="chip">'+esc(posLabel(me.pos))+'</span></div></div><button class="link" data-act="logout">Not you?</button></div>';
   if(!ONLINE)h+='<div class="notice small">Progress is saved on this phone only. Your coach cannot see it.</div>';
@@ -322,7 +323,7 @@ function homeView(){
   if(!any)h+='<div class="empty">No cards for your position yet. Ask your coach.</div>';
   var mm=myMissed(m);
   if(mm.length)h+='<button class="deck" data-act="mine"><div class="row"><h2>My most missed</h2><span class="nums">'+mm.length+'</span></div><div class="small muted">Your weakest cards, worst miss rate first</div></button>';
-  if(drillPool(null).length)h+='<button class="deck" data-act="drillsetup"><div class="row"><h2>2 Min Drill</h2><span class="nums">Best '+(+lsGet(bestKey())||0)+'</span></div><div class="small muted">Race the clock. Right answers move the ball.</div></button>';
+  if(drillPool(null).length)h+='<button class="deck" data-act="drillsetup"><div class="row"><h2>2 Min Drill</h2><span class="nums">Best '+myBest()+'</span></div><div class="small muted">Race the clock. Right answers move the ball.</div></button>';
   h+='</div><p class="small muted" style="margin-top:18px">A card is mastered after '+MASTER.streak+' correct in a row on at least '+MASTER.days+' different days. A miss resets the streak. My most missed lists cards you have tried at least '+MISS_MIN_ME+' times and missed, worst miss rate first. 2 Min Drill answers do not count toward mastery.</p>';
   return h;
 }
@@ -437,6 +438,13 @@ var drill=null, drillTimer=null, drillAdv=null;
 var lb={rows:null,err:false,tab:"today",mine:null,set:"mix",manual:false};
 var drillMissed=[];
 function bestKey(){return NS+"best."+me.name.toLowerCase()}
+/* Best = highest of this phone's saved best and every drill of mine in the Sheet, so a new phone or cleared storage never shows 0 */
+function myBest(){
+  var b=+lsGet(bestKey())||0, n=me.name.trim().toLowerCase();
+  (lb.rows||[]).forEach(function(r){if(String(r.name).trim().toLowerCase()===n&&(+r.score||0)>b)b=+r.score});
+  if(lb.mine&&lb.mine.score>b)b=lb.mine.score;
+  return b;
+}
 function ytxt(y){y=Math.round(y);return y<=50?"Own "+y:"Opp "+(100-y)}
 function fmtClock(ms){var s=Math.ceil(Math.max(0,ms)/1000);return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
 function drillStop(){if(drillTimer){clearInterval(drillTimer);drillTimer=null}if(drillAdv){clearTimeout(drillAdv);drillAdv=null}}
@@ -450,7 +458,7 @@ function loadBoard(){
   lb.err=false;
   getJSON({action:"leaderboard"}).then(function(r){
     if(!Array.isArray(r))throw new Error("no board");
-    lb.rows=r;if((view==="drill"&&drill&&drill.phase!=="play")||view==="coach")render();
+    lb.rows=r;if((view==="drill"&&drill&&drill.phase!=="play")||view==="coach"||view==="home")render();
   }).catch(function(){lb.err=true;if(lb.rows===null)lb.rows=[];if((view==="drill"&&drill&&drill.phase!=="play")||view==="coach")render()});
 }
 function boardRows(){
@@ -519,7 +527,7 @@ function drillTick(){
 }
 function drillEnd(){
   drillStop();
-  var best=+lsGet(bestKey())||0, nb=drill.ans>0&&drill.score>best;
+  var best=myBest(), nb=drill.ans>0&&drill.score>best;
   if(nb)lsSet(bestKey(),String(drill.score));
   drill.phase="end";drill.best=nb?drill.score:best;drill.newBest=nb;
   if(drill.ans>0){
@@ -563,7 +571,7 @@ function drillAdvance(){
 function drillView(){
   var D=drill, h="";
   if(D.phase==="setup"){
-    h+='<div class="top"><button class="link" data-act="home">‹ Decks</button><span class="nums">Best '+(+lsGet(bestKey())||0)+'</span></div><h1>2 Min Drill</h1>';
+    h+='<div class="top"><button class="link" data-act="home">‹ Decks</button><span class="nums">Best '+myBest()+'</span></div><h1>2 Min Drill</h1>';
     h+='<p class="muted" style="margin:8px 0 14px">Two minutes on the clock. A right answer moves the ball 8 yards, 12 on a streak of 3, 16 on a streak of 5. Reach the goal line for a touchdown (+20) and restart from your own 25. A miss ends your streak. Only multiple choice cards are used. Drill answers do not count toward mastery.</p>';
     if(D.err)h+='<div class="notice">'+esc(D.err)+'</div>';
     h+='<div class="panel"><div class="lbl" style="margin-bottom:10px">Decks to pull from</div><div class="stack">';
