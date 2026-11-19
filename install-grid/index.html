@@ -91,6 +91,8 @@ table.mx{border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-
 .mx td button{display:block;width:100%;min-width:52px;height:38px;border:0;background:transparent;cursor:pointer;font-weight:700}
 .mx td button:hover{outline:2px solid var(--ink);outline-offset:-2px}
 .mx td button:disabled{cursor:default;color:var(--soft);font-weight:400;opacity:.5}
+.gctl{display:flex;flex-wrap:wrap;gap:12px 16px}.gctl label{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--soft);font-weight:600}.gctl select{padding:6px 8px;border:1.5px solid var(--line);border-radius:8px;background:var(--panel)}
+.angles{display:inline-flex;border:1.5px solid var(--line);border-radius:8px;overflow:hidden;align-self:flex-start}.angles button{border:0;background:var(--panel2);padding:4px 12px;font-weight:700;font-size:13px;cursor:pointer}.angles button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
 .mxnote{font-size:13px;color:var(--soft);margin:0}
 
 #ftoggle{display:none}
@@ -114,7 +116,7 @@ table.mx{border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-
   <header style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
     <p class="meta" id="hmeta">Deer Creek Football</p>
     <h1>Install Grid</h1>
-    <p class="sub">Filter by play, concept, formation, personnel or tag and watch the clips. Tap a clip to play it. The Grid tab shows formation by concept; tap a number to jump to those clips.</p>
+    <p class="sub">Filter by play, concept, formation, personnel or tag and watch the clips. Tap a clip to play it. The Grid tab counts clips by any two fields you pick; tap a number to jump to those clips.</p>
     <div id="samplebanner" class="banner" hidden>Sample data: these are placeholder clips, not real film.</div>
   </header>
 
@@ -135,7 +137,8 @@ table.mx{border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-
     </aside>
     <section id="clipsView" class="groups" aria-label="Clips"></section>
     <section id="gridView" hidden style="display:flex;flex-direction:column;gap:10px;min-width:0" aria-label="Formation by concept grid">
-      <p class="mxnote">Rows are formations, columns are concepts. Numbers are clip counts under your current filters.</p>
+      <div class="gctl" id="gridCtl"></div>
+      <p class="mxnote">Numbers are clip counts under your current filters. Tap a number to see those clips.</p>
       <div class="mwrap" id="mxwrap"></div>
     </section>
   </div>
@@ -146,7 +149,7 @@ table.mx{border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-
 <script>
 (() => {
 'use strict';
-const FACETS = [['concept','Concept'],['play','Play (one-word call)'],['formation','Formation'],['personnel','Personnel'],['tag','Tag'],['game','Game']];
+const FACETS = [['concept','Concept'],['play','Play'],['formation','Formation'],['personnel','Personnel'],['tag','Tag'],['angle','Angle'],['game','Season / source']];
 const $ = s => document.querySelector(s);
 const h = (tag, attrs, ...kids) => {
   const e = document.createElement(tag);
@@ -168,9 +171,9 @@ async function decrypt(pass, p) {
 }
 
 let DATA, CLIPS = [];
-const S = { sel: Object.fromEntries(FACETS.map(([k]) => [k, new Set()])), q: '', tagMode: 'all', view: 'clips' };
+const S = { sel: Object.fromEntries(FACETS.map(([k]) => [k, new Set()])), q: '', tagMode: 'all', view: 'clips', gx: null, gy: null };
 
-const vals = (c, f) => f === 'tag' ? (c.tags || []) : (c[f] ? [String(c[f])] : []);
+const vals = (c, f) => f === 'tag' ? (c.tags || []) : f === 'angle' ? c.angles.map(a => a.label) : (c[f] ? [String(c[f])] : []);
 function matches(c, skip) {
   for (const [f] of FACETS) {
     if (f === skip) continue;
@@ -180,7 +183,7 @@ function matches(c, skip) {
     else if (!v.some(x => sel.has(x))) return false;
   }
   if (S.q) {
-    const hay = [c.play, c.concept, c.formation, c.personnel, c.game, c.note, ...(c.tags || [])].join(' ').toLowerCase();
+    const hay = [c.title, c.play, c.concept, c.formation, c.personnel, c.game, c.note, ...(c.tags || [])].join(' ').toLowerCase();
     for (const t of S.q.toLowerCase().split(/\s+/).filter(Boolean)) if (!hay.includes(t)) return false;
   }
   return true;
@@ -193,12 +196,15 @@ function saveHash() {
   if (S.q) p.set('q', S.q);
   if (S.tagMode !== 'all') p.set('mode', S.tagMode);
   if (S.view !== 'clips') p.set('view', S.view);
+  if (S.gx) p.set('gx', S.gx);
+  if (S.gy) p.set('gy', S.gy);
   history.replaceState(null, '', location.pathname + (p.toString() ? '#' + p : ''));
 }
 function loadHash() {
   const p = new URLSearchParams(location.hash.slice(1));
   for (const [f] of FACETS) if (p.get(f)) S.sel[f] = new Set(p.get(f).split('|'));
   S.q = p.get('q') || ''; S.tagMode = p.get('mode') === 'any' ? 'any' : 'all'; S.view = p.get('view') === 'grid' ? 'grid' : 'clips';
+  const ok = k => FACETS.some(([f]) => f === k); S.gx = ok(p.get('gx')) ? p.get('gx') : null; S.gy = ok(p.get('gy')) ? p.get('gy') : null;
   $('#q').value = S.q;
 }
 
@@ -211,9 +217,10 @@ function renderFacets() {
     for (const c of CLIPS) if (matches(c, f)) for (const v of vals(c, f)) counts.set(v, (counts.get(v) || 0) + 1);
     for (const s of S.sel[f]) if (!counts.has(s)) counts.set(s, 0);
     if (!counts.size) continue;
+    if (f === 'angle' && [...counts.keys()].every(k => k === 'Clip')) continue;
     const opts = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], undefined, { numeric: true }));
     const d = h('details', { class: 'facet', 'data-f': f });
-    d.open = openState[f] ?? (['concept', 'formation', 'tag'].includes(f) || S.sel[f].size > 0);
+    d.open = S.sel[f].size > 0 || (openState[f] ?? ['concept', 'formation', 'tag'].includes(f));
     d.append(h('summary', {}, h('span', {}, label), h('span', { class: 'sel' }, S.sel[f].size ? S.sel[f].size + ' on' : '')));
     if (f === 'tag') d.append(h('div', { class: 'mode' }, 'Match', h('select', { 'aria-label': 'Tag match mode', onchange: e => { S.tagMode = e.target.value; update(); } },
       h('option', { value: 'all', selected: S.tagMode === 'all' }, 'all selected tags'), h('option', { value: 'any', selected: S.tagMode === 'any' }, 'any selected tag'))));
@@ -227,25 +234,40 @@ function renderFacets() {
 }
 
 const driveId = id => encodeURIComponent(id);
+const embedUrl = id => 'https://drive.google.com/file/d/' + driveId(id) + '/preview';
+const viewUrl = id => 'https://drive.google.com/file/d/' + driveId(id) + '/view';
 function card(c) {
-  const title = c.play || c.concept || 'Clip';
-  const vid = h('button', { class: 'vid', type: 'button', 'aria-label': 'Play clip: ' + [title, c.formation].filter(Boolean).join(', ') },
-    h('div', { class: 'nothumb' }, 'Tap to play'),
-    h('span', { class: 'play' }, h('i')));
-  const img = h('img', { alt: '', loading: 'lazy', referrerpolicy: 'no-referrer', src: 'https://drive.google.com/thumbnail?id=' + driveId(c.id) + '&sz=w640' });
-  img.addEventListener('error', () => img.remove());
-  vid.prepend(img);
-  const el = h('article', { class: 'clip' }, vid,
+  const title = c.title || c.play || c.concept || 'Clip';
+  let idx = 0, playing = false;
+  const media = h('div', { class: 'media' });
+  const link = h('a', { target: '_blank', rel: 'noopener noreferrer' }, 'Open in Drive');
+  const bar = h('div', { class: 'angles', role: 'group', 'aria-label': 'Camera angle' });
+  const show = () => {
+    const a = c.angles[idx];
+    link.href = viewUrl(a.id);
+    if (playing) {
+      media.replaceChildren(h('iframe', { src: embedUrl(a.id), allow: 'autoplay; fullscreen', allowfullscreen: true, title: 'Clip: ' + title + ' (' + a.label + ')', loading: 'lazy' }));
+    } else {
+      const vid = h('button', { class: 'vid', type: 'button', 'aria-label': 'Play clip: ' + title + ', ' + a.label },
+        h('div', { class: 'nothumb' }, 'Tap to play'), h('span', { class: 'play' }, h('i')));
+      const img = h('img', { alt: '', loading: 'lazy', referrerpolicy: 'no-referrer', src: 'https://drive.google.com/thumbnail?id=' + driveId(a.id) + '&sz=w640' });
+      img.addEventListener('error', () => img.remove());
+      vid.prepend(img);
+      vid.addEventListener('click', () => { playing = true; show(); });
+      media.replaceChildren(vid);
+    }
+    bar.querySelectorAll('button').forEach((b, i) => b.setAttribute('aria-pressed', String(i === idx)));
+  };
+  if (c.angles.length > 1) c.angles.forEach((a, i) => bar.append(h('button', { type: 'button', onclick: () => { idx = i; show(); } }, a.label)));
+  const el = h('article', { class: 'clip' }, media,
     h('div', { class: 'info' },
-      h('h3', {}, title, c.concept && c.concept !== title ? ' · ' + c.concept : ''),
-      h('div', { class: 'line' }, [c.formation, c.personnel && c.personnel + ' personnel', c.game].filter(Boolean).join(' · ')),
+      h('h3', {}, title),
+      h('div', { class: 'line' }, [c.concept, c.formation, c.personnel && c.personnel + ' personnel', c.game].filter(Boolean).join(' · ')),
       (c.tags && c.tags.length) ? h('div', { class: 'tags' }, c.tags.map(t => h('b', {}, t))) : null,
+      c.angles.length > 1 ? bar : null,
       c.note ? h('div', { class: 'note' }, c.note) : null,
-      h('a', { href: 'https://drive.google.com/file/d/' + driveId(c.id) + '/view', target: '_blank', rel: 'noopener noreferrer' }, 'Open in Drive')));
-  vid.addEventListener('click', () => {
-    const f = h('iframe', { src: 'https://drive.google.com/file/d/' + driveId(c.id) + '/preview', allow: 'autoplay; fullscreen', allowfullscreen: true, title: 'Clip: ' + title, loading: 'lazy' });
-    vid.replaceWith(f);
-  });
+      link));
+  show();
   return el;
 }
 
@@ -263,20 +285,28 @@ function renderClips(list) {
 }
 
 function renderGrid(list) {
-  const rows = [...new Set(list.map(c => c.formation).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-  const cols = [...new Set(list.map(c => c.concept).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const have = f => CLIPS.some(c => vals(c, f).length);
+  const ctl = $('#gridCtl'); ctl.replaceChildren();
+  const sel = (label, key) => h('label', {}, label, h('select', { onchange: e => { S[key] = e.target.value; update(); } },
+    FACETS.filter(([f]) => have(f) && !(f === 'angle' && CLIPS.every(c => c.angles.length === 1 && c.angles[0].label === 'Clip'))).map(([f, l]) => h('option', { value: f, selected: S[key] === f }, l))));
+  ctl.append(sel('Rows', 'gx'), sel('Columns', 'gy'));
+  const rf = S.gx, cf = S.gy;
+  const rows = new Set(), cols = new Set(), n = new Map(); let max = 1;
+  for (const c of list) for (const r of vals(c, rf)) for (const k of vals(c, cf)) {
+    rows.add(r); cols.add(k); const key = r + '\u0000' + k; const v = (n.get(key) || 0) + 1; n.set(key, v); max = Math.max(max, v);
+  }
+  const R = [...rows].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), C = [...cols].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   const host = $('#mxwrap'); host.replaceChildren();
-  if (!rows.length || !cols.length) { host.append(h('div', { class: 'empty' }, 'Nothing to show under these filters.')); return; }
-  const n = new Map(); let max = 1;
-  for (const c of list) if (c.formation && c.concept) { const k = c.formation + '\u0000' + c.concept; const v = (n.get(k) || 0) + 1; n.set(k, v); max = Math.max(max, v); }
+  if (!R.length || !C.length) { host.append(h('div', { class: 'empty' }, 'Nothing to show under these filters.')); return; }
+  const lab = f => (FACETS.find(x => x[0] === f) || [, f])[1];
   const t = h('table', { class: 'mx' });
-  t.append(h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, 'Formation'), cols.map(c => h('th', { scope: 'col' }, c)))));
+  t.append(h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, lab(rf) + ' ↓ / ' + lab(cf) + ' →'), C.map(c => h('th', { scope: 'col' }, c)))));
   const tb = h('tbody');
-  for (const r of rows) {
-    tb.append(h('tr', {}, h('th', { scope: 'row' }, r), cols.map(c => {
+  for (const r of R) {
+    tb.append(h('tr', {}, h('th', { scope: 'row' }, r), C.map(c => {
       const v = n.get(r + '\u0000' + c) || 0;
       const btn = h('button', { type: 'button', disabled: !v, 'aria-label': v + ' clips, ' + r + ', ' + c, onclick: () => {
-        S.sel.formation = new Set([r]); S.sel.concept = new Set([c]); S.view = 'clips'; update(); window.scrollTo({ top: 0 }); } }, v ? String(v) : '·');
+        S.sel[rf] = new Set([r]); S.sel[cf] = new Set([c]); S.view = 'clips'; update(); window.scrollTo({ top: 0 }); } }, v ? String(v) : '·');
       const td = h('td', {}, btn);
       if (v) td.style.background = 'color-mix(in srgb, var(--accent) ' + Math.round(14 + 66 * v / max) + '%, var(--panel))';
       return td;
@@ -296,11 +326,15 @@ function update() {
 }
 
 function start(data) {
-  DATA = data; CLIPS = (data.clips || []).filter(c => c && c.id);
+  DATA = data;
+  CLIPS = (data.clips || []).map(c => c && (c.angles && c.angles.length ? { ...c, angles: c.angles.filter(a => a && a.id) } : (c && c.id ? { ...c, angles: [{ label: 'Clip', id: c.id }] } : null))).filter(c => c && c.angles.length);
   $('#gate').hidden = true; $('#app').hidden = false;
   if (data.title) $('#hmeta').textContent = data.title;
   $('#samplebanner').hidden = !data.sample;
   loadHash();
+  const hasV = f => CLIPS.some(c => vals(c, f).length), distinct = f => new Set(CLIPS.flatMap(c => vals(c, f))).size;
+  if (!S.gx) S.gx = hasV('formation') ? 'formation' : 'play';
+  if (!S.gy) S.gy = distinct('concept') > 1 ? 'concept' : (S.gx === 'play' ? (hasV('game') ? 'game' : 'concept') : 'play');
   $('#q').addEventListener('input', e => { S.q = e.target.value.trim(); update(); });
   $('#clear').addEventListener('click', () => { for (const [f] of FACETS) S.sel[f].clear(); S.q = ''; $('#q').value = ''; update(); });
   document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => { S.view = b.dataset.view; update(); }));
