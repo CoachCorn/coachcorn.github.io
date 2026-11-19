@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Film Room | Deer Creek Offense</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;600;700&display=swap">
+<style>
+:root{--bg:#ECF0EC;--panel:#FFFFFF;--panel2:#F4F7F4;--ink:#13201A;--soft:#51635A;--line:#D2DBD4;--accent:#1D6B44;--accent-ink:#FFFFFF;--miss:#C9852A;--bad:#B5432F;--track:#E3E9E4;--display:'Barlow Condensed','Arial Narrow',Arial,sans-serif;--body:'Public Sans',system-ui,Arial,sans-serif}
+@media (prefers-color-scheme:dark){:root{--bg:#0E1611;--panel:#16221B;--panel2:#1C2A22;--ink:#E8EFEA;--soft:#9DB0A5;--line:#2B3C32;--accent:#5CC38A;--accent-ink:#0E1611;--miss:#E8A93A;--bad:#E07A62;--track:#24362B;color-scheme:dark}}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45;padding-inline:clamp(14px,4vw,48px);padding-block:28px 56px}
+.wrap{max-width:1400px;margin-inline:auto;display:flex;flex-direction:column;gap:22px}
+h1{font-family:var(--display);font-size:clamp(38px,7vw,60px);line-height:1;font-weight:700;text-transform:uppercase}
+h2{font-family:var(--display);font-size:26px;text-transform:uppercase;font-weight:700;line-height:1.1}
+h3{font-family:var(--display);font-size:20px;text-transform:uppercase;font-weight:700}
+.meta{font-size:13px;color:var(--soft);letter-spacing:.06em;text-transform:uppercase;font-weight:600}
+.sub{color:var(--soft);max-width:75ch}
+.bar{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center}
+.bar label{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--soft)}
+select,button{font:600 15px var(--body);padding:8px 12px;border:1.5px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;cursor:pointer}
+select:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.tabs{display:flex;gap:6px;border-bottom:2px solid var(--line);flex-wrap:wrap}
+.tabs button{border:none;border-radius:8px 8px 0 0;background:transparent;font-family:var(--display);font-size:20px;text-transform:uppercase;letter-spacing:.02em;padding:10px 16px;color:var(--soft)}
+.tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+.seg{display:inline-flex;border:1.5px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:none;border-radius:0}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:12px}
+.tile{background:var(--panel);border:1.5px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.tile .k{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--soft)}
+.tile .v{font-family:var(--display);font-size:36px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.tile .d{font-size:13px;color:var(--soft)}
+.hit{color:var(--accent)} .miss{color:var(--miss)} .badc{color:var(--bad)}
+.panel{background:var(--panel);border:1.5px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:16px}
+.tablewrap{overflow-x:auto;border:1.5px solid var(--line);border-radius:10px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--soft);background:var(--panel2);position:sticky;top:0}
+td.n,th.n{text-align:right}
+tr.flag td{background:color-mix(in srgb,var(--miss) 12%,transparent)}
+tr.half td{background:var(--panel2);font-weight:700;font-family:var(--display);text-transform:uppercase;font-size:15px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:700;border:1.5px solid var(--line)}
+.pill.td{border-color:var(--accent);color:var(--accent)} .pill.bad{border-color:var(--bad);color:var(--bad)}
+.score{display:flex;gap:18px;align-items:baseline;flex-wrap:wrap}
+.score .big{font-family:var(--display);font-size:clamp(48px,9vw,84px);font-weight:700;line-height:1}
+.why{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px}
+.why .panel .num{font-family:var(--display);font-size:28px;font-weight:700;color:var(--bad)}
+.clips{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:14px}
+.clip{background:var(--panel);border:1.5px solid var(--line);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+.clip video{width:100%;aspect-ratio:16/9;background:#000;display:block}
+.clip .cap{padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.clip.good{border-color:var(--accent)} .clip.bad{border-color:var(--bad)}
+.notes{font-size:13px;color:var(--soft);display:flex;flex-direction:column;gap:4px;padding-left:18px}
+.notes li{list-style:disc}
+.badge{font:700 11px var(--body);letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:6px;background:var(--panel2);border:1.5px solid var(--line);color:var(--soft)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:8px">
+    <div class="meta">Deer Creek Football · Offense <span id="viewBadge" class="badge"></span></div>
+    <h1>Film Room</h1>
+    <div class="bar"><label>Game <select id="game"></select></label></div>
+  </header>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="result" aria-selected="true">Game Result &amp; Why</button>
+    <button role="tab" data-tab="stats" aria-selected="false">Stats</button>
+    <button role="tab" data-tab="tagger" aria-selected="false">Film Tagger</button>
+  </nav>
+  <main id="out" aria-live="polite"></main>
+</div>
+<script>
+const $=s=>document.querySelector(s);
+let G=null, TAB='result', HALF='full', FILTER={half:'all',type:'all',flagged:false};
+const pct=(n,d)=>d?Math.round(100*n/d):0;
+const yl=v=>v===''||v==null?'':(v>0?'+'+v:String(v));
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+async function init(){
+  const games=await (await fetch('games/index.json')).json();
+  $('#game').innerHTML=games.map(g=>`<option value="${g.id}">${esc(g.label)}</option>`).join('');
+  const pick=new URLSearchParams(location.search).get('game');
+  if(pick&&games.some(g=>g.id===pick)) $('#game').value=pick;
+  $('#game').onchange=()=>load($('#game').value);
+  document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{TAB=b.dataset.tab;document.querySelectorAll('.tabs button').forEach(x=>x.setAttribute('aria-selected',x===b));render()});
+  load($('#game').value);
+}
+async function load(id){G=await (await fetch(`games/${id}.json`)).json();$('#viewBadge').textContent=G.view==='staff'?'Staff view':'Program view';render()}
+function render(){ $('#out').innerHTML={result:renderResult,stats:renderStats,tagger:renderTagger}[TAB](); wire(); }
+function wire(){
+  document.querySelectorAll('[data-half]').forEach(b=>b.onclick=()=>{HALF=b.dataset.half;render()});
+  const f=k=>{const el=$('#f_'+k); if(el) el.onchange=()=>{FILTER[k]=el.type==='checkbox'?el.checked:el.value;render()}};
+  ['half','type','flagged'].forEach(f);
+}
+function tile(k,v,d,cls=''){return `<div class="tile"><span class="k">${k}</span><span class="v ${cls}">${v}</span>${d?`<span class="d">${d}</span>`:''}</div>`}
+function renderResult(){
+  const f=G.final, s=G.stats.full;
+  const drives=G.drives.map(d=>`<tr><td class="n">${d.n}</td><td>${d.half===1?'1st':'2nd'}</td><td class="n">${yl(d.start)}</td><td class="n">${d.plays}</td><td class="n">${d.yards}</td><td>${d.result==='TD'?'<span class="pill td">TD</span>':(d.result==='Punt'||d.result==='Downs')?`<span class="pill bad">${d.result}</span>`:esc(d.result)}</td></tr>`).join('');
+  return `<section style="display:flex;flex-direction:column;gap:20px">
+  <div class="panel"><div class="score"><span class="big">${f.result==='W'?'W':'L'} ${f.us}-${f.them}</span><h2>${esc(G.title)}</h2></div><p class="sub">${esc(G.summary)}</p>
+  <div class="bar">${G.scoreTimeline.map(t=>`<span class="badge">${esc(t.when)}: DC ${t.us}, ${esc(G.opponent)} ${t.them}</span>`).join('')}</div></div>
+  <div class="tiles">${tile('Efficiency',pct(s.effN,s.effD)+'%','Goal '+G.goals.eff+'%',pct(s.effN,s.effD)>=G.goals.eff?'hit':'miss')}${tile('Explosive',pct(s.explN,s.explD)+'%','Goal '+G.goals.expl+'%',pct(s.explN,s.explD)>=G.goals.expl?'hit':'miss')}${tile('3rd down',s.third)}${tile('Yards / play',s.ypp)}${tile('Sacks',s.passing.sacks,s.passing.sackYds+' yds')}${tile('TD drives',G.drives.filter(d=>d.result==='TD').length+' / '+G.drives.length)}</div>
+  <h2>Why</h2><div class="why">${G.why.map(w=>`<div class="panel"><h3>${esc(w.head)}</h3><div class="num">${esc(w.num)}</div><p>${esc(w.body)}</p></div>`).join('')}</div>
+  <h2>Plays that turned the tide</h2><div class="clips">${G.turningPoints.map(t=>`<div class="clip ${t.tone}"><video controls preload="none" playsinline poster="clips/${G.id}/${t.poster}" src="clips/${G.id}/${t.file}"></video><div class="cap"><strong>${esc(t.title)}</strong><span class="meta">Clip ${t.clip} · ${esc(t.when)}</span></div></div>`).join('')}</div>
+  <h2>Drive chart</h2><div class="tablewrap"><table><thead><tr><th class="n">#</th><th>Half</th><th class="n">Start</th><th class="n">Plays</th><th class="n">Yds</th><th>Result</th></tr></thead><tbody>${drives}</tbody></table></div>
+  <ul class="notes">${G.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul></section>`;
+}
+function renderStats(){
+  const s=G.stats[HALF]; const p=s.passing;
+  const seg=['h1','h2','full'].map(h=>`<button data-half="${h}" aria-pressed="${HALF===h}">${{h1:'1st half',h2:'2nd half',full:'Full game'}[h]}</button>`).join('');
+  const rush=s.rushing.map(r=>`<tr><td>#${esc(r.num)} ${esc(r.name)}</td><td class="n">${r.car}</td><td class="n">${r.yds}</td><td class="n">${r.car?(r.yds/r.car).toFixed(1):''}</td><td class="n">${r.long??''}</td></tr>`).join('');
+  const rec=s.receiving.map(r=>`<tr><td>${r.num==='?'?'':'#'+esc(r.num)+' '}${esc(r.name)}</td><td class="n">${r.rec}</td><td class="n">${r.yds}</td><td class="n">${r.long??''}</td><td class="n">${r.td||''}</td></tr>`).join('');
+  const sk=s.sackList.map(x=>`<tr><td>Clip ${x.clip}</td><td>#${x.qb} ${esc(x.name)}</td><td class="n">${x.yds}</td></tr>`).join('');
+  const e=pct(s.effN,s.effD), x=pct(s.explN,s.explD);
+  return `<section style="display:flex;flex-direction:column;gap:20px"><div class="seg">${seg}</div>
+  <div class="tiles">${tile('Efficiency',e+'%',`${s.effN}/${s.effD} · goal ${G.goals.eff}%`,e>=G.goals.eff?'hit':'miss')}${tile('Explosive',x+'%',`${s.explN}/${s.explD} · goal ${G.goals.expl}%`,x>=G.goals.expl?'hit':'miss')}${tile('Snaps',s.snaps)}${tile('Yards',s.yards,s.ypp+' per play')}${tile('Run',s.runs,s.runYds+' yds')}${tile('Pass calls',s.passCalls,s.passCallYds+' yds')}${tile('3rd down',s.third)}${tile('4th down',s.fourth)}${tile('Penalties',s.penalties,`DC ${s.penYdsAgainst} · opp +${s.penYdsFor}`)}</div>
+  <div class="grid2">
+   <div class="panel"><h3>Passing (team)</h3><p style="font-family:var(--display);font-size:30px;font-weight:700">${p.cmp}/${p.att}, ${p.yds} yds, ${p.td} TD</p><p class="sub">Sacked ${p.sacks} times for ${p.sackYds} yds. Passer per throw isn't recorded in the almanac.</p>${sk?`<div class="tablewrap"><table><thead><tr><th>Sack</th><th>QB</th><th class="n">Yds</th></tr></thead><tbody>${sk}</tbody></table></div>`:''}</div>
+   <div class="panel"><h3>Rushing</h3><div class="tablewrap"><table><thead><tr><th>Player</th><th class="n">Car</th><th class="n">Yds</th><th class="n">Avg</th><th class="n">Long</th></tr></thead><tbody>${rush}</tbody></table></div><p class="sub">Includes QB keeps and scrambles.</p></div>
+   <div class="panel"><h3>Receiving</h3><div class="tablewrap"><table><thead><tr><th>Player</th><th class="n">Rec</th><th class="n">Yds</th><th class="n">Long</th><th class="n">TD</th></tr></thead><tbody>${rec}</tbody></table></div><p class="sub">Includes RPOs that were thrown.</p></div>
+  </div></section>`;
+}
+function renderTagger(){
+  const staff=G.view==='staff';
+  let P=G.plays.filter(p=>(FILTER.half==='all'||String(p.half)===FILTER.half)&&(FILTER.type==='all'||p.type===FILTER.type||(FILTER.type==='other'&&!p.type))&&(!FILTER.flagged||(p.flags&&p.flags.length)));
+  const nflag=staff?G.plays.filter(p=>p.flags&&p.flags.length).length:0;
+  let rows='',lastHalf=null;
+  for(const p of P){
+    if(p.half!==lastHalf){rows+=`<tr class="half"><td colspan="${staff?14:11}">${p.half===1?'1st half':'2nd half'}</td></tr>`;lastHalf=p.half}
+    const fl=staff&&p.flags&&p.flags.length;
+    rows+=`<tr class="${fl?'flag':''}"><td class="n">${p.clip}</td>${staff?`<td class="n">${p.hudl}</td>`:''}<td class="n">${yl(p.yl)}</td><td>${esc(p.hash)}</td><td class="n">${p.dn??''}</td><td class="n">${p.dist??''}</td><td class="n">${p.gn??''}</td><td>${esc(p.eff)}</td><td>${p.expl==='YES'?'<span class="pill td">YES</span>':esc(p.expl)}</td><td>${esc(p.type)}</td><td>${esc(p.result)}</td>${staff?`<td>${esc(p.call)}</td>`:''}<td>${p.player?'#'+esc(p.player)+' '+esc(p.playerName):''}</td>${staff?`<td style="white-space:normal;min-width:180px">${esc((p.flags||[]).join('; '))}</td>`:''}</tr>`;
+  }
+  const acc=G.accuracy?`<div class="panel"><h3>Tagger accuracy vs Hudl tags</h3><div class="tablewrap"><table><thead><tr><th>Field</th><th class="n">Film only</th><th class="n">Film + almanac</th></tr></thead><tbody>${[['Yard ln exact','yardExact'],['Yard ln within 1','yardWithin1'],['Hash','hash'],['Down','dn'],['Distance','dist'],['Gain within 1','gn'],['Efficient','eff'],['Explosive','expl'],['Play type','type'],['Result','result']].map(([l,k])=>`<tr><td>${l}</td><td class="n">${G.accuracy.opponentScout[k]}%</td><td class="n">${G.accuracy.fridayNight[k]}%</td></tr>`).join('')}</tbody></table></div></div>`:'';
+  return `<section style="display:flex;flex-direction:column;gap:16px">
+  <div class="bar"><label>Half <select id="f_half"><option value="all">All</option><option value="1" ${FILTER.half==='1'?'selected':''}>1st</option><option value="2" ${FILTER.half==='2'?'selected':''}>2nd</option></select></label>
+  <label>Type <select id="f_type"><option value="all">All</option>${['Run','Pass'].map(t=>`<option ${FILTER.type===t?'selected':''}>${t}</option>`).join('')}<option value="other" ${FILTER.type==='other'?'selected':''}>Penalty / admin</option></select></label>
+  ${staff?`<label><input type="checkbox" id="f_flagged" ${FILTER.flagged?'checked':''}> Flagged for review only (${nflag})</label>`:''}<span class="meta">${P.length} plays</span></div>
+  <div class="tablewrap" style="max-height:70vh"><table><thead><tr><th class="n">Clip</th>${staff?'<th class="n">Hudl</th>':''}<th class="n">Yard ln</th><th>Hash</th><th class="n">Dn</th><th class="n">Dist</th><th class="n">Gn/Ls</th><th>Eff</th><th>Expl</th><th>Type</th><th>Result</th>${staff?'<th>Call</th>':''}<th>Ball carrier / target</th>${staff?'<th>Review</th>':''}</tr></thead><tbody>${rows}</tbody></table></div>
+  ${acc}</section>`;
+}
+init().catch(e=>{$('#out').innerHTML=`<p class="sub">Couldn't load game data (${esc(e.message)}).</p>`});
+</script>
+</body>
+</html>
