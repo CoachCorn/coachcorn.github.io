@@ -1,0 +1,18 @@
+{
+  "title": "Deer Creek Football · Sample",
+  "sample": true,
+  "clips": [
+    {"id":"SAMPLE0001","play":"Cal","concept":"Cross","formation":"Spill Kong RT","personnel":"11","tags":["Boot"],"game":"Sample game A","note":"Placeholder clip."},
+    {"id":"SAMPLE0002","play":"Cal","concept":"Cross","formation":"Pour Kong LT","personnel":"11","tags":["Pinch"],"game":"Sample game A"},
+    {"id":"SAMPLE0003","play":"Cal","concept":"Cross","formation":"Spill Kong RT","personnel":"10","tags":["Solid"],"game":"Sample game B"},
+    {"id":"SAMPLE0004","play":"Bronchos","concept":"Sail","formation":"Spill Kong RT","personnel":"11","tags":["Boot"],"game":"Sample game B"},
+    {"id":"SAMPLE0005","play":"Bronchos","concept":"Sail","formation":"Pour Kong LT","personnel":"11","tags":[],"game":"Sample game A"},
+    {"id":"SAMPLE0006","play":"Sooners","concept":"Zone Insert","formation":"Spill Kong RT","personnel":"11","tags":["Tite"],"game":"Sample game A"},
+    {"id":"SAMPLE0007","play":"Sooners","concept":"Zone Insert","formation":"Pour Kong LT","personnel":"12","tags":["Tite","Solid"],"game":"Sample game B"},
+    {"id":"SAMPLE0008","play":"Texas","concept":"Buck Sweep","formation":"Spill Kong RT","personnel":"10","tags":["Outside"],"game":"Sample game B"},
+    {"id":"SAMPLE0009","play":"Houston","concept":"GT Counter","formation":"Pour Kong LT","personnel":"10","tags":["Mike"],"game":"Sample game A"},
+    {"id":"SAMPLE0010","play":"Miners","concept":"Verticals","formation":"Spill Kong RT","personnel":"11","tags":["Flip"],"game":"Sample game A"},
+    {"id":"SAMPLE0011","play":"Miners","concept":"Verticals","formation":"Pour Kong LT","personnel":"11","tags":["Flip","Boot"],"game":"Sample game B"},
+    {"id":"SAMPLE0012","play":"Aggies","concept":"Shock","formation":"Spill Kong RT","personnel":"11","tags":[],"game":"Sample game B"}
+  ]
+}

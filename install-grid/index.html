@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" href="data:,">
+<title>Install Grid</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;600;700&display=swap">
+<style>
+:root{--bg:#ECF0EC;--panel:#FFFFFF;--panel2:#F4F7F4;--ink:#13201A;--soft:#51635A;--line:#D2DBD4;--accent:#1D6B44;--accent-ink:#FFFFFF;--warn:#C9852A;--display:'Barlow Condensed','Arial Narrow',Arial,sans-serif;--body:'Public Sans',system-ui,Arial,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0E1611;--panel:#16221B;--panel2:#1C2A22;--ink:#E8EFEA;--soft:#9DB0A5;--line:#2B3C32;--accent:#5CC38A;--accent-ink:#0E1611;--warn:#E8A93A;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0E1611;--panel:#16221B;--panel2:#1C2A22;--ink:#E8EFEA;--soft:#9DB0A5;--line:#2B3C32;--accent:#5CC38A;--accent-ink:#0E1611;--warn:#E8A93A;color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45;padding-inline:clamp(16px,4vw,48px);padding-block:28px 56px}
+.wrap{max-width:1800px;margin-inline:auto;display:flex;flex-direction:column;gap:20px}
+h1{margin:0;font-family:var(--display);font-size:clamp(40px,7vw,64px);line-height:1;font-weight:700;text-transform:uppercase;text-wrap:balance}
+h2,h3{margin:0}
+.meta{margin:0;font-size:13px;color:var(--soft);letter-spacing:.06em;text-transform:uppercase;font-weight:600}
+.sub{margin:0;color:var(--soft);max-width:70ch}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.btn{font-weight:700;font-size:14px;padding:9px 14px;border-radius:8px;border:1.5px solid var(--line);background:var(--panel);cursor:pointer}
+.btn:hover{border-color:var(--ink)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.banner{background:color-mix(in srgb,var(--warn) 16%,var(--panel));border:1.5px solid var(--warn);border-radius:10px;padding:10px 14px;font-size:14px}
+
+/* gate */
+#gate{max-width:420px;margin:12vh auto 0;background:var(--panel);border:1.5px solid var(--line);border-radius:12px;padding:24px;display:flex;flex-direction:column;gap:14px}
+#gate label{font-size:14px;color:var(--soft);font-weight:600}
+#gate input{width:100%;padding:10px 12px;border:1.5px solid var(--line);background:var(--bg);border-radius:8px;font-size:16px}
+#gerr{color:#B3261E;font-size:14px;min-height:1.3em;margin:0}
+@media (prefers-color-scheme:dark){#gerr{color:#F2B8B5}}
+
+/* toolbar */
+.top{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;justify-content:space-between}
+.tabs{display:inline-flex;border:1.5px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}
+.tabs button{border:0;background:transparent;padding:9px 16px;font-weight:700;font-size:14px;cursor:pointer}
+.tabs button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.search{flex:1;min-width:200px;max-width:420px;padding:9px 12px;border:1.5px solid var(--line);border-radius:8px;background:var(--panel)}
+.count{font-weight:700;font-variant-numeric:tabular-nums}
+
+/* layout */
+.layout{display:grid;grid-template-columns:300px minmax(0,1fr);gap:20px;align-items:start}
+.filters{background:var(--panel);border:1.5px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:6px;position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto}
+.filters .fh{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.filters .fh h2{font-family:var(--display);font-size:24px;text-transform:uppercase}
+details.facet{border-top:1px solid var(--line);padding-top:6px}
+details.facet>summary{cursor:pointer;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--soft);padding:4px 0;display:flex;justify-content:space-between;gap:8px}
+details.facet>summary .sel{color:var(--accent);font-weight:700}
+.opts{display:flex;flex-wrap:wrap;gap:6px;padding:6px 0 8px;max-height:220px;overflow:auto}
+.chip{position:relative}
+.chip input{position:absolute;opacity:0;inset:0;width:100%;height:100%;margin:0;cursor:pointer}
+.chip span{display:inline-flex;gap:6px;align-items:baseline;border:1.5px solid var(--line);background:var(--panel2);border-radius:999px;padding:3px 10px;font-size:13px;font-weight:600}
+.chip span small{color:var(--soft);font-weight:600;font-variant-numeric:tabular-nums}
+.chip input:checked+span{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.chip input:checked+span small{color:inherit;opacity:.85}
+.chip input:focus-visible+span{outline:3px solid var(--accent);outline-offset:2px}
+.chip.zero span{opacity:.45}
+.mode{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--soft);padding-bottom:6px}
+.mode select{padding:3px 6px;border:1.5px solid var(--line);border-radius:6px;background:var(--panel)}
+
+/* clips */
+.groups{display:flex;flex-direction:column;gap:26px;min-width:0}
+.ghead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:4px;margin-bottom:12px}
+.ghead h2{font-family:var(--display);font-size:32px;text-transform:uppercase;line-height:1}
+.ghead span{color:var(--soft);font-size:14px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:14px}
+.clip{background:var(--panel);border:1.5px solid var(--line);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.vid{position:relative;aspect-ratio:16/9;background:#0b0f0d;display:block;width:100%;border:0;padding:0;cursor:pointer;color:#fff}
+.vid img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.vid .play{position:absolute;inset:0;display:grid;place-items:center}
+.vid .play i{width:54px;height:54px;border-radius:50%;background:rgba(0,0,0,.62);display:grid;place-items:center;border:2px solid #fff}
+.vid .play i::after{content:"";margin-left:5px;border-left:16px solid #fff;border-top:10px solid transparent;border-bottom:10px solid transparent}
+.vid .nothumb{position:absolute;left:0;right:0;bottom:8px;text-align:center;font-size:12px;color:#9fb1a7}
+.clip iframe{aspect-ratio:16/9;width:100%;border:0;display:block;background:#000}
+.info{padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px}
+.info h3{font-family:var(--display);font-size:22px;text-transform:uppercase;line-height:1.1}
+.info .line{font-size:13px;color:var(--soft)}
+.tags{display:flex;flex-wrap:wrap;gap:5px}
+.tags b{font-size:12px;border:1.5px solid var(--line);border-radius:5px;padding:0 6px;background:var(--panel2)}
+.info a{font-size:13px;font-weight:700;color:var(--accent);align-self:flex-start}
+.note{font-size:13px}
+.empty{padding:40px;text-align:center;color:var(--soft);background:var(--panel);border:1.5px dashed var(--line);border-radius:10px}
+
+/* matrix */
+.mwrap{overflow:auto;background:var(--panel);border:1.5px solid var(--line);border-radius:10px;max-height:75vh}
+table.mx{border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-nums;font-size:14px}
+.mx th,.mx td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:0;text-align:center}
+.mx thead th{position:sticky;top:0;background:var(--panel2);z-index:2;font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--soft);padding:8px 10px;white-space:nowrap}
+.mx tbody th{position:sticky;left:0;background:var(--panel2);z-index:1;text-align:left;padding:8px 12px;white-space:nowrap;font-weight:700}
+.mx thead th:first-child{left:0;z-index:3}
+.mx td button{display:block;width:100%;min-width:52px;height:38px;border:0;background:transparent;cursor:pointer;font-weight:700}
+.mx td button:hover{outline:2px solid var(--ink);outline-offset:-2px}
+.mx td button:disabled{cursor:default;color:var(--soft);font-weight:400;opacity:.5}
+.mxnote{font-size:13px;color:var(--soft);margin:0}
+
+#ftoggle{display:none}
+@media (max-width:900px){.layout{grid-template-columns:1fr}.filters{position:static;max-height:none;display:none}body.fopen .filters{display:flex}#ftoggle{display:inline-block}}
+</style></head>
+<body>
+<div class="wrap">
+
+<section id="gate" aria-labelledby="gt">
+  <p class="meta">Deer Creek Football</p>
+  <h1 id="gt" style="font-size:44px">Install Grid</h1>
+  <form id="gform" style="display:flex;flex-direction:column;gap:12px">
+    <label for="pass">Coach passcode</label>
+    <input id="pass" type="password" autocomplete="current-password" required>
+    <p id="gerr" role="alert"></p>
+    <button class="btn primary" type="submit" id="gbtn">Unlock</button>
+  </form>
+</section>
+
+<main id="app" hidden>
+  <header style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
+    <p class="meta" id="hmeta">Deer Creek Football</p>
+    <h1>Install Grid</h1>
+    <p class="sub">Filter by play, concept, formation, personnel or tag and watch the clips. Tap a clip to play it. The Grid tab shows formation by concept; tap a number to jump to those clips.</p>
+    <div id="samplebanner" class="banner" hidden>Sample data: these are placeholder clips, not real film.</div>
+  </header>
+
+  <div class="top">
+    <div class="tabs" role="group" aria-label="View">
+      <button type="button" data-view="clips" aria-pressed="true">Clips</button>
+      <button type="button" data-view="grid" aria-pressed="false">Grid</button>
+    </div>
+    <input class="search" id="q" type="search" placeholder="Search play, tag, formation, note" aria-label="Search clips">
+    <button class="btn" id="ftoggle" type="button" aria-expanded="false" aria-controls="facets">Filters</button>
+    <div class="count" id="count" aria-live="polite"></div>
+  </div>
+
+  <div class="layout" style="margin-top:20px">
+    <aside class="filters" aria-label="Filters">
+      <div class="fh"><h2>Filters</h2><button class="btn" id="clear" type="button">Clear all</button></div>
+      <div id="facets"></div>
+    </aside>
+    <section id="clipsView" class="groups" aria-label="Clips"></section>
+    <section id="gridView" hidden style="display:flex;flex-direction:column;gap:10px;min-width:0" aria-label="Formation by concept grid">
+      <p class="mxnote">Rows are formations, columns are concepts. Numbers are clip counts under your current filters.</p>
+      <div class="mwrap" id="mxwrap"></div>
+    </section>
+  </div>
+</main>
+
+</div>
+
+<script>
+(() => {
+'use strict';
+const FACETS = [['concept','Concept'],['play','Play (one-word call)'],['formation','Formation'],['personnel','Personnel'],['tag','Tag'],['game','Game']];
+const $ = s => document.querySelector(s);
+const h = (tag, attrs, ...kids) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === 'class') e.className = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of kids.flat()) if (c != null) e.append(c.nodeType ? c : document.createTextNode(c));
+  return e;
+};
+const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const store = { get(k){ try { return sessionStorage.getItem(k); } catch { return null; } }, set(k,v){ try { sessionStorage.setItem(k,v); } catch {} }, del(k){ try { sessionStorage.removeItem(k); } catch {} } };
+
+async function decrypt(pass, p) {
+  const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: b64(p.salt), iterations: p.iter, hash: 'SHA-256' }, km, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64(p.iv) }, key, b64(p.ct));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+
+let DATA, CLIPS = [];
+const S = { sel: Object.fromEntries(FACETS.map(([k]) => [k, new Set()])), q: '', tagMode: 'all', view: 'clips' };
+
+const vals = (c, f) => f === 'tag' ? (c.tags || []) : (c[f] ? [String(c[f])] : []);
+function matches(c, skip) {
+  for (const [f] of FACETS) {
+    if (f === skip) continue;
+    const sel = S.sel[f]; if (!sel.size) continue;
+    const v = vals(c, f);
+    if (f === 'tag' && S.tagMode === 'all') { for (const s of sel) if (!v.includes(s)) return false; }
+    else if (!v.some(x => sel.has(x))) return false;
+  }
+  if (S.q) {
+    const hay = [c.play, c.concept, c.formation, c.personnel, c.game, c.note, ...(c.tags || [])].join(' ').toLowerCase();
+    for (const t of S.q.toLowerCase().split(/\s+/).filter(Boolean)) if (!hay.includes(t)) return false;
+  }
+  return true;
+}
+
+/* URL hash so a coach can send a filtered view to another coach */
+function saveHash() {
+  const p = new URLSearchParams();
+  for (const [f] of FACETS) if (S.sel[f].size) p.set(f, [...S.sel[f]].join('|'));
+  if (S.q) p.set('q', S.q);
+  if (S.tagMode !== 'all') p.set('mode', S.tagMode);
+  if (S.view !== 'clips') p.set('view', S.view);
+  history.replaceState(null, '', location.pathname + (p.toString() ? '#' + p : ''));
+}
+function loadHash() {
+  const p = new URLSearchParams(location.hash.slice(1));
+  for (const [f] of FACETS) if (p.get(f)) S.sel[f] = new Set(p.get(f).split('|'));
+  S.q = p.get('q') || ''; S.tagMode = p.get('mode') === 'any' ? 'any' : 'all'; S.view = p.get('view') === 'grid' ? 'grid' : 'clips';
+  $('#q').value = S.q;
+}
+
+function renderFacets() {
+  const host = $('#facets');
+  const openState = {}; host.querySelectorAll('details').forEach(d => openState[d.dataset.f] = d.open);
+  host.replaceChildren();
+  for (const [f, label] of FACETS) {
+    const counts = new Map();
+    for (const c of CLIPS) if (matches(c, f)) for (const v of vals(c, f)) counts.set(v, (counts.get(v) || 0) + 1);
+    for (const s of S.sel[f]) if (!counts.has(s)) counts.set(s, 0);
+    if (!counts.size) continue;
+    const opts = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], undefined, { numeric: true }));
+    const d = h('details', { class: 'facet', 'data-f': f });
+    d.open = openState[f] ?? (['concept', 'formation', 'tag'].includes(f) || S.sel[f].size > 0);
+    d.append(h('summary', {}, h('span', {}, label), h('span', { class: 'sel' }, S.sel[f].size ? S.sel[f].size + ' on' : '')));
+    if (f === 'tag') d.append(h('div', { class: 'mode' }, 'Match', h('select', { 'aria-label': 'Tag match mode', onchange: e => { S.tagMode = e.target.value; update(); } },
+      h('option', { value: 'all', selected: S.tagMode === 'all' }, 'all selected tags'), h('option', { value: 'any', selected: S.tagMode === 'any' }, 'any selected tag'))));
+    const box = h('div', { class: 'opts' });
+    for (const [v, n] of opts) {
+      const cb = h('input', { type: 'checkbox', checked: S.sel[f].has(v), onchange: e => { e.target.checked ? S.sel[f].add(v) : S.sel[f].delete(v); update(); } });
+      box.append(h('label', { class: 'chip' + (n === 0 ? ' zero' : '') }, cb, h('span', {}, v, h('small', {}, String(n)))));
+    }
+    d.append(box); host.append(d);
+  }
+}
+
+const driveId = id => encodeURIComponent(id);
+function card(c) {
+  const title = c.play || c.concept || 'Clip';
+  const vid = h('button', { class: 'vid', type: 'button', 'aria-label': 'Play clip: ' + [title, c.formation].filter(Boolean).join(', ') },
+    h('div', { class: 'nothumb' }, 'Tap to play'),
+    h('span', { class: 'play' }, h('i')));
+  const img = h('img', { alt: '', loading: 'lazy', referrerpolicy: 'no-referrer', src: 'https://drive.google.com/thumbnail?id=' + driveId(c.id) + '&sz=w640' });
+  img.addEventListener('error', () => img.remove());
+  vid.prepend(img);
+  const el = h('article', { class: 'clip' }, vid,
+    h('div', { class: 'info' },
+      h('h3', {}, title, c.concept && c.concept !== title ? ' · ' + c.concept : ''),
+      h('div', { class: 'line' }, [c.formation, c.personnel && c.personnel + ' personnel', c.game].filter(Boolean).join(' · ')),
+      (c.tags && c.tags.length) ? h('div', { class: 'tags' }, c.tags.map(t => h('b', {}, t))) : null,
+      c.note ? h('div', { class: 'note' }, c.note) : null,
+      h('a', { href: 'https://drive.google.com/file/d/' + driveId(c.id) + '/view', target: '_blank', rel: 'noopener noreferrer' }, 'Open in Drive')));
+  vid.addEventListener('click', () => {
+    const f = h('iframe', { src: 'https://drive.google.com/file/d/' + driveId(c.id) + '/preview', allow: 'autoplay; fullscreen', allowfullscreen: true, title: 'Clip: ' + title, loading: 'lazy' });
+    vid.replaceWith(f);
+  });
+  return el;
+}
+
+function renderClips(list) {
+  const host = $('#clipsView'); host.replaceChildren();
+  if (!list.length) { host.append(h('div', { class: 'empty' }, 'No clips match these filters.')); return; }
+  const groups = new Map();
+  for (const c of list) { const k = c.play || c.concept || 'Other'; (groups.get(k) || groups.set(k, []).get(k)).push(c); }
+  for (const [k, arr] of [...groups].sort((a, b) => a[0].localeCompare(b[0]))) {
+    const concepts = [...new Set(arr.map(c => c.concept).filter(Boolean))].filter(x => x !== k);
+    host.append(h('section', {},
+      h('div', { class: 'ghead' }, h('h2', {}, k), h('span', {}, (concepts.length ? concepts.join(', ') + ' · ' : '') + arr.length + (arr.length === 1 ? ' clip' : ' clips'))),
+      h('div', { class: 'cards' }, arr.map(card))));
+  }
+}
+
+function renderGrid(list) {
+  const rows = [...new Set(list.map(c => c.formation).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const cols = [...new Set(list.map(c => c.concept).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const host = $('#mxwrap'); host.replaceChildren();
+  if (!rows.length || !cols.length) { host.append(h('div', { class: 'empty' }, 'Nothing to show under these filters.')); return; }
+  const n = new Map(); let max = 1;
+  for (const c of list) if (c.formation && c.concept) { const k = c.formation + '\u0000' + c.concept; const v = (n.get(k) || 0) + 1; n.set(k, v); max = Math.max(max, v); }
+  const t = h('table', { class: 'mx' });
+  t.append(h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, 'Formation'), cols.map(c => h('th', { scope: 'col' }, c)))));
+  const tb = h('tbody');
+  for (const r of rows) {
+    tb.append(h('tr', {}, h('th', { scope: 'row' }, r), cols.map(c => {
+      const v = n.get(r + '\u0000' + c) || 0;
+      const btn = h('button', { type: 'button', disabled: !v, 'aria-label': v + ' clips, ' + r + ', ' + c, onclick: () => {
+        S.sel.formation = new Set([r]); S.sel.concept = new Set([c]); S.view = 'clips'; update(); window.scrollTo({ top: 0 }); } }, v ? String(v) : '·');
+      const td = h('td', {}, btn);
+      if (v) td.style.background = 'color-mix(in srgb, var(--accent) ' + Math.round(14 + 66 * v / max) + '%, var(--panel))';
+      return td;
+    })));
+  }
+  t.append(tb); host.append(t);
+}
+
+function update() {
+  const list = CLIPS.filter(c => matches(c));
+  $('#count').textContent = list.length + ' of ' + CLIPS.length + ' clips';
+  document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === S.view)));
+  $('#clipsView').hidden = S.view !== 'clips'; $('#gridView').hidden = S.view !== 'grid';
+  renderFacets();
+  if (S.view === 'clips') renderClips(list); else renderGrid(list);
+  saveHash();
+}
+
+function start(data) {
+  DATA = data; CLIPS = (data.clips || []).filter(c => c && c.id);
+  $('#gate').hidden = true; $('#app').hidden = false;
+  if (data.title) $('#hmeta').textContent = data.title;
+  $('#samplebanner').hidden = !data.sample;
+  loadHash();
+  $('#q').addEventListener('input', e => { S.q = e.target.value.trim(); update(); });
+  $('#clear').addEventListener('click', () => { for (const [f] of FACETS) S.sel[f].clear(); S.q = ''; $('#q').value = ''; update(); });
+  document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => { S.view = b.dataset.view; update(); }));
+  $('#ftoggle').addEventListener('click', e => { const o = document.body.classList.toggle('fopen'); e.currentTarget.setAttribute('aria-expanded', String(o)); });
+  update();
+}
+
+async function unlock(pass, payload, silent) {
+  const btn = $('#gbtn'); btn.disabled = true; $('#gerr').textContent = '';
+  try { const data = await decrypt(pass, payload); store.set('ig-pass', pass); start(data); return true; }
+  catch { store.del('ig-pass'); if (!silent) $('#gerr').textContent = 'That passcode did not work.'; return false; }
+  finally { btn.disabled = false; }
+}
+
+(async () => {
+  let payload;
+  try { payload = await (await fetch('data.enc.json', { cache: 'no-cache' })).json(); }
+  catch { $('#gerr').textContent = 'Could not load the data file.'; return; }
+  if (!window.crypto || !crypto.subtle) { $('#gerr').textContent = 'This browser cannot unlock the page (needs a secure connection).'; return; }
+  const saved = store.get('ig-pass');
+  if (saved && await unlock(saved, payload, true)) return;
+  $('#gform').addEventListener('submit', e => { e.preventDefault(); unlock($('#pass').value, payload, false); });
+  $('#pass').focus();
+})();
+})();
+</script>
+</body></html>
