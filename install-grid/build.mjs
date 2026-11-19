@@ -11,8 +11,8 @@ if (!pass) { console.error('Set IG_PASS to the coach passcode.'); process.exit(1
 
 const data = JSON.parse(readFileSync(input, 'utf8'));
 if (!Array.isArray(data.clips)) { console.error('Input needs a "clips" array.'); process.exit(1); }
-const bad = data.clips.filter(c => !c.id);
-if (bad.length) { console.error(bad.length + ' clip(s) have no Drive file id.'); process.exit(1); }
+const bad = data.clips.filter(c => !(c.id || (c.angles && c.angles.length && c.angles.every(a => a.id))));
+if (bad.length) { console.error(bad.length + ' clip(s) have no Drive file id (use "id" or an "angles" array of {label, id}).'); process.exit(1); }
 
 const ITER = 250000;
 const salt = crypto.getRandomValues(new Uint8Array(16));
