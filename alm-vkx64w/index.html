@@ -128,6 +128,7 @@ function load(){try{A=JSON.parse(localStorage.getItem(KEY))}catch(e){A=null}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(A))}catch(e){}}
 function newGame(name,quiet){const g={id:'g'+Date.now(),opp:name,program:CONFIG.program,plays:[]};A.games.push(g);A.cur=g.id;d=freshDraft(null);if(!quiet){save();renderAll()}}
 const G=()=>A.games.find(g=>g.id===A.cur);
+const esc2=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let d,edit=null;
 function freshDraft(prev){return{down:prev?prev.down:1,dist:prev?prev.dist:10,f:prev?prev.f:25,ptype:'run',formation:null,dir:null,motion:null,shift:false,jumbo:false,call:null,tag:null,rgs:false,shot:false,result:null,gain:0,player:null,td:false}}
 const ylNum=f=>f<=50?f:100-f, ylSide=f=>f<=50?'own':'opp';
@@ -242,10 +243,15 @@ document.getElementById('exp').onclick=()=>{modal(`<h3 style="margin-top:0">Expo
 document.getElementById('setup').onclick=()=>{const L=A.lists;const f=(k,t)=>`<div class="lab"><span>${t}</span></div><textarea id="s_${k}">${L[k].join(', ')}</textarea>`;
  modal(`<h3 style="margin-top:0">Setup</h3><p class="note">Comma-separated. These become the buttons.</p>${f('formations','Formations')}${f('motions','Motions')}${f('runs','Run calls')}${f('passes','Pass calls')}${f('tags','Tags')}${f('players','Jersey numbers')}<div class="lab"><span>Gameplan plays for ${G().opp} (used for "not called yet"; blank = all run and pass buttons)</span></div><textarea id="s_gp">${(G().gp||[]).join(', ')}</textarea><div class="lab"><span>Film Room link</span></div><input type="text" id="s_fr" style="width:100%" value="${A.fr||FR}">
  <div class="two" style="margin-top:8px"><div><div class="lab">Explosive run</div><input type="number" id="s_er" value="${L.expRun}"></div><div><div class="lab">Explosive pass</div><input type="number" id="s_ep" value="${L.expPass}"></div></div>
- <div class="two" style="margin-top:10px"><button class="btn pri" id="ssave">Save</button><button class="btn bad" id="sdel">Delete this game</button></div><button class="btn" id="sdemo" style="margin-top:8px">Add demo game</button>`);
+ <div class="lab" style="margin-top:12px"><span>Games on this device</span></div><div id="gmlist">${A.games.map(g=>`<div class="gmrow" style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)"><div style="flex:1;min-width:0"><b>${esc2(g.opp)}</b>${g.id===A.cur?' <span class="note">(open)</span>':''}<div class="note">${g.plays.filter(x=>x.k==='p').length} plays</div></div><button class="btn bad" data-delg="${g.id}">Delete</button></div>`).join('')}</div>
+ <button class="btn bad" id="skeep" style="margin-top:8px;width:100%">Delete all games except ${esc2(G().opp)}</button>
+ <div class="two" style="margin-top:10px"><button class="btn pri" id="ssave">Save</button></div><button class="btn" id="sdemo" style="margin-top:8px">Add demo game</button>`);
+ const afterDel=()=>{if(!A.games.length)newGame('Game 1',true);if(!A.games.find(g=>g.id===A.cur))A.cur=A.games[0].id;edit=null;d=freshDraft(lastNext());save();modal_close();renderAll()};
+ document.getElementById('gmlist').onclick=e=>{const b=e.target.closest('[data-delg]');if(!b)return;const g=A.games.find(x=>x.id===b.dataset.delg);if(g&&confirm('Delete '+g.opp+' ('+g.plays.filter(x=>x.k==='p').length+' plays)? This can\'t be undone.')){A.games=A.games.filter(x=>x.id!==g.id);afterDel()}};
+ document.getElementById('skeep').onclick=()=>{const n=A.games.length-1;if(n<1){alert('This is the only game.');return}if(confirm('Delete the other '+n+' game'+(n>1?'s':'')+' and keep '+G().opp+'? This can\'t be undone.')){A.games=A.games.filter(g=>g.id===A.cur);afterDel()}};
  ssave.onclick=()=>{for(const k of['formations','motions','runs','passes','tags','players'])L[k]=document.getElementById('s_'+k).value.split(',').map(s=>s.trim()).filter(Boolean);G().gp=document.getElementById('s_gp').value.split(',').map(s=>s.trim()).filter(Boolean);A.fr=document.getElementById('s_fr').value.trim()||FR;L.expRun=+s_er.value||12;L.expPass=+s_ep.value||16;save();modal_close();renderAll()};
  sdemo.onclick=()=>{modal_close();buildDemo(false)};
- sdel.onclick=()=>{if(confirm('Delete '+G().opp+'?')){A.games=A.games.filter(g=>g.id!==A.cur);if(!A.games.length)newGame('Game 1',true);A.cur=A.games[0].id;d=freshDraft(lastNext());save();modal_close();renderAll()}}};
+};
 function buildDemo(quiet){
  let sd=20261119;const rnd=()=>{sd|=0;sd=sd+0x6D2B79F5|0;let t=Math.imul(sd^sd>>>15,1|sd);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
  const pick=a=>a[Math.floor(rnd()*a.length)],ri=(a,b)=>a+Math.floor(rnd()*(b-a+1));
