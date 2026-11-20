@@ -93,6 +93,7 @@ html,button,.chip,input,select{touch-action:manipulation;-webkit-tap-highlight-c
  <button class="btn" id="newgame">+ Game</button>
  <button class="btn" id="logbtn">Log</button>
  <button class="btn" id="newdrive">New Drive</button>
+ <button class="btn" id="qtr">QTR</button>
  <button class="btn" id="half">Halftime</button>
  <button class="btn" id="undo">Undo</button>
  <span style="flex:1"></span>
@@ -230,7 +231,7 @@ function summary(){const P=plays(),pen=P.filter(p=>p.result!=='PEN');const E=pen
 function renderLog(){const g=G(),s=summary();
  let h=`<div class="dclose"><button class="btn" id="logclose">Close log</button></div><div class="tiles"><div class="tile"><b>${s.n}</b><span>Plays</span></div><div class="tile"><b>${s.eff}</b><span>Efficient (50)</span></div><div class="tile"><b>${s.exp}</b><span>Explosive (12)</span></div><div class="tile"><b>${s.fd}</b><span>2FDOS drives</span></div></div>`;
  let dn=1;h+=`<div class="drive"><span>Drive 1</span></div>`;
- g.plays.forEach((p,i)=>{if(p.k==='h'){dn++;h+=`<div class="half">HALFTIME</div><div class="drive"><span>Drive ${dn}</span></div>`;return}if(p.k==='d'){dn++;h+=`<div class="drive"><span>Drive ${dn}</span></div>`;return}
+ g.plays.forEach((p,i)=>{if(p.k==='q'){dn++;h+=`<div class="half">END Q${p.n}</div><div class="drive"><span>Drive ${dn}</span></div>`;return}if(p.k==='h'){dn++;h+=`<div class="half">HALFTIME</div><div class="drive"><span>Drive ${dn}</span></div>`;return}if(p.k==='d'){dn++;h+=`<div class="drive"><span>Drive ${dn}</span></div>`;return}
   const E=eff(p),X=expl(p),r=RESULTS.find(x=>x[0]===p.result);
   h+=`<div class="play ${edit===i?'sel':''}" data-i="${i}"><div><div class="dd">${p.down}&amp;${p.dist}</div><div class="yl">${ylFmt(p.f)}</div></div>
   <div><div class="call">${p.tag?p.tag+' ':''}${p.owc||p.call||'—'}${E==='Y'?'<span class="badge b-e">EFF</span>':''}${X==='Y'?'<span class="badge b-x">EXP</span>':''}</div>
@@ -277,12 +278,15 @@ document.getElementById('newgame').onclick=()=>ask('Opponent',n=>{newGame(n);toa
 function setLog(on){document.querySelector('main').classList.toggle('logon',on);const b=document.getElementById('logbtn');b.textContent=on?'Log ✓':'Log';b.classList.toggle('pri',on);try{localStorage.setItem('almanac_logon',on?'1':'0')}catch(e){}if(on)renderLog()}
 document.getElementById('logbtn').onclick=()=>setLog(!document.querySelector('main').classList.contains('logon'));
 try{if(localStorage.getItem('almanac_logon')==='1')setLog(true)}catch(e){}
-document.getElementById('newdrive').onclick=()=>{G().plays.push({k:'d'});save();renderLog();toast('New drive — Drive '+(G().plays.filter(p=>p.k==='d'||p.k==='h').length+1))};
+document.getElementById('newdrive').onclick=()=>{G().plays.push({k:'d'});save();renderLog();toast('New drive — Drive '+(G().plays.filter(p=>p.k==='d'||p.k==='h'||p.k==='q').length+1))};
+document.getElementById('qtr').onclick=()=>{const pl=G().plays,h=pl.some(p=>p.k==='h'),q1=pl.some(p=>p.k==='q'&&p.n===1),q3=pl.some(p=>p.k==='q'&&p.n===3);let m;
+ if(!h&&!q1)m={k:'q',n:1};else if(!h)m={k:'h'};else if(!q3)m={k:'q',n:3};else{toast('All quarter breaks marked (use Undo to fix)');return}
+ pl.push(m);d=freshDraft({down:1,dist:10,f:25});edit=null;save();renderAll();toast(m.k==='h'?'End of Q2 (halftime) marked':'End of Q'+m.n+' marked')};
 document.getElementById('half').onclick=()=>{if(G().plays.some(p=>p.k==='h')){toast('Halftime already marked');return}G().plays.push({k:'h'});d=freshDraft({down:1,dist:10,f:25});edit=null;save();renderAll();toast('Halftime marked')};
-document.getElementById('undo').onclick=()=>{const pl=G().plays;if(pl.length){const x=pl.pop();d=freshDraft(lastNext());edit=null;save();renderAll();toast('Undid '+(x.k==='h'?'halftime':x.k==='d'?'drive marker':'last play'))}else toast('Nothing to undo')};
+document.getElementById('undo').onclick=()=>{const pl=G().plays;if(pl.length){const x=pl.pop();d=freshDraft(lastNext());edit=null;save();renderAll();toast('Undid '+(x.k==='q'?'quarter break':x.k==='h'?'halftime':x.k==='d'?'drive marker':'last play'))}else toast('Nothing to undo')};
 const HEAD=['DOWN','DISTANCE','JUMBO Y/N','SHIFT','MOTION','PLAY TAG','RUN CALL','PASS CALL','RGS Y/N','SHOT Y/N','RESULT','PLAYER','YARD LINE','GAIN/LOSS','<50','CROSS 50','>50','BCKWD CROSS 50','GAIN/LOSS','EXPLOSIVE','EFFICIENT','RUN SCHEME','PASS SCHEME','FORMATION','DIRECTION','PLAY TYPE','FORMATION TAG','CONCEPT','TARGET','ONE WORD','GLF','PASSER'];
 function resText(p){const r=p.result;if(r==='PEN')return'PENALTY';if(r==='INC')return'INC';if(r==='INT')return'INT';if(r==='FUM')return'FUM';if(r==='SACK')return'SACK';if(p.td)return p.gain+' YD TD';return String(p.gain)}
-function rows(){const out=[HEAD];for(const p of G().plays){if(p.k==='h'){out.push(['HALFTIME']);continue}if(p.k==='d'){out.push(['NEW DRIVE']);continue}
+function rows(){const out=[HEAD];for(const p of G().plays){if(p.k==='q'){out.push(['NEW DRIVE']);continue}if(p.k==='h'){out.push(['HALFTIME']);continue}if(p.k==='d'){out.push(['NEW DRIVE']);continue}
  out.push([p.down,p.dist,p.jumbo?'Y':'',p.shift?'Y':'',motionFull(p),p.tag||'',p.ptype==='run'?p.call||'':'',p.ptype==='pass'?p.call||'':'',p.rgs?'Y':'',p.shot?'Y':'',resText(p),p.player||'',ylFmt(p.f),p.gain,'','','','',p.gain,expl(p),eff(p),p.ptype==='run'?runScheme(p.call):'','',p.formation||'',p.dir||'',p.ptype==='run'?'Run':'Pass',p.ftag||(p.jumbo?'JUMBO':''),famOf(p.call),p.target||'',p.owc||'',p.glf?'Y':'',p.passer||''])}return out}
 const csv=()=>rows().map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
 
@@ -292,7 +296,7 @@ const HUDL_HEAD=['PLAY #','ODK','HASH','P & 10','DN','DIST','GN/LS','YARD LN','P
 const HUDL_RES={COMP:'Complete',INC:'Incomplete',RUSH:'Rush',SCRAM:'Scramble',SACK:'Sack',PEN:'Penalty',INT:'Interception',FUM:'Fumble Lost'};
 const RLDIR=c=>{if(!c)return'';c=String(c).toUpperCase();const pr=PAIRS.find(q=>q.includes(c));if(pr)return pr[0]===c?'Left':'Right';if(c==='PITTSBURGH')return'Left';return''};
 function hudlRows(){const out=[HUDL_HEAD];let first=true;
- for(const p of G().plays){if(p.k==='h'||p.k==='d'){first=true;continue}
+ for(const p of G().plays){if(p.k==='h'||p.k==='d'||p.k==='q'){first=true;continue}
   const run=p.ptype==='run',form=p.formation?[p.formation+(p.dir?' '+(p.dir==='RT'?'Rt':'Lt'):''),...(p.ftag?[p.ftag]:p.jumbo?['JUMBO']:[])].join(' '):'';
   out.push(['','O','',first?'Y':'',p.down,p.dist,p.gain,ylFmt(p.f),'',eff(p),p.result==='PEN'?'':(expl(p)==='Y'?'YES':'NO'),'',run?'Run':'Pass',(HUDL_RES[p.result]||'')+(p.td?' TD':''),form,'',motionFull(p),p.shift?'Y':'',p.call||'',p.tag||'',p.owc||'',p.target||'',p.player||'',p.passer||'',run?famOf(p.call):'',run?RLDIR(p.call):'',(!run&&p.owc&&(OW[p.owc]||{}).pp)?'BLACK/BROWN':'']);
   first=false}
@@ -407,6 +411,8 @@ function rangePlays(){const a=G().plays;let r=a;
  if(RF==='1h'){const i=a.findIndex(p=>p.k==='h');r=i<0?a:a.slice(0,i)}
  else if(RF==='2h'){const i=a.findIndex(p=>p.k==='h');r=i<0?[]:a.slice(i+1)}
  else if(RF==='last'){let i=-1;a.forEach((p,j)=>{if(p.k!=='p')i=j});r=a.slice(i+1)}
+ else if(RF==='last2'){const ix=[];a.forEach((p,j)=>{if(p.k!=='p')ix.push(j)});r=a.slice(ix.length>1?ix[ix.length-2]+1:0)}
+ else if(/^q[1-4]$/.test(RF)){const n=+RF[1];let e=0;r=[];for(const p of a){if(p.k==='q')e=Math.max(e,p.n);else if(p.k==='h')e=Math.max(e,2);else if(e+1===n)r.push(p)}}
  return r}
 function reportData(){const R=rangePlays(),P=R.filter(p=>p.k==='p'),N=P.filter(p=>p.result!=='PEN');
  const pc=(a,b)=>b?Math.round(100*a/b):null;
@@ -433,7 +439,7 @@ function reportData(){const R=rangePlays(),P=R.filter(p=>p.k==='p'),N=P.filter(p
   Q:Object.entries(Q).sort((a,b)=>b[1].n-a[1].n),fams,ows,GL,T:Object.entries(T).sort((a,b)=>(b[1].c+b[1].r)-(a[1].c+a[1].r)||b[1].t-a[1].t),calls,notCalled:gp.filter(x=>!called.has(x.toUpperCase())),unassigned:N.filter(p=>!p.player&&['RUSH','SCRAM','COMP','INC'].includes(p.result)).length}}
 const pct=v=>v==null?'–':v+'%';
 function reportHtml(){const D=reportData(),mx=Math.max(1,...D.T.map(([k,o])=>o.c+o.r+(o.t-o.r)));
- const F=[['all','All'],['1h','1st half'],['2h','2nd half'],['last','Last drive']];
+ const F=[['all','All'],['1h','1st half'],['2h','2nd half'],['q1','Q1'],['q2','Q2'],['q3','Q3'],['q4','Q4'],['last','Last drive'],['last2','Last 2 drives']];
  let h=`<div class="noprint" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${F.map(f=>`<button class="chip ${RF===f[0]?'on':''}" data-rf="${f[0]}">${f[1]}</button>`).join('')}<span style="flex:1"></span><button class="btn" id="rprint">Print / PDF</button><button class="btn" id="rcopy">Copy text</button></div>
  <h3 style="margin:4px 0">${G().opp} — ${F.find(f=>f[0]===RF)[1]}</h3>
  <div class="tiles"><div class="tile"><b>${D.n}</b><span>Plays (${D.runs}R / ${D.passes}P)</span></div><div class="tile"><b>${pct(D.ep)}</b><span>Efficient (goal 50)</span></div><div class="tile"><b>${pct(D.xp)}</b><span>Explosive (goal 12)</span></div><div class="tile"><b>${D.fd}/${D.drn}</b><span>2FDOS drives</span></div></div>
