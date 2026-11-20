@@ -98,6 +98,7 @@ html,button,.chip,input,select{touch-action:manipulation;-webkit-tap-highlight-c
  <button class="btn pri" id="rep">Report</button>
  <button class="btn" id="send" title="Send this game to Film Room">→ Film Room</button>
  <button class="btn" id="exp">Export</button>
+ <button class="btn" id="gpbtn">Gameplan</button>
  <button class="btn" id="setup">Setup</button>
 </header>
 <main>
@@ -167,18 +168,19 @@ function conceptChips(list){const used=new Set(),out=[];for(const x of list){if(
   if(pr){pr.forEach(y=>used.add(y));out.push('<span class="pair">'+pr.map(y=>chip('call',y,y,d.call===y)).join('')+'</span>')}else{used.add(x);out.push(chip('call',x,x,d.call===x))}}return out.join('')}
 function renderEntry(){const L=A.lists,e=edit!==null;
  if(!d.tags)d.tags=d.tag?String(d.tag).split(' ').filter(Boolean):[];if(!d.ftags)d.ftags=d.ftag?String(d.ftag).split(' ').filter(Boolean):[];
- const calls=d.ptype==='run'?L.runs:L.passes,tagL=(d.ptype==='run'?L.tagsRun:L.tagsPass)||[];
+ const calls=planL(d.ptype==='run'?'runs':'passes',d.call),tagL=planL(d.ptype==='run'?'tagsRun':'tagsPass',d.tags);
+ const oth=c=>`<button class="chip" data-a="oth" data-c="${c}">+ Other</button>`;
  const C=(cls,t,r,body)=>`<div class="card ${cls}">${lab(t,r)}${body}</div>`;
  let h='<div class="ent">';
  h+=C('s2','Down','',`<div class="chips">${[1,2,3,4].map(n=>chip('down',n,n,d.down===n)).join('')}</div>`);
  h+=C('s6','Distance','',`<div class="chips">${[1,2,3,4,5,6,7,8,9,10].map(n=>chip('dist',n,n,d.dist===n)).join('')}<input type="number" inputmode="numeric" id="distx" class="chipin ${d.dist>10?'on':''}" placeholder="11+" value="${d.dist>10?d.dist:''}"></div>`);
  h+=C('s4','Ball on',ylFmt(d.f),`<div class="chips" style="align-items:center">${chip('side','own','Own',ylSide(d.f)==='own')}${chip('side','opp','Opp',ylSide(d.f)==='opp')}<div class="step"><button class="chip" data-a="ym">−</button><input type="number" inputmode="numeric" id="ylx" min="1" max="50" value="${ylNum(d.f)}" style="width:62px;font-size:20px;font-weight:700;text-align:center;background:transparent;color:var(--tx);border:1px solid var(--line);border-radius:6px;padding:4px 0"><button class="chip" data-a="yp">+</button></div></div>`);
- h+=C('s3','Formation tag','',`<div class="chips scroll">${chip('jumbo','t','Jumbo',d.jumbo)}${(L.ftags||[]).filter(x=>x!=='JUMBO').map(x=>chip('ftags',x,x,d.ftags.includes(x))).join('')}</div>`);
- h+=C('s3','Motion / shift','',`<div class="chips scroll">${chip('shift','t','Shift',d.shift)}${L.motions.map(x=>chip('motion',x,x,d.motion===x)).join('')}</div>`);
- h+=C('s5','Formation','',`<div class="chips">${L.formations.map(x=>chip('formation',x,x,d.formation===x)).join('')}</div>`);
+ h+=C('s3','Formation tag','',`<div class="chips scroll">${chip('jumbo','t','Jumbo',d.jumbo)}${planL('ftags',d.ftags).filter(x=>x!=='JUMBO').map(x=>chip('ftags',x,x,d.ftags.includes(x))).join('')}${oth('ftags')}</div>`);
+ h+=C('s3','Motion / shift','',`<div class="chips scroll">${chip('shift','t','Shift',d.shift)}${planL('motions',d.motion).map(x=>chip('motion',x,x,d.motion===x)).join('')}${oth('motions')}</div>`);
+ h+=C('s5','Formation','',`<div class="chips">${planL('formations',d.formation).map(x=>chip('formation',x,x,d.formation===x)).join('')}${oth('formations')}</div>`);
  h+=C('s1','Direction','',`<div class="chips">${chip('dir','RT','RT',d.dir==='RT')}${chip('dir','LT','LT',d.dir==='LT')}</div>`);
- h+=C('s5','Play tag(s)','',`<div class="chips scroll">${tagL.map(x=>chip('tags',x,x,d.tags.includes(x))).join('')}${chip('rgs','t','RGS',d.rgs)}${chip('shot','t','Shot',d.shot)}</div>`);
- h+=C('s7','Concept',`<span class="chips">${chip('ptype','run','RUN',d.ptype==='run')}${chip('ptype','pass','PASS',d.ptype==='pass')}</span>`,`<div class="chips scroll">${conceptChips(calls)}</div>`);
+ h+=C('s5','Play tag(s)','',`<div class="chips scroll">${tagL.map(x=>chip('tags',x,x,d.tags.includes(x))).join('')}${oth(d.ptype==='run'?'tagsRun':'tagsPass')}${chip('rgs','t','RGS',d.rgs)}${chip('shot','t','Shot',d.shot)}</div>`);
+ h+=C('s7','Concept',`<span class="chips">${chip('ptype','run','RUN',d.ptype==='run')}${chip('ptype','pass','PASS',d.ptype==='pass')}</span>`,`<div class="chips scroll">${conceptChips(calls)}${oth(d.ptype==='run'?'runs':'passes')}</div>`);
  if(d.ptype==='pass')h+=C('s12','Target (route)','',`<div class="chips scroll">${(L.targets||[]).map(x=>chip('target',x,x,d.target===x)).join('')}<button class="chip" data-a="tother">Other</button></div>`);
  h+=C('s5','Result','',`<div class="chips">${RESULTS.map(r=>chip('result',r[0],r[1],d.result===r[0],['SACK','INT','FUM'].includes(r[0])?'neg':'res')).join('')}${chip('td','t','TD',d.td,'res')}</div>`);
  h+=C('s4','Gain / loss','<input id="gv" type="number" inputmode="numeric" min="-99" max="99" value="'+d.gain+'" style="width:64px;font-size:18px;font-weight:700;text-align:center;background:transparent;color:var(--tx);border:1px solid var(--bd,#345);border-radius:6px">',`<input type="range" id="gs" min="-99" max="99" value="${d.gain}"><div class="chips" style="margin-top:2px">${[-5,0,2,4,6,8,10,15].map(n=>chip('gain',n,(n>0?'+':'')+n,d.gain===n)).join('')}<button class="chip" data-a="gm">−1</button><button class="chip" data-a="gp">+1</button></div>`);
@@ -217,6 +219,8 @@ document.getElementById('entry').addEventListener('click',ev=>{const b=ev.target
  if(a==='dm'){d.dist=Math.max(1,d.dist-1)}else if(a==='dp'){d.dist++}
  else if(a==='ym'||a==='yp'){const s=ylSide(d.f),n=ylNum(d.f)+(a==='yp'?1:-1);const m=Math.max(1,Math.min(50,n));d.f=s==='own'?m:100-m}
  else if(a==='gm'){d.gain=Math.max(-99,d.gain-1)}else if(a==='gp'){d.gain=Math.min(99,d.gain+1)}
+ else if(a==='oth'){const c=b.dataset.c,x0=prompt('Type it in');if(x0&&x0.trim()){let x=x0.trim();x=c==='formations'?x.toLowerCase().replace(/\b\w/g,m=>m.toUpperCase()):x.toUpperCase();const L=A.lists;if(!L[c].some(y=>y.toUpperCase()===x.toUpperCase()))L[c].push(x);else x=L[c].find(y=>y.toUpperCase()===x.toUpperCase());const pl=G().plan=G().plan||{};if(pl[c]&&pl[c].length&&!pl[c].some(y=>y.toUpperCase()===x.toUpperCase()))pl[c].push(x);
+   if(c==='ftags'){if(!d.ftags.includes(x))d.ftags.push(x)}else if(c==='motions')d.motion=x;else if(c==='formations')d.formation=x;else if(c==='runs'||c==='passes')d.call=x;else{if(!d.tags.includes(x))d.tags.push(x)}save()}}
  else if(a==='tother'){const x=prompt('Route targeted');if(x)d.target=x.trim().toUpperCase()}
  else if(a==='pother'){const x=prompt('Jersey number');if(x)d.player=x.trim()}
  else if(a==='log'){logPlay();return}
@@ -252,6 +256,41 @@ function hudlRows(){const out=[HUDL_HEAD];let first=true;
  return out}
 const hudlCsv=()=>hudlRows().map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
 const hudlTsv=()=>hudlRows().map(r=>r.join('\t')).join('\n');
+
+/* ===== Gameplan scoping: only show what is in this week's gameplan ===== */
+const planL=(cat,sel)=>{const base=A.lists[cat]||[],p=(G().plan||{})[cat];if(!p||!p.length)return base;const S=new Set(p.map(x=>x.toUpperCase())),sl=[].concat(sel||[]).filter(Boolean).map(x=>String(x).toUpperCase());return base.filter(x=>S.has(x.toUpperCase())||sl.includes(x.toUpperCase()))};
+const GPCATS=[['ftags','Formation tag'],['motions','Motion'],['formations','Formation'],['runs','Run concept'],['passes','Pass concept'],['tagsRun','Play tag']];
+const GPSKIP=new Set(['RT','LT','LEFT','RIGHT','L','R']);
+function gpVocab(extra){const v=new Map(),add=(t,c)=>{t=String(t).toUpperCase().trim();if(!t)return;if(!v.has(t))v.set(t,new Set());v.get(t).add(c)};
+ const L=A.lists;for(const c of['ftags','motions','formations','runs','passes'])(L[c]||[]).forEach(x=>add(x,c));(L.tagsRun||[]).forEach(x=>add(x,'tag'));(L.tagsPass||[]).forEach(x=>add(x,'tag'));
+ for(const k in extra||{})if(extra[k]&&extra[k]!=='skip')add(k,extra[k]==='tagsRun'?'tag':extra[k]);return v}
+function gpTok(line,v){const w=line.toUpperCase().replace(/[^A-Z0-9 /&-]+/g,' ').split(/\s+/).filter(Boolean),out=[];for(let i=0;i<w.length;){let n=Math.min(3,w.length-i),hit=null;for(;n>=1;n--){const ph=w.slice(i,i+n).join(' ');if(v.has(ph)){hit=[ph,v.get(ph),n];break}}
+  if(hit){out.push({t:hit[0],c:hit[1]});i+=hit[2]}else{out.push({t:w[i],c:null});i++}}return out}
+function gpParse(text,extra){const v=gpVocab(extra),lines=text.split(/\n/).map(x=>x.trim()).filter(Boolean),plan={ftags:new Set(),motions:new Set(),formations:new Set(),runs:new Set(),passes:new Set(),tagsRun:new Set(),tagsPass:new Set()},unk=new Map(),concepts=new Set();let n=0;
+ for(const ln of lines){const tk=gpTok(ln,v);let ci=-1;for(let i=tk.length-1;i>=0;i--)if(tk[i].c&&(tk[i].c.has('runs')||tk[i].c.has('passes'))){ci=i;break}
+  if(ci<0&&!tk.some(x=>x.c))continue;n++;const typ=ci>=0?(tk[ci].c.has('runs')?'run':'pass'):null;
+  tk.forEach((x,i)=>{if(GPSKIP.has(x.t))return;if(!x.c){unk.set(x.t,(unk.get(x.t)||0)+1);return}
+   if(i===ci){const c=tk[ci].c.has('runs')?'runs':'passes';plan[c].add(x.t);concepts.add(x.t);const pr=PAIRS.find(q=>q.includes(x.t));if(pr)pr.forEach(y=>{plan[c].add(y);concepts.add(y)});return}
+   for(const c of x.c){if(c==='ftags'||c==='motions'||c==='formations')plan[c].add(x.t);else if(c==='tag'){if(typ!=='pass')plan.tagsRun.add(x.t);if(typ!=='run')plan.tagsPass.add(x.t)}}})}
+ return{plan,unk,concepts,n,lines:lines.length}}
+let gpState={text:'',extra:{}};
+function gpModal(){const g=G(),r=gpParse(gpState.text,gpState.extra),on=g.plan&&Object.values(g.plan).some(a=>a&&a.length);
+ const cnt=c=>r.plan[c].size;
+ const unk=[...gpParse(gpState.text,{}).unk.entries()].sort((a,b)=>b[1]-a[1]);
+ modal(`<h3 style="margin-top:0">Gameplan for ${esc2(g.opp)}</h3><p class="note">Paste the GAMEPLAN PLAYS column from the Play Script Tool, one call per line (like "PULSE JUMBO CAROLINA"). The almanac will only show the formations, motions, tags and concepts that appear. Left/Right partners come along automatically. <b>+ Other</b> is always there for anything else.${on?' <b>Scoping is on for this game.</b>':''}</p>
+ <textarea id="gptext" style="width:100%;min-height:150px" placeholder="HIP POKER BRUINS&#10;SWAP SHUFFLE&#10;TRIPS RT MUSTANG">${esc2(gpState.text)}</textarea>
+ ${r.n?`<p class="note"><b>${r.n}</b> calls read &middot; ${GPCATS.map(([c,l])=>l+': '+cnt(c)).join(' &middot; ')}</p>`:''}
+ ${unk.length?`<div class="lab"><span>Words not in your lists (${unk.length}) — tell me what each one is</span></div>${unk.map(([t,n])=>`<div style="display:flex;gap:8px;align-items:center;padding:3px 0"><b style="min-width:110px">${esc2(t)}</b><span class="note">${n}x</span><select data-w="${esc2(t)}" style="flex:1"><option value="">Ignore</option>${GPCATS.map(([c,l])=>`<option value="${c}" ${gpState.extra[t]===c?'selected':''}>${l}</option>`).join('')}</select></div>`).join('')}`:''}
+ <p style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px"><button class="btn pri" id="gpapply" ${r.n?'':'disabled'}>Apply to ${esc2(g.opp)}</button>${on?'<button class="btn bad" id="gpclear">Show everything again</button>':''}<button class="btn" onclick="modal_close()">Close</button></p>`);
+ gptext.oninput=e=>{gpState.text=e.target.value};gptext.onchange=()=>gpModal();
+ document.querySelectorAll('#mbox select[data-w]').forEach(s=>s.onchange=e=>{gpState.extra[e.target.dataset.w]=e.target.value;gpModal()});
+ const ap=document.getElementById('gpapply');if(ap)ap.onclick=()=>{const L=A.lists,pl={};
+  for(const k in gpState.extra){const c=gpState.extra[k];if(!c)continue;const nm=c==='formations'?k.toLowerCase().replace(/\b\w/g,m=>m.toUpperCase()):k;if(!L[c].some(y=>y.toUpperCase()===k))L[c].push(nm);if(c==='tagsRun'&&!L.tagsPass.some(y=>y.toUpperCase()===k))L.tagsPass.push(nm)}
+  const r2=gpParse(gpState.text,gpState.extra);
+  for(const c in r2.plan){const set=r2.plan[c];pl[c]=(L[c]||[]).filter(x=>set.has(x.toUpperCase()))}
+  g.plan=pl;g.gp=[...r2.concepts];save();modal_close();d=freshDraft(lastNext());renderAll();toast('Gameplan applied')};
+ const cl=document.getElementById('gpclear');if(cl)cl.onclick=()=>{g.plan=null;save();modal_close();renderAll();toast('Showing everything')}}
+document.getElementById('gpbtn').onclick=()=>{gpState={text:'',extra:{}};gpModal()};
 const FR=CONFIG.filmRoom;
 function copyText(t){return(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).catch(()=>{const x=document.createElement('textarea');x.value=t;document.body.appendChild(x);x.select();document.execCommand('copy');x.remove()})}
 // Copy first, inside the tap (iPhone/iPad only allow clipboard writes during the tap), then let the coach open Film Room with a second tap.
