@@ -78,6 +78,7 @@ tr.half td{background:var(--panel2);font-weight:700;font-family:var(--display);t
 <script>
 const $=s=>document.querySelector(s);
 let G=null, TAB='result', HALF='full', FILTER={half:'all',type:'all',flagged:false};
+const CB=()=>G.clipBase||`clips/${G.id}/`;
 const pct=(n,d)=>d?Math.round(100*n/d):0;
 const yl=v=>v===''||v==null?'':(v>0?'+'+v:String(v));
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -108,7 +109,7 @@ function renderResult(){
   <div class="bar">${G.scoreTimeline.map(t=>`<span class="badge">${esc(t.when)}: DC ${t.us}, ${esc(G.opponent)} ${t.them}</span>`).join('')}</div></div>
   <div class="tiles">${tile('Efficiency',pct(s.effN,s.effD)+'%','Goal '+G.goals.eff+'%',pct(s.effN,s.effD)>=G.goals.eff?'hit':'miss')}${tile('Explosive',pct(s.explN,s.explD)+'%','Goal '+G.goals.expl+'%',pct(s.explN,s.explD)>=G.goals.expl?'hit':'miss')}${tile('3rd down',s.third)}${tile('Yards / play',s.ypp)}${tile('Sacks',s.passing.sacks,s.passing.sackYds+' yds')}${tile('TD drives',G.drives.filter(d=>d.result==='TD').length+' / '+G.drives.length)}</div>
   <h2>Why</h2><div class="why">${G.why.map(w=>`<div class="panel"><h3>${esc(w.head)}</h3><div class="num">${esc(w.num)}</div><p>${esc(w.body)}</p></div>`).join('')}</div>
-  <h2>Plays that turned the tide</h2><div class="clips">${G.turningPoints.map(t=>`<div class="clip ${t.tone}"><video controls preload="none" playsinline poster="clips/${G.id}/${t.poster}" src="clips/${G.id}/${t.file}"></video><div class="cap"><strong>${esc(t.title)}</strong><span class="meta">Clip ${t.clip} · ${esc(t.when)}</span></div></div>`).join('')}</div>
+  <h2>Plays that turned the tide</h2><div class="clips">${G.turningPoints.map(t=>`<div class="clip ${t.tone}"><video controls preload="metadata" playsinline poster="${CB()}${t.poster}" src="${CB()}${t.file}#t=0.1"></video><div class="cap"><strong>${esc(t.title)}</strong><span class="meta">Clip ${t.clip} · ${esc(t.when)}</span></div></div>`).join('')}</div>
   <ul class="notes">${G.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul></section>`;
 }
 
@@ -124,7 +125,7 @@ function render5012(){
   <div class="grid2">${meter(e,G.goals.eff,'Efficiency',s.effN,s.effD)}${meter(x,G.goals.expl,'Explosive',s.explN,s.explD)}</div>
   <div class="grid2"><div class="panel"><h3>Drive results</h3><div class="tablewrap"><table><thead><tr><th class="n">#</th><th>Half</th><th class="n">Start</th><th class="n">Plays</th><th class="n">Yds</th><th class="n">Eff</th><th class="n">Expl</th><th>Result</th></tr></thead><tbody>${dr}</tbody></table></div></div>
   <div class="panel"><h3>Efficiency by down</h3><div class="tablewrap"><table><thead><tr><th>Down</th><th class="n">Eff</th><th class="n">Rate</th></tr></thead><tbody>${bd}</tbody></table></div><p class="sub" style="font-size:13px">Efficient: 1st and 10 gains 4+, 2nd down gains half the distance, 3rd and 4th down convert.</p></div></div>
-  <h2>Explosive plays (${ex.length})</h2><div class="clips">${ex.map(t=>`<div class="clip good"><video controls preload="none" playsinline poster="clips/${G.id}/${t.poster}" src="clips/${G.id}/${t.file}"></video><div class="cap"><strong>${esc(t.title)}</strong><span class="meta">Clip ${t.clip} · ${esc(t.when)}</span>${t.note?`<span class="sub" style="font-size:13px">${esc(t.note)}</span>`:''}</div></div>`).join('')}</div></section>`;
+  <h2>Explosive plays (${ex.length})</h2><div class="clips">${ex.map(t=>`<div class="clip good"><video controls preload="metadata" playsinline poster="${CB()}${t.poster}" src="${CB()}${t.file}#t=0.1"></video><div class="cap"><strong>${esc(t.title)}</strong><span class="meta">Clip ${t.clip} · ${esc(t.when)}</span>${t.note?`<span class="sub" style="font-size:13px">${esc(t.note)}</span>`:''}</div></div>`).join('')}</div></section>`;
 }
 function renderStats(){
   const s=G.stats[HALF]; const p=s.passing;
