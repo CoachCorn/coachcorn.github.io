@@ -209,7 +209,8 @@ function renderLog(){const g=G(),s=summary();
   <div class="sub">${[p.ftag&&p.ftag,motionFull(p),p.shift&&'shift',p.hash&&p.hash+' hash',p.formation&&p.formation+(p.dir?' '+p.dir:''),p.fib&&'FIB '+p.fib,p.target&&'→ '+p.target,p.jumbo&&'jumbo',p.rgs&&'RGS',p.shot&&'shot'].filter(Boolean).join(' · ')}</div></div>
   <div><div class="gain ${p.gain>0?'pos':p.gain<0?'neg':''}">${p.gain>0?'+':''}${p.gain}</div><div class="sub" style="text-align:right">${p.td?'TD ':''}${r?r[1]:''}${p.player?' #'+p.player:''}</div></div></div>`});
  const el=document.getElementById('logp');el.innerHTML=h;el.scrollTop=el.scrollHeight}
-function renderHdr(){document.getElementById('gsel').innerHTML=A.games.map(g=>`<option value="${g.id}" ${g.id===A.cur?'selected':''}>${g.opp}</option>`).join('')}
+function renderHdr(){const gb=document.getElementById('gpbtn');if(gb){const on=G()&&G().plan&&Object.values(G().plan).some(a=>a&&a.length);gb.textContent=on?'Gameplan ✓':'Gameplan';gb.classList.toggle('pri',!!on)}
+document.getElementById('gsel').innerHTML=A.games.map(g=>`<option value="${g.id}" ${g.id===A.cur?'selected':''}>${g.opp}</option>`).join('')}
 function renderAll(){renderHdr();renderEntry();renderLog()}
 document.getElementById('entry').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;const a=b.dataset.a,g=b.dataset.g,v=b.dataset.v;
  if(g){
@@ -289,7 +290,7 @@ function gpModal(){const g=G(),r=gpParse(gpState.text,gpState.extra),on=g.plan&&
  <textarea id="gptext" style="width:100%;min-height:150px" placeholder="HIP POKER BRUINS&#10;SWAP SHUFFLE&#10;TRIPS RT MUSTANG">${esc2(gpState.text)}</textarea>
  ${r.n?`<p class="note"><b>${r.n}</b> calls read &middot; ${GPCATS.map(([c,l])=>l+': '+cnt(c)).join(' &middot; ')}</p>`:''}
  ${unk.length?`<div class="lab"><span>Words not in your lists (${unk.length}) — tell me what each one is</span></div>${unk.map(([t,n])=>`<div style="display:flex;gap:8px;align-items:center;padding:3px 0"><b style="min-width:110px">${esc2(t)}</b><span class="note">${n}x</span><select data-w="${esc2(t)}" style="flex:1"><option value="">Ignore</option>${GPCATS.map(([c,l])=>`<option value="${c}" ${gpState.extra[t]===c?'selected':''}>${l}</option>`).join('')}</select></div>`).join('')}`:''}
- <p style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px"><button class="btn" id="gpread">Read it</button><button class="btn pri" id="gpapply">Apply to ${esc2(g.opp)}</button>${on?'<button class="btn bad" id="gpclear">Reset gameplan</button>':''}<button class="btn" onclick="modal_close()">Close</button></p>`);
+ <p style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px"><button class="btn" id="gpread">Read it</button><button class="btn pri" id="gpapply">Apply to ${esc2(g.opp)}</button><button class="btn bad" id="gpclear">Clear gameplan</button><button class="btn" onclick="modal_close()">Close</button></p>`);
  gptext.oninput=e=>{gpState.text=e.target.value};document.getElementById('gpread').onclick=()=>{gpState.text=gptext.value;gpModal()};
  document.querySelectorAll('#mbox select[data-w]').forEach(s=>s.onchange=e=>{gpState.extra[e.target.dataset.w]=e.target.value;gpModal()});
  const ap=document.getElementById('gpapply');if(ap)ap.onclick=()=>{gpState.text=gptext.value;const r=gpParse(gpState.text,gpState.extra);if(!r.n){toast('No plays found — paste the GAMEPLAN PLAYS column first');return}const L=A.lists,pl={};
@@ -297,7 +298,7 @@ function gpModal(){const g=G(),r=gpParse(gpState.text,gpState.extra),on=g.plan&&
   const r2=gpParse(gpState.text,gpState.extra);
   for(const c in r2.plan){const set=r2.plan[c];pl[c]=(L[c]||[]).filter(x=>set.has(x.toUpperCase()))}
   g.plan=pl;g.gp=[...r2.concepts];save();modal_close();d=freshDraft(lastNext());renderAll();toast('Gameplan applied')};
- const cl=document.getElementById('gpclear');if(cl)cl.onclick=()=>{g.plan=null;g.gp=null;gpState={text:'',extra:{}};save();modal_close();d=freshDraft(lastNext());renderAll();toast('Gameplan reset')}}
+ const cl=document.getElementById('gpclear');if(cl)cl.onclick=()=>{const was=on;g.plan=null;g.gp=null;gpState={text:'',extra:{}};save();modal_close();d=freshDraft(lastNext());renderAll();toast(was?'Gameplan cleared — all buttons showing':'No gameplan was set')}}
 document.getElementById('gpbtn').onclick=()=>{gpState={text:'',extra:{}};gpModal()};
 
 function ask(title,cb,val){modal(`<h3 style="margin-top:0">${title}</h3><input type="text" id="askin" autocapitalize="characters" autocomplete="off" style="width:100%;font-size:20px;padding:10px" value="${esc2(val||'')}"><p style="display:flex;gap:10px"><button class="btn pri" id="askok">OK</button><button class="btn" id="askno">Cancel</button></p>`);
