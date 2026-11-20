@@ -113,12 +113,12 @@ const CONFIG={program:'deer-creek',name:'Deer Creek',filmRoom:'https://claude.ai
 const KEY=CONFIG.storageKey;
 const DEF={
  ftags:['JUMBO','SLAM','SCRUNCH','SPILL','POUR','PINCH','STOOGE','HIP','SQUINT','ALL IN','HULK','THOR','OVER','STACK','SQUEEZE','TRI','TITE'],
- motions:['MISSILE','X OUT','Z OUT','JET','ORBIT','FLY','SATELLITE','POPCORN','HAY','BAR','TIDE','SWAP','CROSS SPRAY','YOYO','TRADE','BOUNCE','STAY','ZAP','MAP','ZIP','IN'],
+ motions:['MISSILE','OUT','JET','ORBIT','FLY','SATELLITE','POPCORN','HAY','BAR','TIDE','SWAP','CROSS SPRAY','YOYO','TRADE','BOUNCE','STAY','ZAP','MAP','ZIP','IN','HOT'],
  formations:['Kong','Crown','Queen','King','Trips','Army','Money','Pour Slot','Joker','Splash','Ace','Slot','Wing','Jumbo','Shoot','Diamond','Mace','Bunch','Change','Twins','Jack'],
  runs:['SOONERS','CAROLINA','PITT','TEXAS','HOUSTON','LA','CHARGER','RAVEN','WASHINGTON','COMMANDER','PHILLY','EAGLE','STEELER','CLEV','BROWNS','PANTHER','TROJANS','STATE','ALTER STEELER','BRUINS','H RAIDER','Y VEGAS','X RAIDER','Z VEGAS','VEGAS','RAIDER'],
  passes:['MATCH','CUT CAL','AGGIES','RACE','BT BRONCHOS','LAP','FLASH','STRIKE','CAL','BRONCHOS','MINERS','STANFORD','TULSA','SHUFFLE','DEUCE'],
- tagsRun:['G','NOSE','TEAR','MISS','MASH','MOB','MAX','STREAK','GANG','ARC','WIDE','PISTOL','KICK','HAND','CRACK','WALL','TOSS','SWITCH','SPIN','SWORD','SHIELD','MIKE','OUTSIDE','SOLID','MIRROR','FOLLOW','SNUZ','PULSE','POP','HOLLER','MAIL'],
- tagsPass:['BRONZE','GOLD','BLACK','BROWN','FLIP','POKER','WHEEL','FIRE','FLAME','GO','TRAIL','COP','FLOP','MILLY','ROCK','BANANA','HAIL','PUMP','FLEA','LATE','SNAP','CHOICE','SLIDE','TUNNEL','DRAW','PICK','CUT','PUNCH','SURF','SLING','CURL','TOAD','THROWBACK','STOP','BT','SOLID','MIRROR','FOLLOW','SNUZ','PULSE','POP','HOLLER','MAIL'],
+ tagsRun:['X','Z','G','NOSE','TEAR','MISS','MASH','MOB','MAX','STREAK','GANG','ARC','WIDE','PISTOL','KICK','HAND','CRACK','WALL','TOSS','SWITCH','SPIN','SWORD','SHIELD','MIKE','OUTSIDE','SOLID','MIRROR','FOLLOW','SNUZ','PULSE','POP','HOLLER','MAIL'],
+ tagsPass:['X','Z','BRONZE','GOLD','BLACK','BROWN','FLIP','POKER','WHEEL','FIRE','FLAME','GO','TRAIL','COP','FLOP','MILLY','ROCK','BANANA','HAIL','PUMP','FLEA','LATE','SNAP','CHOICE','SLIDE','TUNNEL','DRAW','PICK','CUT','PUNCH','SURF','SLING','CURL','TOAD','THROWBACK','STOP','BT','SOLID','MIRROR','FOLLOW','SNUZ','PULSE','POP','HOLLER','MAIL'],
  targets:['HITCH','SLANT','OUT','CURL','DIG','POST','CORNER','GO','SEAM','FLAT','WHEEL','CROSS','STICK','SCREEN'],
  players:['0','2','3','4','5','8','9','11','12','13','14','15','30','33','48'],
  expRun:12,expPass:16
@@ -139,6 +139,7 @@ function load(){try{A=JSON.parse(localStorage.getItem(KEY))}catch(e){A=null}
  if(A.v<4){const bad=['G VEGAS','G RAIDER','GANG VEGAS','GANG RAIDER'];A.lists.runs=A.lists.runs.filter(x=>!bad.includes(x));if(!A.lists.tagsRun.includes('G'))A.lists.tagsRun.unshift('G');if(!A.lists.tagsRun.includes('GANG'))A.lists.tagsRun.push('GANG');for(const g of A.games)if(g.plan&&g.plan.runs)g.plan.runs=g.plan.runs.filter(x=>!bad.includes(x))}
  if(A.v<3){const un=(a,b)=>[...a,...b.filter(x=>!a.includes(x))];for(const k of['ftags','motions','passes','tagsRun','tagsPass'])A.lists[k]=un(A.lists[k]||[],DEF[k]);A.v=3}
  if(A.v<4)A.v=4;
+ if(A.v<5){const un=(a,b)=>[...a,...b.filter(x=>!a.includes(x))],L=A.lists;L.motions=un(L.motions.filter(x=>!['X OUT','Z OUT'].includes(x)),DEF.motions);for(const k of['tagsRun','tagsPass'])L[k]=un(['X','Z'],L[k]);for(const g of A.games)if(g.plan&&g.plan.motions&&g.plan.motions.some(x=>/^(X|Z) OUT$/.test(x))){g.plan.motions=g.plan.motions.filter(x=>!/^(X|Z) OUT$/.test(x));if(!g.plan.motions.includes('OUT'))g.plan.motions.push('OUT')}A.v=5}
  if(!A.games.length)buildDemo(true);
  if(!A.cur||!A.games.find(g=>g.id===A.cur))A.cur=A.games[0].id;save()}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(A))}catch(e){}}
@@ -146,7 +147,7 @@ function newGame(name,quiet){const g={id:'g'+Date.now(),opp:name,program:CONFIG.
 const G=()=>A.games.find(g=>g.id===A.cur);
 const esc2=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let d,edit=null;
-function freshDraft(prev){return{down:prev?prev.down:1,dist:prev?prev.dist:10,f:prev?prev.f:25,ptype:'run',formation:null,dir:null,motion:null,shift:false,jumbo:false,call:null,tag:null,ftags:[],tags:[],rgs:false,shot:false,result:null,gain:0,player:null,target:null,hash:null,fib:null,td:false}}
+function freshDraft(prev){return{down:prev?prev.down:1,dist:prev?prev.dist:10,f:prev?prev.f:25,ptype:'run',formation:null,dir:null,motion:null,shift:false,jumbo:false,call:null,tag:null,ftags:[],tags:[],rgs:false,shot:false,result:null,gain:0,player:null,target:null,hash:null,fib:null,mpos:null,td:false}}
 const ylNum=f=>f<=50?f:100-f, ylSide=f=>f<=50?'own':'opp';
 const ylFmt=f=>f===50?'50':f<50?'-'+f:'+'+(100-f);
 function plays(){return G().plays.filter(p=>p.k==='p')}
@@ -181,7 +182,7 @@ function renderEntry(){const L=A.lists,e=edit!==null;
  h+=C('s4','Ball on',ylFmt(d.f),`<div class="chips" style="align-items:center">${chip('side','own','Own',ylSide(d.f)==='own')}${chip('side','opp','Opp',ylSide(d.f)==='opp')}<div class="step"><button class="chip" data-a="ym">−</button><input type="number" inputmode="numeric" id="ylx" min="1" max="50" value="${ylNum(d.f)}" style="width:62px;font-size:20px;font-weight:700;text-align:center;background:transparent;color:var(--tx);border:1px solid var(--line);border-radius:6px;padding:4px 0"><button class="chip" data-a="yp">+</button></div></div>`);
  h+=C('s2','Hash','',`<div class="chips">${chip('hash','L','L',d.hash==='L')}${chip('hash','M','M',d.hash==='M')}${chip('hash','R','R',d.hash==='R')}</div>`);
  h+=C('s3','Formation tag','',`<div class="chips scroll">${chip('jumbo','t','Jumbo',d.jumbo)}${planL('ftags',d.ftags).filter(x=>x!=='JUMBO').map(x=>chip('ftags',x,x,d.ftags.includes(x))).join('')}${oth('ftags')}</div>`);
- h+=C('s3','Motion / shift','',`<div class="chips scroll">${chip('shift','t','Shift',d.shift)}${planL('motions',d.motion).map(x=>chip('motion',x,x,d.motion===x)).join('')}${oth('motions')}</div>`);
+ h+=C('s3','Motion / shift','',`<div class="chips scroll">${chip('shift','t','Shift',d.shift)}${chip('mpos','X','X',d.mpos==='X')}${chip('mpos','Z','Z',d.mpos==='Z')}${planL('motions',d.motion).map(x=>chip('motion',x,x,d.motion===x)).join('')}${oth('motions')}</div>`);
  h+=C('s3','Formation','',`<div class="chips scroll">${planL('formations',d.formation).map(x=>chip('formation',x,x,d.formation===x)).join('')}${oth('formations')}</div>`);
  h+=d.hash==='M'?C('s1','Dir','',`<div class="chips">${chip('dir','LT','LT',d.dir==='LT')}${chip('dir','RT','RT',d.dir==='RT')}</div>`):C('s1','FIB','',`<div class="chips">${chip('fib','Y','Y',d.fib==='Y')}${chip('fib','N','N',d.fib==='N')}</div>`);
  h+=C('s5','Play tag(s)','',`<div class="chips scroll">${tagL.map(x=>chip('tags',x,x,d.tags.includes(x))).join('')}${oth(d.ptype==='run'?'tagsRun':'tagsPass')}${chip('rgs','t','RGS',d.rgs)}${chip('shot','t','Shot',d.shot)}</div>`);
@@ -205,7 +206,7 @@ function renderLog(){const g=G(),s=summary();
   const E=eff(p),X=expl(p),r=RESULTS.find(x=>x[0]===p.result);
   h+=`<div class="play ${edit===i?'sel':''}" data-i="${i}"><div><div class="dd">${p.down}&amp;${p.dist}</div><div class="yl">${ylFmt(p.f)}</div></div>
   <div><div class="call">${p.call||'—'}${p.tag?' · '+p.tag:''}${E==='Y'?'<span class="badge b-e">EFF</span>':''}${X==='Y'?'<span class="badge b-x">EXP</span>':''}</div>
-  <div class="sub">${[p.ftag&&p.ftag,p.motion,p.shift&&'shift',p.hash&&p.hash+' hash',p.formation&&p.formation+(p.dir?' '+p.dir:''),p.fib&&'FIB '+p.fib,p.target&&'→ '+p.target,p.jumbo&&'jumbo',p.rgs&&'RGS',p.shot&&'shot'].filter(Boolean).join(' · ')}</div></div>
+  <div class="sub">${[p.ftag&&p.ftag,motionFull(p),p.shift&&'shift',p.hash&&p.hash+' hash',p.formation&&p.formation+(p.dir?' '+p.dir:''),p.fib&&'FIB '+p.fib,p.target&&'→ '+p.target,p.jumbo&&'jumbo',p.rgs&&'RGS',p.shot&&'shot'].filter(Boolean).join(' · ')}</div></div>
   <div><div class="gain ${p.gain>0?'pos':p.gain<0?'neg':''}">${p.gain>0?'+':''}${p.gain}</div><div class="sub" style="text-align:right">${p.td?'TD ':''}${r?r[1]:''}${p.player?' #'+p.player:''}</div></div></div>`});
  const el=document.getElementById('logp');el.innerHTML=h;el.scrollTop=el.scrollHeight}
 function renderHdr(){document.getElementById('gsel').innerHTML=A.games.map(g=>`<option value="${g.id}" ${g.id===A.cur?'selected':''}>${g.opp}</option>`).join('')}
@@ -247,9 +248,10 @@ document.getElementById('undo').onclick=()=>{const pl=G().plays;if(pl.length){co
 const HEAD=['DOWN','DISTANCE','JUMBO Y/N','SHIFT','MOTION','PLAY TAG','RUN CALL','PASS CALL','RGS Y/N','SHOT Y/N','RESULT','PLAYER','YARD LINE','GAIN/LOSS','<50','CROSS 50','>50','BCKWD CROSS 50','GAIN/LOSS','EXPLOSIVE','EFFICIENT','RUN SCHEME','PASS SCHEME','FORMATION','DIRECTION','PLAY TYPE','FORMATION TAG','CONCEPT','TARGET'];
 function resText(p){const r=p.result;if(r==='PEN')return'PENALTY';if(r==='INC')return'INC';if(r==='INT')return'INT';if(r==='FUM')return'FUM';if(r==='SACK')return'SACK';if(p.td)return p.gain+' YD TD';return String(p.gain)}
 function rows(){const out=[HEAD];for(const p of G().plays){if(p.k==='h'){out.push(['HALFTIME']);continue}if(p.k==='d'){out.push(['NEW DRIVE']);continue}
- out.push([p.down,p.dist,p.jumbo?'Y':'',p.shift?'Y':'',p.motion||'',p.tag||'',p.ptype==='run'?p.call||'':'',p.ptype==='pass'?p.call||'':'',p.rgs?'Y':'',p.shot?'Y':'',resText(p),p.player||'',ylFmt(p.f),p.gain,'','','','',p.gain,expl(p),eff(p),p.ptype==='run'?runScheme(p.call):'','',p.formation||'',p.dir||'',p.ptype==='run'?'Run':'Pass',p.ftag||(p.jumbo?'JUMBO':''),famOf(p.call),p.target||''])}return out}
+ out.push([p.down,p.dist,p.jumbo?'Y':'',p.shift?'Y':'',motionFull(p),p.tag||'',p.ptype==='run'?p.call||'':'',p.ptype==='pass'?p.call||'':'',p.rgs?'Y':'',p.shot?'Y':'',resText(p),p.player||'',ylFmt(p.f),p.gain,'','','','',p.gain,expl(p),eff(p),p.ptype==='run'?runScheme(p.call):'','',p.formation||'',p.dir||'',p.ptype==='run'?'Run':'Pass',p.ftag||(p.jumbo?'JUMBO':''),famOf(p.call),p.target||''])}return out}
 const csv=()=>rows().map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
 
+const motionFull=p=>p.motion?((p.mpos?p.mpos+' ':'')+p.motion):'';
 /* ===== Hudl export: exact column order for the Hudl import ===== */
 const HUDL_HEAD=['PLAY #','ODK','HASH','P & 10','DN','DIST','GN/LS','YARD LN','PERSONNEL','EFF','EXPLOSIVE?','SHOT','PLAY TYPE','RESULT','OFF FORM','FIB?','MOTION','SHIFT','PLAY','TAG','ONE WORD CALL','TARGET','PLAYER','QB NUMBER','RUN CONCEPT FAMILY','RUN R/L','PASS PRO'];
 const HUDL_RES={COMP:'Complete',INC:'Incomplete',RUSH:'Rush',SCRAM:'Scramble',SACK:'Sack',PEN:'Penalty',INT:'Interception',FUM:'Fumble Lost'};
@@ -257,7 +259,7 @@ const RLDIR=c=>{if(!c)return'';c=String(c).toUpperCase();const pr=PAIRS.find(q=>
 function hudlRows(){const out=[HUDL_HEAD];let first=true;
  for(const p of G().plays){if(p.k==='h'||p.k==='d'){first=true;continue}
   const run=p.ptype==='run',form=p.formation?[p.formation+(p.dir?' '+(p.dir==='RT'?'Rt':'Lt'):''),...(p.ftag?[p.ftag]:p.jumbo?['JUMBO']:[])].join(' '):'';
-  out.push(['','O','',first?'Y':'',p.down,p.dist,p.gain,ylFmt(p.f),'',eff(p),p.result==='PEN'?'':(expl(p)==='Y'?'YES':'NO'),'',run?'Run':'Pass',(HUDL_RES[p.result]||'')+(p.td?' TD':''),form,'',p.motion||'',p.shift?'Y':'',p.call||'',p.tag||'','',p.target||'',p.player||'','',run?famOf(p.call):'',run?RLDIR(p.call):'','']);
+  out.push(['','O','',first?'Y':'',p.down,p.dist,p.gain,ylFmt(p.f),'',eff(p),p.result==='PEN'?'':(expl(p)==='Y'?'YES':'NO'),'',run?'Run':'Pass',(HUDL_RES[p.result]||'')+(p.td?' TD':''),form,'',motionFull(p),p.shift?'Y':'',p.call||'',p.tag||'','',p.target||'',p.player||'','',run?famOf(p.call):'',run?RLDIR(p.call):'','']);
   first=false}
  return out}
 const hudlCsv=()=>hudlRows().map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
