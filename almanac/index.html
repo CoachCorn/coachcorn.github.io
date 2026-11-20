@@ -97,6 +97,7 @@ html,button,.chip,input,select{touch-action:manipulation;-webkit-tap-highlight-c
  <button class="btn" id="half">Halftime</button>
  <button class="btn" id="undo">Undo</button>
  <span style="flex:1"></span>
+ <button class="btn pri" id="stats">Stats</button>
  <button class="btn pri" id="rep">Report</button>
  <button class="btn" id="send" title="Send this game to Film Room">→ Film Room</button>
  <button class="btn" id="exp">Export</button>
@@ -406,7 +407,7 @@ function buildDemo(quiet){
  }
  A.games.push(g);A.cur=g.id;
  if(!quiet){edit=null;d=freshDraft(lastNext());save();renderAll()}}
-let RF='all';
+let RF='all',RMODE='report';
 function rangePlays(){const a=G().plays;let r=a;
  if(RF==='1h'){const i=a.findIndex(p=>p.k==='h');r=i<0?a:a.slice(0,i)}
  else if(RF==='2h'){const i=a.findIndex(p=>p.k==='h');r=i<0?[]:a.slice(i+1)}
@@ -441,7 +442,7 @@ const pct=v=>v==null?'–':v+'%';
 function reportHtml(){const D=reportData(),mx=Math.max(1,...D.T.map(([k,o])=>o.c+o.r+(o.t-o.r)));
  const F=[['all','All'],['1h','1st half'],['2h','2nd half'],['q1','Q1'],['q2','Q2'],['q3','Q3'],['q4','Q4'],['last','Last drive'],['last2','Last 2 drives']];
  let h=`<div class="noprint" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${F.map(f=>`<button class="chip ${RF===f[0]?'on':''}" data-rf="${f[0]}">${f[1]}</button>`).join('')}<span style="flex:1"></span><button class="btn" id="rprint">Print / PDF</button><button class="btn" id="rcopy">Copy text</button></div>
- <h3 style="margin:4px 0">${G().opp} — ${F.find(f=>f[0]===RF)[1]}</h3>
+ <h3 style="margin:4px 0">${G().opp} ${RMODE==='stats'?'stats':''} — ${F.find(f=>f[0]===RF)[1]}</h3>
  <div class="tiles"><div class="tile"><b>${D.n}</b><span>Plays (${D.runs}R / ${D.passes}P)</span></div><div class="tile"><b>${pct(D.ep)}</b><span>Efficient (goal 50)</span></div><div class="tile"><b>${pct(D.xp)}</b><span>Explosive (goal 12)</span></div><div class="tile"><b>${D.fd}/${D.drn}</b><span>2FDOS drives</span></div></div>
  <div class="tiles"><div class="tile"><b>${D.yp.toFixed(1)}</b><span>Yds / play</span></div><div class="tile"><b>${D.t3c}/${D.t3}</b><span>3rd down</span></div><div class="tile"><b>${D.X}</b><span>Explosives</span></div><div class="tile"><b>${D.n-D.E}</b><span>Non-efficient</span></div></div>
  <div class="rh">Who touched the ball</div>`;
@@ -449,6 +450,8 @@ function reportHtml(){const D=reportData(),mx=Math.max(1,...D.T.map(([k,o])=>o.c
  for(const [k,o] of D.T){const inc=o.t-o.r;h+=`<div class="dist"><b>#${k}</b><div class="bar"><i class="c1" style="width:${100*o.c/mx}%"></i><i class="c2" style="width:${100*o.r/mx}%"></i><i class="c3" style="width:${100*inc/mx}%"></i></div><div class="sub">${o.c} carries · ${o.r} catches · ${o.t} targets · ${o.y} yds${o.c+o.r?' ('+(o.y/(o.c+o.r)).toFixed(1)+'/touch)':''} · ${Math.round(100*o.e/o.n)}% eff</div></div>`}
  h+=`<div class="note">Blue = carries, green = catches, gray = incomplete targets.  ${D.unassigned?D.unassigned+' plays have no player logged.':''}</div>`;
  h+=`<div class="rh">Passers</div>`;if(!D.Q.length)h+='<div class="note">No passer logged yet.</div>';else h+=`<table class="t"><tr><th>QB</th><th>C/A</th><th>Yds</th><th>TD</th><th>INT</th><th>Sacks</th><th>Rush</th><th>Eff</th></tr>${D.Q.map(([k,q])=>`<tr><td>#${k}</td><td>${q.cmp}/${q.att}${q.att?' ('+Math.round(100*q.cmp/q.att)+'%)':''}</td><td>${q.y}${q.att?' ('+(q.y/q.att).toFixed(1)+'/att)':''}</td><td>${q.td}</td><td>${q.int}</td><td>${q.sk} (${q.sky})</td><td>${q.sc} (${q.scy})</td><td>${Math.round(100*q.e/q.n)}%</td></tr>`).join('')}</table>`;
+ if(RMODE==='stats'){const N=rangePlays().filter(p=>p.k==='p'&&p.result!=='PEN');const row=(l,a)=>{const e=a.filter(p=>eff(p)==='Y').length,x=a.filter(p=>expl(p)==='Y').length,y=a.reduce((t,p)=>t+p.gain,0);return `<tr><td>${l}</td><td>${a.length}</td><td>${a.length?Math.round(100*e/a.length)+'%':'–'}</td><td>${a.length?(y/a.length).toFixed(1):'–'}</td><td>${x}</td></tr>`};
+  h+=`<div class="rh">Splits</div><table class="t"><tr><th></th><th>Plays</th><th>Eff</th><th>Yds/play</th><th>Exp</th></tr>${row('Run',N.filter(p=>p.ptype==='run'))}${row('Pass',N.filter(p=>p.ptype==='pass'))}${[1,2,3,4].map(n=>row(['1st','2nd','3rd','4th'][n-1]+' down',N.filter(p=>p.down===n))).join('')}</table>`;return h}
  const tb=(v)=>D.calls.filter(c=>c.v===v);
  h+=`<div class="rh">Green light formations</div>${D.GL.n?`<table class="t"><tr><th>GLF</th><th>Snaps</th><th>Eff</th></tr><tr><td>Stayed in it (bubble / its own play)</td><td>${D.GL.st}</td><td>${D.GL.st?Math.round(100*D.GL.ste/D.GL.st)+"%":"–"}</td></tr><tr><td>Shifted out</td><td>${D.GL.se}</td><td>${D.GL.se?Math.round(100*D.GL.see/D.GL.se)+"%":"–"}</td></tr></table>`:'<div class="note">No green light formations yet.</div>'}
  <div class="rh">Calls: keep, stop, watch</div><table class="t"><tr><th>Call</th><th>Snaps</th><th>Eff</th><th>Avg</th><th>Exp</th><th></th></tr>${D.calls.map(c=>`<tr><td>${c.call}</td><td>${c.n}</td><td>${c.ep}%</td><td>${c.avg>0?'+':''}${c.avg.toFixed(1)}</td><td>${c.x}</td><td class="${c.v==='KEEP'?'keep':c.v==='STOP'?'stop':'mid'}">${c.v}</td></tr>`).join('')||'<tr><td colspan=6 class="note">No calls yet.</td></tr>'}</table>
@@ -459,11 +462,11 @@ function reportHtml(){const D=reportData(),mx=Math.max(1,...D.T.map(([k,o])=>o.c
  <div class="note">${G().gp&&G().gp.length?'From this week\'s gameplan list.':'No gameplan list set (Setup), so this is every run and pass button. Whole game to date.'}</div>`;
  return h}
 function reportText(){const D=reportData();return [G().opp+' — '+RF,`Plays ${D.n} (${D.runs}R/${D.passes}P) | Eff ${pct(D.ep)} | Exp ${pct(D.xp)} | 2FDOS ${D.fd}/${D.drn} | 3rd ${D.t3c}/${D.t3} | ${D.yp.toFixed(1)} yds/play`,'','PASSERS',...D.Q.map(([k,q])=>`#${k}: ${q.cmp}/${q.att}, ${q.y} yds, ${q.td} TD, ${q.int} INT, ${q.sk} sacks (${q.sky}), ${q.sc} rush (${q.scy}), ${Math.round(100*q.e/q.n)}% eff`),'','TOUCHES',...D.T.map(([k,o])=>`#${k}: ${o.c} car, ${o.r} rec, ${o.t} tgt, ${o.y} yds`),'','KEEP: '+(D.calls.filter(c=>c.v==='KEEP').map(c=>c.call).join(', ')||'-'),'STOP: '+(D.calls.filter(c=>c.v==='STOP').map(c=>c.call).join(', ')||'-'),'ONE WORDS: '+(D.ows.map(c=>`${c.ow} ${c.n} (${c.ep}% eff)`).join(', ')||'-'),'BY CONCEPT: '+(D.fams.map(c=>`${c.fam} ${c.n} (${c.ep}% eff)`).join(', ')||'-'),'NOT CALLED: '+(D.notCalled.join(', ')||'-')].join('\n')}
-function openReport(){modal(reportHtml());document.getElementById('mbox').classList.add('wide');wireReport()}
+function openReport(m){RMODE=m==='stats'?'stats':'report';modal(reportHtml());document.getElementById('mbox').classList.add('wide');wireReport()}
 function wireReport(){const b=document.getElementById('mbox');b.querySelectorAll('[data-rf]').forEach(x=>x.onclick=()=>{RF=x.dataset.rf;b.innerHTML=reportHtml();wireReport()});
  document.getElementById('rprint').onclick=()=>window.print();
  document.getElementById('rcopy').onclick=()=>{const t=reportText();(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).catch(()=>{const x=document.createElement('textarea');x.value=t;document.body.appendChild(x);x.select();document.execCommand('copy');x.remove()}).finally(()=>toast('Copied'))}}
-document.getElementById('rep').onclick=openReport;
+document.getElementById('rep').onclick=()=>openReport('report');document.getElementById('stats').onclick=()=>openReport('stats');
 function modal_close(){document.getElementById('modal').classList.remove('show')}
 load();d=freshDraft(lastNext());renderAll();
 </script></body></html>
