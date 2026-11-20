@@ -50,7 +50,7 @@ input[type=range]{width:100%;height:36px}
 .play{display:grid;grid-template-columns:62px 1fr auto;gap:6px;padding:7px 6px;border-radius:8px;align-items:center}
 .play:active,.play.sel{background:#223140}
 .play .dd{font-weight:700}.play .yl{font-size:11px;color:var(--mut)}
-.play .call{font-weight:600}.play .sub{font-size:12px;color:var(--mut)}
+.owg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.owg .chip{width:100%}.play .call{font-weight:600}.play .sub{font-size:12px;color:var(--mut)}
 .gain{font-weight:800;font-size:17px;text-align:right}.gain.pos{color:var(--ok)}.gain.neg{color:var(--bad)}
 .badge{display:inline-block;font-size:10px;font-weight:800;padding:1px 5px;border-radius:5px;margin-left:4px}
 .b-e{background:var(--ok);color:#04210f}.b-x{background:var(--warn);color:#2a1e00}
@@ -115,10 +115,11 @@ const DEF={
  ftags:['JUMBO','SLAM','SCRUNCH','SPILL','POUR','PINCH','STOOGE','HIP','SQUINT','ALL IN','HULK','THOR','OVER','STACK','SQUEEZE','TRI','TITE'],
  motions:['MISSILE','OUT','JET','ORBIT','FLY','SATELLITE','POPCORN','HAY','BAR','TIDE','SWAP','CROSS SPRAY','YOYO','TRADE','BOUNCE','STAY','ZAP','MAP','ZIP','IN','HOT'],
  formations:['Kong','Crown','Queen','King','Trips','Army','Money','Pour Slot','Joker','Splash','Ace','Slot','Wing','Jumbo','Shoot','Diamond','Mace','Bunch','Change','Twins','Jack'],
- runs:['SOONERS','CAROLINA','PITT','TEXAS','HOUSTON','LA','CHARGER','STEELER','PANTHER','TROJANS','STATE','BRUINS','VEGAS','RAIDER'],
- passes:['MATCH','CUT CAL','AGGIES','RACE','BT BRONCHOS','LAP','FLASH','STRIKE','CAL','BRONCHOS','MINERS','STANFORD','TULSA','SHUFFLE','DEUCE'],
- tagsRun:['X','Z','G','NOSE','TEAR','MISS','MASH','MOB','MAX','STREAK','GANG','ARC','WIDE','PISTOL','KICK','HAND','CRACK','WALL','TOSS','SWITCH','SPIN','SWORD','SHIELD','MIKE','OUTSIDE','SOLID','MIRROR','FOLLOW','SNUZ','PULSE','POP','HOLLER','MAIL'],
- tagsPass:['X','Z','BRONZE','GOLD','BLACK','BROWN','FLIP','POKER','WHEEL','FIRE','FLAME','GO','TRAIL','COP','FLOP','MILLY','ROCK','BANANA','HAIL','PUMP','FLEA','LATE','SNAP','CHOICE','SLIDE','TUNNEL','DRAW','PICK','CUT','PUNCH','SURF','SLING','CURL','TOAD','THROWBACK','STOP','BT','SOLID','MIRROR','FOLLOW','SNUZ','PULSE','POP','HOLLER','MAIL'],
+ runs:['CAROLINA','PANTHER','LA','CHARGER','PITT','STEELER','VEGAS','RAIDER'],
+ passes:['LAP','RACE','FLASH','STRIKE','AGGIES'],
+ owcs:['TEXAS','HOUSTON','AGGIES','MINERS','SOONERS','STATE','BRONCHOS','TULSA','CAL','TROJANS','BRUINS','STANFORD'],
+ tagsRun:['X','Z','G','NOSE','TEAR','MISS','MASH','MOB','MAX','STREAK','GANG','ARC','WIDE','PISTOL','KICK','HAND','CRACK','WALL','TOSS','SWITCH','SPIN','SWORD','SHIELD','MIKE','OUTSIDE','SOLID','MIRROR','SHORT','FOLLOW','SNUZ','PULSE','POP','HOLLER','MAIL'],
+ tagsPass:['X','Z','BRONZE','GOLD','BLACK','BROWN','FLIP','POKER','WHEEL','FIRE','FLAME','GO','TRAIL','COP','FLOP','MILLY','ROCK','BANANA','HAIL','PUMP','FLEA','LATE','SNAP','CHOICE','SLIDE','TUNNEL','DRAW','PICK','CUT','PUNCH','SURF','SLING','CURL','TOAD','THROWBACK','STOP','BT','SOLID','MIRROR','SHORT','FOLLOW','SNUZ','PULSE','POP','HOLLER','MAIL'],
  targets:['HITCH','SLANT','OUT','CURL','DIG','POST','CORNER','GO','SEAM','FLAT','WHEEL','CROSS','STICK','SCREEN'],
  players:['0','2','3','4','5','8','9','11','12','13','14','15','30','33','48'],
  expRun:12,expPass:16
@@ -126,8 +127,12 @@ const DEF={
 const RS={GH:['TROJANS','STATE','CAROLINA','PANTHER','ALTER STEELER'],BUCK:['TEXAS','VEGAS','RAIDER','G VEGAS','G RAIDER','GANG VEGAS','GANG RAIDER'],IZ:['SOONERS','WASHINGTON','COMMANDER','PHILLY','EAGLE'],GT:['HOUSTON','PITT','STEELER','CLEV','BROWNS'],POWER:['LA','CHARGER','RAVEN'],JET:['BRUINS','H RAIDER','Y VEGAS','X RAIDER','Z VEGAS']};
 /* Concept families: pairs are the Left/Right versions of one concept (shown boxed together on the button grid), FAM folds them in the report. */
 const PAIRS=[['CAROLINA','PANTHER'],['LA','CHARGER'],['VEGAS','RAIDER'],['PITT','STEELER'],['LAP','RACE'],['FLASH','STRIKE'],['G VEGAS','G RAIDER'],['GANG VEGAS','GANG RAIDER']];
-const FAM={CAROLINA:'GY Counter',PANTHER:'GY Counter',STATE:'GY Counter',TROJANS:'GY Counter',ALTER_STEELER:'GY Counter',LA:'Power',CHARGER:'Power',RAVEN:'Power',VEGAS:'Buck Sweep',RAIDER:'Buck Sweep','G VEGAS':'Buck Sweep','G RAIDER':'Buck Sweep','GANG VEGAS':'Buck Sweep','GANG RAIDER':'Buck Sweep',TEXAS:'Buck Sweep',PITT:'GT Counter',PITTSBURGH:'GT Counter',STEELER:'GT Counter',HOUSTON:'GT Counter',CLEV:'GT Counter',BROWNS:'GT Counter',SOONERS:'Zone Insert',WASHINGTON:'Zone Insert',COMMANDER:'Zone Insert',PHILLY:'Zone Insert',EAGLE:'Zone Insert',BRUINS:'Jet Sweep','H RAIDER':'Jet Sweep','Y VEGAS':'Jet Sweep','X RAIDER':'Jet Sweep','Z VEGAS':'Jet Sweep',LAP:'Cross',RACE:'Cross',CAL:'Cross',FLASH:'Verticals',STRIKE:'Verticals',MINERS:'Verticals',BRONCHOS:'Sail','BT BRONCHOS':'Sail',AGGIES:'Shock',STANFORD:'Post Spike',TULSA:'Post Spike'};
+const FAM={CAROLINA:'GY Counter',PANTHER:'GY Counter',STATE:'GY Counter',TROJANS:'GY Counter',ALTER_STEELER:'GY Counter',LA:'Power',CHARGER:'Power',RAVEN:'Power',VEGAS:'Buck Sweep',RAIDER:'Buck Sweep','G VEGAS':'Buck Sweep','G RAIDER':'Buck Sweep','GANG VEGAS':'Buck Sweep','GANG RAIDER':'Buck Sweep',TEXAS:'Buck Sweep',PITT:'GT Counter',PITTSBURGH:'GT Counter',STEELER:'GT Counter',HOUSTON:'GT Counter',CLEV:'GT Counter',BROWNS:'GT Counter',SOONERS:'Zone Insert',WASHINGTON:'Zone Insert',COMMANDER:'Zone Insert',PHILLY:'Zone Insert',EAGLE:'Zone Insert',BRUINS:'Jet Sweep','H RAIDER':'Jet Sweep','Y VEGAS':'Jet Sweep','X RAIDER':'Jet Sweep','Z VEGAS':'Jet Sweep',LAP:'Cross',RACE:'Cross',CAL:'Cross',FLASH:'Verticals',STRIKE:'Verticals',MINERS:'Verticals',BRONCHOS:'Sail','BT BRONCHOS':'Sail',AGGIES:'Shock','RACE SAIL':'Sail','LAP SAIL':'Sail',STANFORD:'Post Spike',TULSA:'Post Spike'};
 FAM['ALTER STEELER']='GY Counter';delete FAM.ALTER_STEELER;
+/* One-word calls: Texas/Trips family points to field, Crown = California, Kong = Oklahoma. Run OWCs always go to the boundary; pass OWCs always carry Black/Brown to the boundary. */
+const OW={TEXAS:{t:'run',fam:'Trips',pair:['VEGAS','RAIDER']},HOUSTON:{t:'run',fam:'Trips',pair:['PITT','STEELER']},STATE:{t:'run',fam:'Kong',pair:['CAROLINA','PANTHER']},SOONERS:{t:'run',fam:'Kong'},TROJANS:{t:'run',fam:'Crown',pair:['CAROLINA','PANTHER']},BRUINS:{t:'run',fam:'Crown'},
+ AGGIES:{t:'pass',fam:'Trips',pp:1},MINERS:{t:'pass',fam:'Trips',pp:1},BRONCHOS:{t:'pass',fam:'Kong',pp:1,byHash:{L:'RACE SAIL',R:'LAP SAIL'}},TULSA:{t:'pass',fam:'Kong',pp:1},CAL:{t:'pass',fam:'Crown',pp:1,byHash:{L:'LAP',R:'RACE'}},STANFORD:{t:'pass',fam:'Crown',pp:1}};
+const owLong=(o,h)=>{o=String(o||'').toUpperCase();const w=OW[o];if(!w||(h!=='L'&&h!=='R'))return o;if(w.byHash)return w.byHash[h];if(w.pair)return w.pair[h==='L'?0:1];return o};
 const famOf=c=>c?(FAM[String(c).toUpperCase()]||String(c).toUpperCase()):'';
 /* ===== end program settings ===== */
 const RESULTS=[['COMP','Complete'],['INC','Incomplete'],['RUSH','Rush'],['SCRAM','Scramble'],['SACK','Sack'],['PEN','Penalty'],['INT','INT'],['FUM','Fumble lost']];
@@ -141,6 +146,11 @@ function load(){try{A=JSON.parse(localStorage.getItem(KEY))}catch(e){A=null}
  if(A.v<4)A.v=4;
  if(A.v<5){const un=(a,b)=>[...a,...b.filter(x=>!a.includes(x))],L=A.lists;L.motions=un(L.motions.filter(x=>!['X OUT','Z OUT'].includes(x)),DEF.motions);for(const k of['tagsRun','tagsPass'])L[k]=un(['X','Z'],L[k]);for(const g of A.games)if(g.plan&&g.plan.motions&&g.plan.motions.some(x=>/^(X|Z) OUT$/.test(x))){g.plan.motions=g.plan.motions.filter(x=>!/^(X|Z) OUT$/.test(x));if(!g.plan.motions.includes('OUT'))g.plan.motions.push('OUT')}A.v=5}
  if(A.v<6){const bad=['RAVEN','WASHINGTON','COMMANDER','PHILLY','EAGLE','CLEV','BROWNS','ALTER STEELER','H RAIDER','Y VEGAS','X RAIDER','Z VEGAS'];A.lists.runs=A.lists.runs.filter(x=>!bad.includes(x));for(const g of A.games)if(g.plan&&g.plan.runs)g.plan.runs=g.plan.runs.filter(x=>!bad.includes(x));A.v=6}
+ if(A.v<7){const L=A.lists,mv=new Set(DEF.owcs),dropP=['MATCH','CUT CAL','BT BRONCHOS','CAL','BRONCHOS','MINERS','STANFORD','TULSA','SHUFFLE','DEUCE'],U=x=>String(x).toUpperCase();
+  const fr=a=>(a||[]).filter(x=>!mv.has(U(x)));const fp=a=>(a||[]).filter(x=>(!mv.has(U(x))||U(x)==='AGGIES')&&!dropP.includes(U(x)));
+  L.runs=fr(L.runs);L.passes=fp(L.passes);L.owcs=[...DEF.owcs];for(const k of['tagsRun','tagsPass'])if(!L[k].includes('SHORT'))L[k].push('SHORT');
+  for(const g of A.games)if(g.plan){g.plan.owcs=[...new Set([...(g.plan.runs||[]),...(g.plan.passes||[])].map(U).filter(x=>mv.has(x)))];g.plan.runs=fr(g.plan.runs);g.plan.passes=fp(g.plan.passes)}
+  A.v=7}
  if(!A.games.length)buildDemo(true);
  if(!A.cur||!A.games.find(g=>g.id===A.cur))A.cur=A.games[0].id;save()}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(A))}catch(e){}}
@@ -162,7 +172,7 @@ function advance(p){let f=p.f,down=p.down,dist=p.dist,newDrive=false;
  else{f=Math.max(1,Math.min(99,f+p.gain));if(p.gain>=dist){down=1;dist=f>=90?100-f:10}else{down++;dist-=p.gain;if(down>4){newDrive=true;f=100-f;down=1;dist=10}}}
  return{nd:newDrive,next:{down,dist,f}}}
 function logPlay(){if(!d.result){toast('Pick a result');return}
- const p=Object.assign({k:'p'},d);p.tags=[...(d.tags||[])];p.ftags=[...(d.ftags||[])];p.tag=p.tags.join(' ');p.ftag=p.ftags.join(' ');
+ const p=Object.assign({k:'p'},d);p.tags=[...(d.tags||[])];p.ftags=[...(d.ftags||[])];p.tag=p.tags.join(' ');p.ftag=p.ftags.join(' ');if(p.owc){p.call=owLong(p.owc,p.hash);p.ptype=(OW[p.owc]||{t:p.ptype}).t}else p.owc=null;
  if(edit!==null){G().plays[edit]=p;edit=null;d=freshDraft(lastNext())}
  else{G().plays.push(p);const a=advance(p);if(a.nd)G().plays.push({k:'d'});d=freshDraft(a.next)}
  save();renderAll()}
@@ -171,10 +181,10 @@ function toast(m){const t=document.createElement('div');t.textContent=m;t.style.
 const chip=(g,v,l,on,x='')=>`<button class="chip ${x} ${on?'on':''}" data-g="${g}" data-v="${String(v).replace(/"/g,'&quot;')}">${l??v}</button>`;
 const lab=(t,r='')=>`<div class="lab"><span>${t}</span><span>${r}</span></div>`;
 function conceptChips(list){const used=new Set(),out=[];for(const x of list){if(used.has(x))continue;const pr=PAIRS.find(q=>q.includes(x)&&q.every(y=>list.includes(y)));
-  if(pr){pr.forEach(y=>used.add(y));out.push('<span class="pair">'+pr.map(y=>chip('call',y,y,d.call===y)).join('')+'</span>')}else{used.add(x);out.push(chip('call',x,x,d.call===x))}}return out.join('')}
+  if(pr){pr.forEach(y=>used.add(y));out.push('<span class="pair">'+pr.map(y=>chip('call',y,y,d.call===y&&!d.owc)).join('')+'</span>')}else{used.add(x);out.push(chip('call',x,x,d.call===x&&!d.owc))}}return out.join('')}
 function renderEntry(){const L=A.lists,e=edit!==null;
  if(!d.tags)d.tags=d.tag?String(d.tag).split(' ').filter(Boolean):[];if(!d.ftags)d.ftags=d.ftag?String(d.ftag).split(' ').filter(Boolean):[];
- const calls=planL(d.ptype==='run'?'runs':'passes',d.call),tagL=planL(d.ptype==='run'?'tagsRun':'tagsPass',d.tags);
+ const runL=planL('runs',d.call),passL=planL('passes',d.call),owL=planL('owcs',d.owc),tagL=(d.call||d.owc)?planL(d.ptype==='run'?'tagsRun':'tagsPass',d.tags):[...new Set([...planL('tagsRun',d.tags),...planL('tagsPass',d.tags)])];
  const oth=c=>`<button class="chip" data-a="oth" data-c="${c}">+ Other</button>`;
  const C=(cls,t,r,body)=>`<div class="card ${cls}">${lab(t,r)}${body}</div>`;
  let h='<div class="ent">';
@@ -188,12 +198,14 @@ function renderEntry(){const L=A.lists,e=edit!==null;
  h+=C('s3','Formation','',`<div class="chips scroll">${planL('formations',d.formation).map(x=>chip('formation',x,x,d.formation===x)).join('')}${oth('formations')}</div>`);
  h+=d.hash==='M'?C('s1','Dir','',`<div class="chips">${chip('dir','LT','LT',d.dir==='LT')}${chip('dir','RT','RT',d.dir==='RT')}</div>`):C('s1','FIB','',`<div class="chips">${chip('fib','Y','Y',d.fib==='Y')}${chip('fib','N','N',d.fib==='N')}</div>`);
  h+=C('s5','Play tag(s)','',`<div class="chips scroll">${tagL.map(x=>chip('tags',x,x,d.tags.includes(x))).join('')}${oth(d.ptype==='run'?'tagsRun':'tagsPass')}</div>`);
- h+=C('s7','Concept',`<span class="chips">${chip('ptype','run','RUN',d.ptype==='run')}${chip('ptype','pass','PASS',d.ptype==='pass')}</span>`,`<div class="chips scroll">${conceptChips(calls)}${oth(d.ptype==='run'?'runs':'passes')}</div>`);
+ h+=C('s7','One word','',`<div class="owg">${owL.map(x=>chip('owc',x,x,d.owc===x)).join('')}</div>`);
+ h+=C('s6','Run concepts','',`<div class="chips scroll">${conceptChips(runL)}${oth('runs')}</div>`);
+ h+=C('s6','Pass concepts','',`<div class="chips scroll">${conceptChips(passL)}${oth('passes')}</div>`);
  if(d.ptype==='pass')h+=C('s12','Target (route)','',`<div class="chips scroll">${(L.targets||[]).map(x=>chip('target',x,x,d.target===x)).join('')}<button class="chip" data-a="tother">Other</button></div>`);
  h+=C('s5','Result','',`<div class="chips">${RESULTS.map(r=>chip('result',r[0],r[1],d.result===r[0],['SACK','INT','FUM'].includes(r[0])?'neg':'res')).join('')}${chip('td','t','TD',d.td,'res')}</div>`);
  h+=C('s4','Gain / loss','<input id="gv" type="number" inputmode="numeric" min="-99" max="99" value="'+d.gain+'" style="width:64px;font-size:18px;font-weight:700;text-align:center;background:transparent;color:var(--tx);border:1px solid var(--bd,#345);border-radius:6px">',`<input type="range" id="gs" min="-99" max="99" value="${d.gain}"><div class="chips" style="margin-top:2px">${[-5,0,2,4,6,8,10,15].map(n=>chip('gain',n,(n>0?'+':'')+n,d.gain===n)).join('')}<button class="chip" data-a="gm">−1</button><button class="chip" data-a="gp">+1</button></div>`);
  h+=C('s3','Player','',`<div class="chips scroll">${L.players.map(x=>chip('player',x,'#'+x,d.player===x)).join('')}<button class="chip" data-a="pother">Other</button></div>`);
- const lp=G().plays.filter(x=>x.k==='p').pop();h+=`<div class="s12 logrow">${lp&&!e?`<div class="last"><b>Last</b> ${lp.down}&amp;${lp.dist} ${lp.call||''}${lp.tag?' · '+lp.tag:''} <b>${lp.gain>0?'+':''}${lp.gain}</b></div>`:''}<button class="btn pri logbtn" data-a="log">${e?'Save changes':'Log play'}</button>${e?'<button class="btn" data-a="cancel">Cancel</button><button class="btn bad" data-a="del">Delete play</button>':''}</div></div>`;
+ const lp=G().plays.filter(x=>x.k==='p').pop();h+=`<div class="s12 logrow">${lp&&!e?`<div class="last"><b>Last</b> ${lp.down}&amp;${lp.dist} ${lp.owc||lp.call||''}${lp.tag?' · '+lp.tag:''} <b>${lp.gain>0?'+':''}${lp.gain}</b></div>`:''}<button class="btn pri logbtn" data-a="log">${e?'Save changes':'Log play'}</button>${e?'<button class="btn" data-a="cancel">Cancel</button><button class="btn bad" data-a="del">Delete play</button>':''}</div></div>`;
  document.getElementById('entry').innerHTML=h}
 function drivesOf(arr){const dr=[];let c=[];for(const p of arr){if(p.k!=='p'){if(c.length)dr.push(c);c=[]}else c.push(p)}if(c.length)dr.push(c);return dr}
 function summary(){const P=plays(),pen=P.filter(p=>p.result!=='PEN');const E=pen.filter(p=>eff(p)==='Y').length,X=pen.filter(p=>expl(p)==='Y').length;
@@ -207,7 +219,7 @@ function renderLog(){const g=G(),s=summary();
  g.plays.forEach((p,i)=>{if(p.k==='h'){dn++;h+=`<div class="half">HALFTIME</div><div class="drive"><span>Drive ${dn}</span></div>`;return}if(p.k==='d'){dn++;h+=`<div class="drive"><span>Drive ${dn}</span></div>`;return}
   const E=eff(p),X=expl(p),r=RESULTS.find(x=>x[0]===p.result);
   h+=`<div class="play ${edit===i?'sel':''}" data-i="${i}"><div><div class="dd">${p.down}&amp;${p.dist}</div><div class="yl">${ylFmt(p.f)}</div></div>
-  <div><div class="call">${p.call||'—'}${p.tag?' · '+p.tag:''}${E==='Y'?'<span class="badge b-e">EFF</span>':''}${X==='Y'?'<span class="badge b-x">EXP</span>':''}</div>
+  <div><div class="call">${p.owc?p.owc+(p.call&&p.call!==p.owc?' ('+p.call+')':''):(p.call||'—')}${p.tag?' · '+p.tag:''}${E==='Y'?'<span class="badge b-e">EFF</span>':''}${X==='Y'?'<span class="badge b-x">EXP</span>':''}</div>
   <div class="sub">${[p.ftag&&p.ftag,motionFull(p),p.shift&&'shift',p.hash&&p.hash+' hash',p.formation&&p.formation+(p.dir?' '+p.dir:''),p.fib&&'FIB '+p.fib,p.target&&'→ '+p.target,p.jumbo&&'jumbo',p.rgs&&'RGS',p.shot&&'shot'].filter(Boolean).join(' · ')}</div></div>
   <div><div class="gain ${p.gain>0?'pos':p.gain<0?'neg':''}">${p.gain>0?'+':''}${p.gain}</div><div class="sub" style="text-align:right">${p.td?'TD ':''}${r?r[1]:''}${p.player?' #'+p.player:''}</div></div></div>`});
  const el=document.getElementById('logp');el.innerHTML=h;el.scrollTop=el.scrollHeight}
@@ -220,6 +232,8 @@ document.getElementById('entry').addEventListener('click',ev=>{const b=ev.target
   else if(g==='side'&&(v==='own'||v==='opp')){const n=ylNum(d.f);d.f=v==='own'?n:100-n}
   else if(['shift','jumbo','rgs','shot'].includes(g))d[g]=!d[g];
   else if(g==='td'){d.td=!d.td;if(d.td)d.gain=100-d.f}
+  else if(g==='owc'){const w=OW[v];if(d.owc===v)d.owc=null;else{d.owc=v;d.call=null;if(w)d.ptype=w.t}const tl=A.lists[d.ptype==='run'?'tagsRun':'tagsPass'].map(x=>x.toUpperCase());d.tags=(d.tags||[]).filter(x=>tl.includes(x.toUpperCase()));if(d.ptype==='run')d.target=null}
+  else if(g==='call'){const was=d.call===v&&!d.owc;d.owc=null;d.call=was?null:v;if(d.call){d.ptype=A.lists.runs.some(x=>x.toUpperCase()===v.toUpperCase())?'run':'pass';const tl=A.lists[d.ptype==='run'?'tagsRun':'tagsPass'].map(x=>x.toUpperCase());d.tags=(d.tags||[]).filter(x=>tl.includes(x.toUpperCase()));if(d.ptype==='run')d.target=null}}
   else if(g==='ptype'){d.ptype=v;d.call=null;d.tags=[];d.tag=null;d.target=null}
   else if(g==='tags'||g==='ftags'){const a=d[g]||(d[g]=[]),i=a.indexOf(v);i<0?a.push(v):a.splice(i,1)}
   else if(g==='result'){d.result=d.result===v?null:v;if(v==='INC')d.gain=0}
@@ -230,7 +244,7 @@ document.getElementById('entry').addEventListener('click',ev=>{const b=ev.target
  else if(a==='ym'||a==='yp'){const s=ylSide(d.f),n=ylNum(d.f)+(a==='yp'?1:-1);const m=Math.max(1,Math.min(50,n));d.f=s==='own'?m:100-m}
  else if(a==='gm'){d.gain=Math.max(-99,d.gain-1)}else if(a==='gp'){d.gain=Math.min(99,d.gain+1)}
  else if(a==='oth'){const c=b.dataset.c;ask('Type it in',x0=>{let x=x0.trim();x=c==='formations'?x.toLowerCase().replace(/\b\w/g,m=>m.toUpperCase()):x.toUpperCase();const L=A.lists;if(!L[c].some(y=>y.toUpperCase()===x.toUpperCase()))L[c].push(x);else x=L[c].find(y=>y.toUpperCase()===x.toUpperCase());const pl=G().plan;if(pl&&pl[c]&&!pl[c].some(y=>y.toUpperCase()===x.toUpperCase()))pl[c].push(x);
-   if(c==='ftags'){if(!d.ftags.includes(x))d.ftags.push(x)}else if(c==='motions')d.motion=x;else if(c==='formations')d.formation=x;else if(c==='runs'||c==='passes')d.call=x;else{if(!d.tags.includes(x))d.tags.push(x)}save();renderEntry()});return}
+   if(c==='ftags'){if(!d.ftags.includes(x))d.ftags.push(x)}else if(c==='motions')d.motion=x;else if(c==='formations')d.formation=x;else if(c==='runs'||c==='passes'){d.call=x;d.owc=null;d.ptype=c==='runs'?'run':'pass'}else{if(!d.tags.includes(x))d.tags.push(x)}save();renderEntry()});return}
  else if(a==='gpopen'){gpState={text:'',extra:{}};gpModal();return}
  else if(a==='tother'){ask('Route targeted',x=>{d.target=x.toUpperCase();renderEntry()});return}
  else if(a==='pother'){ask('Jersey number',x=>{d.player=x;renderEntry()});return}
@@ -249,10 +263,10 @@ document.getElementById('logbtn').onclick=()=>document.getElementById('logp').cl
 document.getElementById('newdrive').onclick=()=>{G().plays.push({k:'d'});save();renderLog();toast('New drive — Drive '+(G().plays.filter(p=>p.k==='d'||p.k==='h').length+1))};
 document.getElementById('half').onclick=()=>{if(G().plays.some(p=>p.k==='h')){toast('Halftime already marked');return}G().plays.push({k:'h'});d=freshDraft({down:1,dist:10,f:25});edit=null;save();renderAll();toast('Halftime marked')};
 document.getElementById('undo').onclick=()=>{const pl=G().plays;if(pl.length){const x=pl.pop();d=freshDraft(lastNext());edit=null;save();renderAll();toast('Undid '+(x.k==='h'?'halftime':x.k==='d'?'drive marker':'last play'))}else toast('Nothing to undo')};
-const HEAD=['DOWN','DISTANCE','JUMBO Y/N','SHIFT','MOTION','PLAY TAG','RUN CALL','PASS CALL','RGS Y/N','SHOT Y/N','RESULT','PLAYER','YARD LINE','GAIN/LOSS','<50','CROSS 50','>50','BCKWD CROSS 50','GAIN/LOSS','EXPLOSIVE','EFFICIENT','RUN SCHEME','PASS SCHEME','FORMATION','DIRECTION','PLAY TYPE','FORMATION TAG','CONCEPT','TARGET'];
+const HEAD=['DOWN','DISTANCE','JUMBO Y/N','SHIFT','MOTION','PLAY TAG','RUN CALL','PASS CALL','RGS Y/N','SHOT Y/N','RESULT','PLAYER','YARD LINE','GAIN/LOSS','<50','CROSS 50','>50','BCKWD CROSS 50','GAIN/LOSS','EXPLOSIVE','EFFICIENT','RUN SCHEME','PASS SCHEME','FORMATION','DIRECTION','PLAY TYPE','FORMATION TAG','CONCEPT','TARGET','ONE WORD'];
 function resText(p){const r=p.result;if(r==='PEN')return'PENALTY';if(r==='INC')return'INC';if(r==='INT')return'INT';if(r==='FUM')return'FUM';if(r==='SACK')return'SACK';if(p.td)return p.gain+' YD TD';return String(p.gain)}
 function rows(){const out=[HEAD];for(const p of G().plays){if(p.k==='h'){out.push(['HALFTIME']);continue}if(p.k==='d'){out.push(['NEW DRIVE']);continue}
- out.push([p.down,p.dist,p.jumbo?'Y':'',p.shift?'Y':'',motionFull(p),p.tag||'',p.ptype==='run'?p.call||'':'',p.ptype==='pass'?p.call||'':'',p.rgs?'Y':'',p.shot?'Y':'',resText(p),p.player||'',ylFmt(p.f),p.gain,'','','','',p.gain,expl(p),eff(p),p.ptype==='run'?runScheme(p.call):'','',p.formation||'',p.dir||'',p.ptype==='run'?'Run':'Pass',p.ftag||(p.jumbo?'JUMBO':''),famOf(p.call),p.target||''])}return out}
+ out.push([p.down,p.dist,p.jumbo?'Y':'',p.shift?'Y':'',motionFull(p),p.tag||'',p.ptype==='run'?p.call||'':'',p.ptype==='pass'?p.call||'':'',p.rgs?'Y':'',p.shot?'Y':'',resText(p),p.player||'',ylFmt(p.f),p.gain,'','','','',p.gain,expl(p),eff(p),p.ptype==='run'?runScheme(p.call):'','',p.formation||'',p.dir||'',p.ptype==='run'?'Run':'Pass',p.ftag||(p.jumbo?'JUMBO':''),famOf(p.call),p.target||'',p.owc||''])}return out}
 const csv=()=>rows().map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
 
 const motionFull=p=>p.motion?((p.mpos?p.mpos+' ':'')+p.motion):'';
@@ -263,7 +277,7 @@ const RLDIR=c=>{if(!c)return'';c=String(c).toUpperCase();const pr=PAIRS.find(q=>
 function hudlRows(){const out=[HUDL_HEAD];let first=true;
  for(const p of G().plays){if(p.k==='h'||p.k==='d'){first=true;continue}
   const run=p.ptype==='run',form=p.formation?[p.formation+(p.dir?' '+(p.dir==='RT'?'Rt':'Lt'):''),...(p.ftag?[p.ftag]:p.jumbo?['JUMBO']:[])].join(' '):'';
-  out.push(['','O','',first?'Y':'',p.down,p.dist,p.gain,ylFmt(p.f),'',eff(p),p.result==='PEN'?'':(expl(p)==='Y'?'YES':'NO'),'',run?'Run':'Pass',(HUDL_RES[p.result]||'')+(p.td?' TD':''),form,'',motionFull(p),p.shift?'Y':'',p.call||'',p.tag||'','',p.target||'',p.player||'','',run?famOf(p.call):'',run?RLDIR(p.call):'','']);
+  out.push(['','O','',first?'Y':'',p.down,p.dist,p.gain,ylFmt(p.f),'',eff(p),p.result==='PEN'?'':(expl(p)==='Y'?'YES':'NO'),'',run?'Run':'Pass',(HUDL_RES[p.result]||'')+(p.td?' TD':''),form,'',motionFull(p),p.shift?'Y':'',p.call||'',p.tag||'',p.owc||'',p.target||'',p.player||'','',run?famOf(p.call):'',run?RLDIR(p.call):'',(!run&&p.owc&&(OW[p.owc]||{}).pp)?'BLACK/BROWN':'']);
   first=false}
  return out}
 const hudlCsv=()=>hudlRows().map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
@@ -275,18 +289,18 @@ const planL=(cat,sel)=>{const base=A.lists[cat]||[],pl=G().plan,sl=[].concat(sel
  if(!pl)return(CONFIG.blankUntilPlan&&BLANKCATS.includes(cat))?keep():base;
  const p=pl[cat];if(!p||!p.length)return CONFIG.blankUntilPlan?keep():base;
  const S=new Set(p.map(x=>x.toUpperCase()));return base.filter(x=>S.has(x.toUpperCase())||sl.includes(x.toUpperCase()))};
-const GPCATS=[['ftags','Formation tag'],['motions','Motion'],['formations','Formation'],['runs','Run concept'],['passes','Pass concept'],['tagsRun','Play tag']];
+const GPCATS=[['ftags','Formation tag'],['motions','Motion'],['formations','Formation'],['runs','Run concept'],['passes','Pass concept'],['owcs','One word'],['tagsRun','Play tag']];
 const GPSKIP=new Set(['RT','LT','LEFT','RIGHT','L','R']);
 function gpVocab(extra){const v=new Map(),add=(t,c)=>{t=String(t).toUpperCase().trim();if(!t)return;if(!v.has(t))v.set(t,new Set());v.get(t).add(c)};
- const L=A.lists;for(const c of['ftags','motions','formations','runs','passes'])(L[c]||[]).forEach(x=>add(x,c));(L.tagsRun||[]).forEach(x=>add(x,'tag'));(L.tagsPass||[]).forEach(x=>add(x,'tag'));
+ const L=A.lists;for(const c of['ftags','motions','formations','runs','passes','owcs'])(L[c]||[]).forEach(x=>add(x,c));(L.tagsRun||[]).forEach(x=>add(x,'tag'));(L.tagsPass||[]).forEach(x=>add(x,'tag'));
  for(const k in extra||{})if(extra[k]&&extra[k]!=='skip')add(k,extra[k]==='tagsRun'?'tag':extra[k]);return v}
 function gpTok(line,v){const w=line.toUpperCase().replace(/[^A-Z0-9 /&-]+/g,' ').split(/\s+/).filter(Boolean),out=[];for(let i=0;i<w.length;){let n=Math.min(3,w.length-i),hit=null;for(;n>=1;n--){const ph=w.slice(i,i+n).join(' ');if(v.has(ph)){hit=[ph,v.get(ph),n];break}}
   if(hit){out.push({t:hit[0],c:hit[1]});i+=hit[2]}else{out.push({t:w[i],c:null});i++}}return out}
-function gpParse(text,extra){const v=gpVocab(extra),lines=text.split(/\n/).map(x=>x.trim()).filter(Boolean),plan={ftags:new Set(),motions:new Set(),formations:new Set(),runs:new Set(),passes:new Set(),tagsRun:new Set(),tagsPass:new Set()},unk=new Map(),concepts=new Set();let n=0;
- for(const ln of lines){const tk=gpTok(ln,v);let ci=-1;for(let i=tk.length-1;i>=0;i--)if(tk[i].c&&(tk[i].c.has('runs')||tk[i].c.has('passes'))){ci=i;break}
-  if(ci<0&&!tk.some(x=>x.c))continue;n++;const typ=ci>=0?(tk[ci].c.has('runs')?'run':'pass'):null;
+function gpParse(text,extra){const v=gpVocab(extra),lines=text.split(/\n/).map(x=>x.trim()).filter(Boolean),plan={ftags:new Set(),motions:new Set(),formations:new Set(),runs:new Set(),passes:new Set(),owcs:new Set(),tagsRun:new Set(),tagsPass:new Set()},unk=new Map(),concepts=new Set();let n=0;
+ for(const ln of lines){const tk=gpTok(ln,v);let ci=-1;for(let i=tk.length-1;i>=0;i--)if(tk[i].c&&(tk[i].c.has('runs')||tk[i].c.has('passes')||tk[i].c.has('owcs'))){ci=i;break}
+  if(ci<0&&!tk.some(x=>x.c))continue;n++;const typ=ci>=0?(tk[ci].c.has('runs')?'run':tk[ci].c.has('passes')?'pass':((OW[tk[ci].t]||{}).t||null)):null;
   tk.forEach((x,i)=>{if(GPSKIP.has(x.t))return;if(!x.c){unk.set(x.t,(unk.get(x.t)||0)+1);return}
-   if(i===ci){const c=tk[ci].c.has('runs')?'runs':'passes';plan[c].add(x.t);concepts.add(x.t);const pr=PAIRS.find(q=>q.includes(x.t));if(pr)pr.forEach(y=>{plan[c].add(y);concepts.add(y)});return}
+   if(i===ci){for(const c of['runs','passes','owcs'])if(x.c.has(c)){plan[c].add(x.t);concepts.add(x.t);if(c!=='owcs'){const pr=PAIRS.find(q=>q.includes(x.t));if(pr)pr.forEach(y=>{plan[c].add(y);concepts.add(y)})}}return}
    for(const c of x.c){if(c==='ftags'||c==='motions'||c==='formations')plan[c].add(x.t);else if(c==='tag'){if(typ!=='pass')plan.tagsRun.add(x.t);if(typ!=='run')plan.tagsPass.add(x.t)}}})}
  return{plan,unk,concepts,n,lines:lines.length}}
 let gpState={text:'',extra:{}};
@@ -333,7 +347,7 @@ document.getElementById('exp').onclick=()=>{modal(`<h3 style="margin-top:0">Expo
  e4.onclick=()=>dl(G().opp.replace(/\W+/g,'_')+'_almanac.csv',csv(),'text/csv');
  e3.onclick=()=>dl('almanac_backup.json',JSON.stringify(A),'application/json')};
 document.getElementById('setup').onclick=()=>{const L=A.lists;const f=(k,t)=>`<div class="lab"><span>${t}</span></div><textarea id="s_${k}">${L[k].join(', ')}</textarea>`;
- modal(`<h3 style="margin-top:0">Setup</h3><p class="note">Comma-separated. These become the buttons.</p>${f('ftags','Formation tags')}${f('motions','Motions')}${f('formations','Formations')}${f('runs','Run calls')}${f('passes','Pass calls')}${f('ftags','Formation tags')}${f('tagsRun','Run play tags')}${f('tagsPass','Pass play tags')}${f('targets','Targets (routes)')}${f('players','Jersey numbers')}<div class="lab"><span>Gameplan plays for ${G().opp} (used for "not called yet"; blank = all run and pass buttons)</span></div><textarea id="s_gp">${(G().gp||[]).join(', ')}</textarea><div class="lab"><span>Film Room link</span></div><input type="text" id="s_fr" style="width:100%" value="${A.fr||FR}">
+ modal(`<h3 style="margin-top:0">Setup</h3><p class="note">Comma-separated. These become the buttons.</p>${f('ftags','Formation tags')}${f('motions','Motions')}${f('formations','Formations')}${f('runs','Run calls')}${f('passes','Pass calls')}${f('owcs','One words')}${f('ftags','Formation tags')}${f('tagsRun','Run play tags')}${f('tagsPass','Pass play tags')}${f('targets','Targets (routes)')}${f('players','Jersey numbers')}<div class="lab"><span>Gameplan plays for ${G().opp} (used for "not called yet"; blank = all run and pass buttons)</span></div><textarea id="s_gp">${(G().gp||[]).join(', ')}</textarea><div class="lab"><span>Film Room link</span></div><input type="text" id="s_fr" style="width:100%" value="${A.fr||FR}">
  <div class="two" style="margin-top:8px"><div><div class="lab">Explosive run</div><input type="number" id="s_er" value="${L.expRun}"></div><div><div class="lab">Explosive pass</div><input type="number" id="s_ep" value="${L.expPass}"></div></div>
  <div class="lab" style="margin-top:12px"><span>Games on this device</span></div><div id="gmlist">${A.games.map(g=>`<div class="gmrow" style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)"><div style="flex:1;min-width:0"><b>${esc2(g.opp)}</b>${g.id===A.cur?' <span class="note">(open)</span>':''}<div class="note">${g.plays.filter(x=>x.k==='p').length} plays</div></div><button class="btn bad" data-delg="${g.id}">Delete</button></div>`).join('')}</div>
  <button class="btn bad" id="skeep" style="margin-top:8px;width:100%">Delete all games except ${esc2(G().opp)}</button>
@@ -341,7 +355,7 @@ document.getElementById('setup').onclick=()=>{const L=A.lists;const f=(k,t)=>`<d
  const afterDel=()=>{if(!A.games.length)newGame('Game 1',true);if(!A.games.find(g=>g.id===A.cur))A.cur=A.games[0].id;edit=null;d=freshDraft(lastNext());save();modal_close();renderAll()};
  document.getElementById('gmlist').onclick=e=>{const b=e.target.closest('[data-delg]');if(!b)return;const g=A.games.find(x=>x.id===b.dataset.delg);if(g)arm(b,'Tap again to delete',()=>{A.games=A.games.filter(x=>x.id!==g.id);afterDel()})};
  document.getElementById('skeep').onclick=()=>{const n=A.games.length-1;if(n<1){toast('This is the only game');return}arm(document.getElementById('skeep'),'Tap again: delete '+n+' other game'+(n>1?'s':''),()=>{A.games=A.games.filter(g=>g.id===A.cur);afterDel()})};
- ssave.onclick=()=>{for(const k of['ftags','motions','formations','runs','passes','tagsRun','tagsPass','targets','players'])L[k]=document.getElementById('s_'+k).value.split(',').map(s=>s.trim()).filter(Boolean);G().gp=document.getElementById('s_gp').value.split(',').map(s=>s.trim()).filter(Boolean);A.fr=document.getElementById('s_fr').value.trim()||FR;L.expRun=+s_er.value||12;L.expPass=+s_ep.value||16;save();modal_close();renderAll()};
+ ssave.onclick=()=>{for(const k of['ftags','motions','formations','runs','passes','owcs','tagsRun','tagsPass','targets','players'])L[k]=document.getElementById('s_'+k).value.split(',').map(s=>s.trim()).filter(Boolean);G().gp=document.getElementById('s_gp').value.split(',').map(s=>s.trim()).filter(Boolean);A.fr=document.getElementById('s_fr').value.trim()||FR;L.expRun=+s_er.value||12;L.expPass=+s_ep.value||16;save();modal_close();renderAll()};
  sdemo.onclick=()=>{modal_close();buildDemo(false)};
 };
 function buildDemo(quiet){
@@ -385,16 +399,18 @@ function reportData(){const R=rangePlays(),P=R.filter(p=>p.k==='p'),N=P.filter(p
  const T={};for(const p of N){if(!p.player)continue;const o=T[p.player]||(T[p.player]={c:0,r:0,t:0,y:0,e:0,n:0});o.n++;
   if(p.result==='RUSH'||p.result==='SCRAM'){o.c++;o.y+=p.gain}else if(p.result==='COMP'){o.r++;o.t++;o.y+=p.gain}else if(p.result==='INC'){o.t++}
   if(eff(p)==='Y')o.e++}
- const C={};for(const p of N){if(!p.call)continue;const o=C[p.call]||(C[p.call]={n:0,e:0,x:0,y:0});o.n++;o.y+=p.gain;if(eff(p)==='Y')o.e++;if(expl(p)==='Y')o.x++}
+ const C={};for(const p of N){if(!p.call)continue;const ck=p.owc||p.call;const o=C[ck]||(C[ck]={n:0,e:0,x:0,y:0});o.n++;o.y+=p.gain;if(eff(p)==='Y')o.e++;if(expl(p)==='Y')o.x++}
  const calls=Object.entries(C).map(([k,o])=>{const ep=Math.round(100*o.e/o.n);let v='Too early';
   if(o.n>=2&&ep>=50)v='KEEP';else if((o.n>=3&&ep<35)||(o.n===2&&ep===0))v='STOP';else if(o.n>=2)v='Neutral';
   return{call:k,n:o.n,ep,avg:o.y/o.n,x:o.x,v}}).sort((a,b)=>b.n-a.n);
  const FM={};for(const p of N){if(!p.call)continue;const k=famOf(p.call),o=FM[k]||(FM[k]={n:0,e:0,x:0,y:0,calls:new Set()});o.n++;o.y+=p.gain;o.calls.add(p.call.toUpperCase());if(eff(p)==='Y')o.e++;if(expl(p)==='Y')o.x++}
  const fams=Object.entries(FM).map(([k,o])=>({fam:k,n:o.n,ep:Math.round(100*o.e/o.n),avg:o.y/o.n,x:o.x,calls:[...o.calls].join(' / ')})).sort((a,b)=>b.n-a.n);
- const gp=(G().gp&&G().gp.length)?G().gp:[...A.lists.runs,...A.lists.passes];
- const called=new Set(G().plays.filter(p=>p.k==='p'&&p.call).map(p=>p.call.toUpperCase()));
+ const OWS={};for(const p of N){if(!p.owc)continue;const o=OWS[p.owc]||(OWS[p.owc]={n:0,e:0,x:0,y:0});o.n++;o.y+=p.gain;if(eff(p)==='Y')o.e++;if(expl(p)==='Y')o.x++}
+ const ows=Object.entries(OWS).map(([k,o])=>({ow:k,long:OW[k]?OW[k].fam:'',n:o.n,ep:Math.round(100*o.e/o.n),avg:o.y/o.n,x:o.x})).sort((a,b)=>b.n-a.n);
+ const gp=(G().gp&&G().gp.length)?G().gp:[...A.lists.runs,...A.lists.passes,...(A.lists.owcs||[])];
+ const called=new Set(G().plays.filter(p=>p.k==='p'&&(p.call||p.owc)).flatMap(p=>[p.call,p.owc]).filter(Boolean).map(x=>x.toUpperCase()));
  return{n:N.length,E,X,ep:pc(E,N.length),xp:pc(X,N.length),yp:N.length?yds/N.length:0,runs:N.filter(p=>p.ptype==='run').length,passes:N.filter(p=>p.ptype==='pass').length,t3:t3.length,t3c,fd:hit,drn:dr.length,
-  fams,T:Object.entries(T).sort((a,b)=>(b[1].c+b[1].r)-(a[1].c+a[1].r)||b[1].t-a[1].t),calls,notCalled:gp.filter(x=>!called.has(x.toUpperCase())),unassigned:N.filter(p=>!p.player&&['RUSH','SCRAM','COMP','INC'].includes(p.result)).length}}
+  fams,ows,T:Object.entries(T).sort((a,b)=>(b[1].c+b[1].r)-(a[1].c+a[1].r)||b[1].t-a[1].t),calls,notCalled:gp.filter(x=>!called.has(x.toUpperCase())),unassigned:N.filter(p=>!p.player&&['RUSH','SCRAM','COMP','INC'].includes(p.result)).length}}
 const pct=v=>v==null?'–':v+'%';
 function reportHtml(){const D=reportData(),mx=Math.max(1,...D.T.map(([k,o])=>o.c+o.r+(o.t-o.r)));
  const F=[['all','All'],['1h','1st half'],['2h','2nd half'],['last','Last drive']];
@@ -409,11 +425,12 @@ function reportHtml(){const D=reportData(),mx=Math.max(1,...D.T.map(([k,o])=>o.c
  const tb=(v)=>D.calls.filter(c=>c.v===v);
  h+=`<div class="rh">Calls: keep, stop, watch</div><table class="t"><tr><th>Call</th><th>Snaps</th><th>Eff</th><th>Avg</th><th>Exp</th><th></th></tr>${D.calls.map(c=>`<tr><td>${c.call}</td><td>${c.n}</td><td>${c.ep}%</td><td>${c.avg>0?'+':''}${c.avg.toFixed(1)}</td><td>${c.x}</td><td class="${c.v==='KEEP'?'keep':c.v==='STOP'?'stop':'mid'}">${c.v}</td></tr>`).join('')||'<tr><td colspan=6 class="note">No calls yet.</td></tr>'}</table>
  <div class="note">KEEP = 2+ snaps at 50% efficient or better. STOP = 3+ snaps under 35%, or 2 snaps with none efficient. One snap is too early to judge. Small samples, so use judgment.</div>
+ <div class="rh">One words</div><table class="t"><tr><th>One word</th><th>Snaps</th><th>Eff</th><th>Avg</th><th>Exp</th></tr>${D.ows.map(c=>`<tr><td>${c.ow}</td><td>${c.n}</td><td>${c.ep}%</td><td>${c.avg>0?'+':''}${c.avg.toFixed(1)}</td><td>${c.x}</td></tr>`).join('')||'<tr><td colspan=5 class="note">No one words yet.</td></tr>'}</table>
  <div class="rh">By concept (Left/Right pairs combined)</div><table class="t"><tr><th>Concept</th><th>Calls used</th><th>Snaps</th><th>Eff</th><th>Avg</th><th>Exp</th></tr>${D.fams.map(c=>`<tr><td>${c.fam}</td><td>${c.calls}</td><td>${c.n}</td><td>${c.ep}%</td><td>${c.avg>0?'+':''}${c.avg.toFixed(1)}</td><td>${c.x}</td></tr>`).join('')||'<tr><td colspan=6 class="note">No calls yet.</td></tr>'}</table>
  <div class="rh">Not called yet (${D.notCalled.length})</div><div class="chips">${D.notCalled.map(x=>`<span class="chip" style="min-height:0;padding:4px 9px;font-weight:500">${x}</span>`).join('')||'<span class="note">Everything on the plan has been called.</span>'}</div>
  <div class="note">${G().gp&&G().gp.length?'From this week\'s gameplan list.':'No gameplan list set (Setup), so this is every run and pass button. Whole game to date.'}</div>`;
  return h}
-function reportText(){const D=reportData();return [G().opp+' — '+RF,`Plays ${D.n} (${D.runs}R/${D.passes}P) | Eff ${pct(D.ep)} | Exp ${pct(D.xp)} | 2FDOS ${D.fd}/${D.drn} | 3rd ${D.t3c}/${D.t3} | ${D.yp.toFixed(1)} yds/play`,'','TOUCHES',...D.T.map(([k,o])=>`#${k}: ${o.c} car, ${o.r} rec, ${o.t} tgt, ${o.y} yds`),'','KEEP: '+(D.calls.filter(c=>c.v==='KEEP').map(c=>c.call).join(', ')||'-'),'STOP: '+(D.calls.filter(c=>c.v==='STOP').map(c=>c.call).join(', ')||'-'),'BY CONCEPT: '+(D.fams.map(c=>`${c.fam} ${c.n} (${c.ep}% eff)`).join(', ')||'-'),'NOT CALLED: '+(D.notCalled.join(', ')||'-')].join('\n')}
+function reportText(){const D=reportData();return [G().opp+' — '+RF,`Plays ${D.n} (${D.runs}R/${D.passes}P) | Eff ${pct(D.ep)} | Exp ${pct(D.xp)} | 2FDOS ${D.fd}/${D.drn} | 3rd ${D.t3c}/${D.t3} | ${D.yp.toFixed(1)} yds/play`,'','TOUCHES',...D.T.map(([k,o])=>`#${k}: ${o.c} car, ${o.r} rec, ${o.t} tgt, ${o.y} yds`),'','KEEP: '+(D.calls.filter(c=>c.v==='KEEP').map(c=>c.call).join(', ')||'-'),'STOP: '+(D.calls.filter(c=>c.v==='STOP').map(c=>c.call).join(', ')||'-'),'ONE WORDS: '+(D.ows.map(c=>`${c.ow} ${c.n} (${c.ep}% eff)`).join(', ')||'-'),'BY CONCEPT: '+(D.fams.map(c=>`${c.fam} ${c.n} (${c.ep}% eff)`).join(', ')||'-'),'NOT CALLED: '+(D.notCalled.join(', ')||'-')].join('\n')}
 function openReport(){modal(reportHtml());document.getElementById('mbox').classList.add('wide');wireReport()}
 function wireReport(){const b=document.getElementById('mbox');b.querySelectorAll('[data-rf]').forEach(x=>x.onclick=()=>{RF=x.dataset.rf;b.innerHTML=reportHtml();wireReport()});
  document.getElementById('rprint').onclick=()=>window.print();
