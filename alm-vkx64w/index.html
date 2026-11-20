@@ -109,7 +109,7 @@ html,button,.chip,input,select{touch-action:manipulation;-webkit-tap-highlight-c
 <div class="modal" id="modal"><div class="box" id="mbox"></div></div>
 <script>
 /* ===== PROGRAM SETTINGS: change this block (and the lists below) to set the app up for another program ===== */
-const CONFIG={program:'deer-creek',name:'Deer Creek',filmRoom:'https://claude.ai/artifact/83Jt11X8MfVHj1xD2UB6CA',storageKey:'almanac_v1'};
+const CONFIG={program:'deer-creek',name:'Deer Creek',filmRoom:'https://claude.ai/artifact/83Jt11X8MfVHj1xD2UB6CA',storageKey:'almanac_v1',blankUntilPlan:true};
 const KEY=CONFIG.storageKey;
 const DEF={
  ftags:['JUMBO','SLAM','SCRUNCH','SPILL','POUR','PINCH','STOOGE','HIP','SQUINT','ALL IN','HULK','THOR','OVER','STACK','SQUEEZE','TRI','TITE'],
@@ -177,6 +177,7 @@ function renderEntry(){const L=A.lists,e=edit!==null;
  const oth=c=>`<button class="chip" data-a="oth" data-c="${c}">+ Other</button>`;
  const C=(cls,t,r,body)=>`<div class="card ${cls}">${lab(t,r)}${body}</div>`;
  let h='<div class="ent">';
+ if(CONFIG.blankUntilPlan&&!G().plan)h+=`<div class="s12 card" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="note" style="flex:1;min-width:200px">No gameplan loaded for ${esc2(G().opp)}. Formation tags, motions, formations and play tags stay blank until you paste it.</span><button class="btn pri" data-a="gpopen">Paste gameplan</button></div>`;
  h+=C('s2','Down','',`<div class="chips">${[1,2,3,4].map(n=>chip('down',n,n,d.down===n)).join('')}</div>`);
  h+=C('s6','Distance','',`<div class="chips">${[1,2,3,4,5,6,7,8,9,10].map(n=>chip('dist',n,n,d.dist===n)).join('')}<input type="number" inputmode="numeric" id="distx" class="chipin ${d.dist>10?'on':''}" placeholder="11+" value="${d.dist>10?d.dist:''}"></div>`);
  h+=C('s4','Ball on',ylFmt(d.f),`<div class="chips" style="align-items:center">${chip('side','own','Own',ylSide(d.f)==='own')}${chip('side','opp','Opp',ylSide(d.f)==='opp')}<div class="step"><button class="chip" data-a="ym">−</button><input type="number" inputmode="numeric" id="ylx" min="1" max="50" value="${ylNum(d.f)}" style="width:62px;font-size:20px;font-weight:700;text-align:center;background:transparent;color:var(--tx);border:1px solid var(--line);border-radius:6px;padding:4px 0"><button class="chip" data-a="yp">+</button></div></div>`);
@@ -227,8 +228,9 @@ document.getElementById('entry').addEventListener('click',ev=>{const b=ev.target
  if(a==='dm'){d.dist=Math.max(1,d.dist-1)}else if(a==='dp'){d.dist++}
  else if(a==='ym'||a==='yp'){const s=ylSide(d.f),n=ylNum(d.f)+(a==='yp'?1:-1);const m=Math.max(1,Math.min(50,n));d.f=s==='own'?m:100-m}
  else if(a==='gm'){d.gain=Math.max(-99,d.gain-1)}else if(a==='gp'){d.gain=Math.min(99,d.gain+1)}
- else if(a==='oth'){const c=b.dataset.c;ask('Type it in',x0=>{let x=x0.trim();x=c==='formations'?x.toLowerCase().replace(/\b\w/g,m=>m.toUpperCase()):x.toUpperCase();const L=A.lists;if(!L[c].some(y=>y.toUpperCase()===x.toUpperCase()))L[c].push(x);else x=L[c].find(y=>y.toUpperCase()===x.toUpperCase());const pl=G().plan=G().plan||{};if(pl[c]&&pl[c].length&&!pl[c].some(y=>y.toUpperCase()===x.toUpperCase()))pl[c].push(x);
+ else if(a==='oth'){const c=b.dataset.c;ask('Type it in',x0=>{let x=x0.trim();x=c==='formations'?x.toLowerCase().replace(/\b\w/g,m=>m.toUpperCase()):x.toUpperCase();const L=A.lists;if(!L[c].some(y=>y.toUpperCase()===x.toUpperCase()))L[c].push(x);else x=L[c].find(y=>y.toUpperCase()===x.toUpperCase());const pl=G().plan;if(pl&&pl[c]&&!pl[c].some(y=>y.toUpperCase()===x.toUpperCase()))pl[c].push(x);
    if(c==='ftags'){if(!d.ftags.includes(x))d.ftags.push(x)}else if(c==='motions')d.motion=x;else if(c==='formations')d.formation=x;else if(c==='runs'||c==='passes')d.call=x;else{if(!d.tags.includes(x))d.tags.push(x)}save();renderEntry()});return}
+ else if(a==='gpopen'){gpState={text:'',extra:{}};gpModal();return}
  else if(a==='tother'){ask('Route targeted',x=>{d.target=x.toUpperCase();renderEntry()});return}
  else if(a==='pother'){ask('Jersey number',x=>{d.player=x;renderEntry()});return}
  else if(a==='log'){logPlay();return}
@@ -267,7 +269,11 @@ const hudlCsv=()=>hudlRows().map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"
 const hudlTsv=()=>hudlRows().map(r=>r.join('\t')).join('\n');
 
 /* ===== Gameplan scoping: only show what is in this week's gameplan ===== */
-const planL=(cat,sel)=>{const base=A.lists[cat]||[],p=(G().plan||{})[cat];if(!p||!p.length)return base;const S=new Set(p.map(x=>x.toUpperCase())),sl=[].concat(sel||[]).filter(Boolean).map(x=>String(x).toUpperCase());return base.filter(x=>S.has(x.toUpperCase())||sl.includes(x.toUpperCase()))};
+const BLANKCATS=['ftags','motions','formations','tagsRun','tagsPass'];
+const planL=(cat,sel)=>{const base=A.lists[cat]||[],pl=G().plan,sl=[].concat(sel||[]).filter(Boolean).map(x=>String(x).toUpperCase()),keep=()=>base.filter(x=>sl.includes(x.toUpperCase()));
+ if(!pl)return(CONFIG.blankUntilPlan&&BLANKCATS.includes(cat))?keep():base;
+ const p=pl[cat];if(!p||!p.length)return CONFIG.blankUntilPlan?keep():base;
+ const S=new Set(p.map(x=>x.toUpperCase()));return base.filter(x=>S.has(x.toUpperCase())||sl.includes(x.toUpperCase()))};
 const GPCATS=[['ftags','Formation tag'],['motions','Motion'],['formations','Formation'],['runs','Run concept'],['passes','Pass concept'],['tagsRun','Play tag']];
 const GPSKIP=new Set(['RT','LT','LEFT','RIGHT','L','R']);
 function gpVocab(extra){const v=new Map(),add=(t,c)=>{t=String(t).toUpperCase().trim();if(!t)return;if(!v.has(t))v.set(t,new Set());v.get(t).add(c)};
