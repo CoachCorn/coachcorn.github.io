@@ -117,6 +117,7 @@ const DEF={
  formations:['Kong','Crown','Queen','King','Trips','Army','Money','Pour Slot','Joker','Splash','Ace','Slot','Wing','Jumbo','Shoot','Diamond','Mace','Bunch','Change','Twins','Jack'],
  runs:['CAROLINA','PANTHER','LA','CHARGER','PITT','STEELER','VEGAS','RAIDER'],
  passes:['LAP','RACE','FLASH','STRIKE','AGGIES'],
+ glfs:['SHUFFLE','DIAMOND','QUAD','SCRAMBLE','MONEY','MATCH'],
  owcs:['TEXAS','HOUSTON','AGGIES','MINERS','SOONERS','STATE','BRONCHOS','TULSA','CAL','TROJANS','BRUINS','STANFORD'],
  tagsRun:['X','Z','G','NOSE','TEAR','MISS','MASH','MOB','MAX','STREAK','GANG','ARC','WIDE','PISTOL','KICK','HAND','CRACK','WALL','TOSS','SWITCH','SPIN','SWORD','SHIELD','MIKE','OUTSIDE','SOLID','MIRROR','SHORT','FOLLOW','SNUZ','PULSE','POP','HOLLER','MAIL'],
  tagsPass:['X','Z','BRONZE','GOLD','BLACK','BROWN','FLIP','POKER','WHEEL','FIRE','FLAME','GO','TRAIL','COP','FLOP','MILLY','ROCK','BANANA','HAIL','PUMP','FLEA','LATE','SNAP','CHOICE','SLIDE','TUNNEL','DRAW','PICK','CUT','PUNCH','SURF','SLING','CURL','TOAD','THROWBACK','STOP','BT','SOLID','MIRROR','SHORT','FOLLOW','SNUZ','PULSE','POP','HOLLER','MAIL'],
@@ -165,7 +166,7 @@ function newGame(name,quiet){const g={id:'g'+Date.now(),opp:name,program:CONFIG.
 const G=()=>A.games.find(g=>g.id===A.cur);
 const esc2=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let d,edit=null;
-function freshDraft(prev){return{down:prev?prev.down:1,dist:prev?prev.dist:10,f:prev?prev.f:25,ptype:'run',formation:null,dir:null,motion:null,shift:false,jumbo:false,call:null,tag:null,ftags:[],tags:[],rgs:false,shot:false,result:null,gain:0,player:null,target:null,hash:null,fib:null,mpos:null,td:false}}
+function freshDraft(prev){return{down:prev?prev.down:1,dist:prev?prev.dist:10,f:prev?prev.f:25,ptype:'run',formation:null,dir:null,motion:null,shift:false,jumbo:false,call:null,tag:null,ftags:[],tags:[],rgs:false,shot:false,result:null,gain:0,player:null,target:null,hash:null,fib:null,mpos:null,glf:null,td:false}}
 const ylNum=f=>f<=50?f:100-f, ylSide=f=>f<=50?'own':'opp';
 const ylFmt=f=>f===50?'50':f<50?'-'+f:'+'+(100-f);
 function plays(){return G().plays.filter(p=>p.k==='p')}
@@ -180,6 +181,8 @@ function advance(p){let f=p.f,down=p.down,dist=p.dist,newDrive=false;
  return{nd:newDrive,next:{down,dist,f}}}
 function logPlay(){if(!d.result){toast('Pick a result');return}
  const p=Object.assign({k:'p'},d);p.tags=[...(d.tags||[])];p.ftags=[...(d.ftags||[])];p.tag=p.tags.join(' ');p.ftag=p.ftags.join(' ');if(p.call)p.call=al(p.call);if(p.owc){owApply(p);p.tag=p.tags.join(' ');p.call=owLong(p.owc,p.hash);p.ptype=(OW[p.owc]||{t:p.ptype}).t}else p.owc=null;delete p.autoT;
+ {const U=x=>String(x||'').toUpperCase(),gl=(A.lists.glfs||[]).map(U);if(!p.glf&&p.formation&&gl.includes(U(p.formation)))p.glf=U(p.formation);
+  if(p.glf){if(!p.formation)p.formation=p.glf.charAt(0)+p.glf.slice(1).toLowerCase();if(!p.call&&!p.owc){p.call=p.glf;p.ptype='pass'}p.glfOut=U(p.formation)!==p.glf}else{p.glf=null;p.glfOut=false}}
  if(edit!==null){G().plays[edit]=p;edit=null;d=freshDraft(lastNext())}
  else{G().plays.push(p);const a=advance(p);if(a.nd)G().plays.push({k:'d'});d=freshDraft(a.next)}
  save();renderAll()}
@@ -204,6 +207,7 @@ function renderEntry(){const L=A.lists,e=edit!==null;
  h+=C('s3','Motion / Shift','',`<div class="chips scroll">${chip('mpos','X','X',d.mpos==='X')}${chip('mpos','Z','Z',d.mpos==='Z')}${planL('motions',d.motion).map(x=>chip('motion',x,x,d.motion===x)).join('')}${oth('motions')}</div>`);
  h+=C('s3','Formation','',`<div class="chips scroll">${planL('formations',d.formation).map(x=>chip('formation',x,x,d.formation===x)).join('')}${oth('formations')}</div>`);
  h+=d.hash==='M'?C('s1','Dir','',`<div class="chips">${chip('dir','LT','LT',d.dir==='LT')}${chip('dir','RT','RT',d.dir==='RT')}</div>`):C('s1','FIB','',`<div class="chips">${chip('fib','Y','Y',d.fib==='Y')}${chip('fib','N','N',d.fib==='N')}</div>`);
+ h+=C('s12','Green light formation (GLF)',d.glf?`<span class="note">${d.formation&&d.formation.toUpperCase()!==d.glf?'shifted out to '+d.formation:'stayed in it'}</span>`:'',`<div class="chips">${(L.glfs||[]).map(x=>chip('glf',x,x,d.glf===x)).join('')}</div>`);
  h+=C('s12','Play tag(s)','',`<div class="chips scroll">${tagL.map(x=>chip('tags',x,x,d.tags.includes(x))).join('')}${oth('tagsRun')}</div>`);
  h+=C('s12','One word','',`<div class="owg">${owL.map(x=>chip('owc',x,x,d.owc===x)).join('')}</div>`);
  h+=C('s6','Run concepts','',`<div class="chips scroll">${conceptChips(runL)}${oth('runs')}</div>`);
@@ -227,7 +231,7 @@ function renderLog(){const g=G(),s=summary();
   const E=eff(p),X=expl(p),r=RESULTS.find(x=>x[0]===p.result);
   h+=`<div class="play ${edit===i?'sel':''}" data-i="${i}"><div><div class="dd">${p.down}&amp;${p.dist}</div><div class="yl">${ylFmt(p.f)}</div></div>
   <div><div class="call">${p.tag?p.tag+' ':''}${p.owc||p.call||'—'}${E==='Y'?'<span class="badge b-e">EFF</span>':''}${X==='Y'?'<span class="badge b-x">EXP</span>':''}</div>
-  <div class="sub">${[p.ftag&&p.ftag,motionFull(p),p.shift&&'shift',p.hash&&p.hash+' hash',p.formation&&p.formation+(p.dir?' '+p.dir:''),p.fib&&'FIB '+p.fib,p.target&&'→ '+p.target,p.jumbo&&'jumbo',p.rgs&&'RGS',p.shot&&'shot'].filter(Boolean).join(' · ')}</div></div>
+  <div class="sub">${[p.ftag&&p.ftag,motionFull(p),p.shift&&'shift',p.hash&&p.hash+' hash',p.formation&&p.formation+(p.dir?' '+p.dir:''),p.fib&&'FIB '+p.fib,p.glf&&'GLF '+p.glf+(p.glfOut?' (shifted out)':''),p.target&&'→ '+p.target,p.jumbo&&'jumbo',p.rgs&&'RGS',p.shot&&'shot'].filter(Boolean).join(' · ')}</div></div>
   <div><div class="gain ${p.gain>0?'pos':p.gain<0?'neg':''}">${p.gain>0?'+':''}${p.gain}</div><div class="sub" style="text-align:right">${p.td?'TD ':''}${r?r[1]:''}${p.player?' #'+p.player:''}</div></div></div>`});
  const el=document.getElementById('logp');el.innerHTML=h;el.scrollTop=el.scrollHeight}
 function renderHdr(){const gb=document.getElementById('gpbtn');if(gb){const on=G()&&G().plan&&Object.values(G().plan).some(a=>a&&a.length);gb.textContent=on?'Gameplan ✓':'Gameplan';gb.classList.toggle('pri',!!on)}
@@ -239,6 +243,7 @@ document.getElementById('entry').addEventListener('click',ev=>{const b=ev.target
   else if(g==='side'&&(v==='own'||v==='opp')){const n=ylNum(d.f);d.f=v==='own'?n:100-n}
   else if(['shift','jumbo','rgs','shot'].includes(g))d[g]=!d[g];
   else if(g==='td'){d.td=!d.td;if(d.td)d.gain=100-d.f}
+  else if(g==='glf'){d.glf=d.glf===v?null:v;if(d.glf&&!d.call&&!d.owc)d.ptype='pass'}
   else if(g==='owc'){const w=OW[v];if(d.autoT){d.tags=d.tags.filter(x=>x!==d.autoT);d.autoT=null}if(d.owc===v)d.owc=null;else{d.owc=v;d.call=null;if(w)d.ptype=w.t}if(d.ptype==='run')d.target=null;if(d.owc)owApply(d)}
   else if(g==='call'){const was=d.call===v&&!d.owc;if(d.autoT){d.tags=(d.tags||[]).filter(x=>x!==d.autoT);d.autoT=null}d.owc=null;d.call=was?null:v;if(d.call){d.ptype=A.lists.runs.some(x=>x.toUpperCase()===v.toUpperCase())?'run':'pass';if(d.ptype==='run')d.target=null}}
   else if(g==='ptype'){d.ptype=v;d.call=null;d.target=null}
@@ -272,10 +277,10 @@ try{if(localStorage.getItem('almanac_logon')==='1')setLog(true)}catch(e){}
 document.getElementById('newdrive').onclick=()=>{G().plays.push({k:'d'});save();renderLog();toast('New drive — Drive '+(G().plays.filter(p=>p.k==='d'||p.k==='h').length+1))};
 document.getElementById('half').onclick=()=>{if(G().plays.some(p=>p.k==='h')){toast('Halftime already marked');return}G().plays.push({k:'h'});d=freshDraft({down:1,dist:10,f:25});edit=null;save();renderAll();toast('Halftime marked')};
 document.getElementById('undo').onclick=()=>{const pl=G().plays;if(pl.length){const x=pl.pop();d=freshDraft(lastNext());edit=null;save();renderAll();toast('Undid '+(x.k==='h'?'halftime':x.k==='d'?'drive marker':'last play'))}else toast('Nothing to undo')};
-const HEAD=['DOWN','DISTANCE','JUMBO Y/N','SHIFT','MOTION','PLAY TAG','RUN CALL','PASS CALL','RGS Y/N','SHOT Y/N','RESULT','PLAYER','YARD LINE','GAIN/LOSS','<50','CROSS 50','>50','BCKWD CROSS 50','GAIN/LOSS','EXPLOSIVE','EFFICIENT','RUN SCHEME','PASS SCHEME','FORMATION','DIRECTION','PLAY TYPE','FORMATION TAG','CONCEPT','TARGET','ONE WORD'];
+const HEAD=['DOWN','DISTANCE','JUMBO Y/N','SHIFT','MOTION','PLAY TAG','RUN CALL','PASS CALL','RGS Y/N','SHOT Y/N','RESULT','PLAYER','YARD LINE','GAIN/LOSS','<50','CROSS 50','>50','BCKWD CROSS 50','GAIN/LOSS','EXPLOSIVE','EFFICIENT','RUN SCHEME','PASS SCHEME','FORMATION','DIRECTION','PLAY TYPE','FORMATION TAG','CONCEPT','TARGET','ONE WORD','GLF'];
 function resText(p){const r=p.result;if(r==='PEN')return'PENALTY';if(r==='INC')return'INC';if(r==='INT')return'INT';if(r==='FUM')return'FUM';if(r==='SACK')return'SACK';if(p.td)return p.gain+' YD TD';return String(p.gain)}
 function rows(){const out=[HEAD];for(const p of G().plays){if(p.k==='h'){out.push(['HALFTIME']);continue}if(p.k==='d'){out.push(['NEW DRIVE']);continue}
- out.push([p.down,p.dist,p.jumbo?'Y':'',p.shift?'Y':'',motionFull(p),p.tag||'',p.ptype==='run'?p.call||'':'',p.ptype==='pass'?p.call||'':'',p.rgs?'Y':'',p.shot?'Y':'',resText(p),p.player||'',ylFmt(p.f),p.gain,'','','','',p.gain,expl(p),eff(p),p.ptype==='run'?runScheme(p.call):'','',p.formation||'',p.dir||'',p.ptype==='run'?'Run':'Pass',p.ftag||(p.jumbo?'JUMBO':''),famOf(p.call),p.target||'',p.owc||''])}return out}
+ out.push([p.down,p.dist,p.jumbo?'Y':'',p.shift?'Y':'',motionFull(p),p.tag||'',p.ptype==='run'?p.call||'':'',p.ptype==='pass'?p.call||'':'',p.rgs?'Y':'',p.shot?'Y':'',resText(p),p.player||'',ylFmt(p.f),p.gain,'','','','',p.gain,expl(p),eff(p),p.ptype==='run'?runScheme(p.call):'','',p.formation||'',p.dir||'',p.ptype==='run'?'Run':'Pass',p.ftag||(p.jumbo?'JUMBO':''),famOf(p.call),p.target||'',p.owc||'',p.glf?'Y':''])}return out}
 const csv=()=>rows().map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
 
 const motionFull=p=>p.motion?((p.mpos?p.mpos+' ':'')+p.motion):'';
@@ -356,7 +361,7 @@ document.getElementById('exp').onclick=()=>{modal(`<h3 style="margin-top:0">Expo
  e4.onclick=()=>dl(G().opp.replace(/\W+/g,'_')+'_almanac.csv',csv(),'text/csv');
  e3.onclick=()=>dl('almanac_backup.json',JSON.stringify(A),'application/json')};
 document.getElementById('setup').onclick=()=>{const L=A.lists;const f=(k,t)=>`<div class="lab"><span>${t}</span></div><textarea id="s_${k}">${L[k].join(', ')}</textarea>`;
- modal(`<h3 style="margin-top:0">Setup</h3><p class="note">Comma-separated. These become the buttons.</p>${f('ftags','Formation tags')}${f('motions','Motions')}${f('formations','Formations')}${f('runs','Run calls')}${f('passes','Pass calls')}${f('owcs','One words')}${f('ftags','Formation tags')}${f('tagsRun','Run play tags')}${f('tagsPass','Pass play tags')}${f('targets','Targets (routes)')}${f('players','Jersey numbers')}<div class="lab"><span>Gameplan plays for ${G().opp} (used for "not called yet"; blank = all run and pass buttons)</span></div><textarea id="s_gp">${(G().gp||[]).join(', ')}</textarea><div class="lab"><span>Film Room link</span></div><input type="text" id="s_fr" style="width:100%" value="${A.fr||FR}">
+ modal(`<h3 style="margin-top:0">Setup</h3><p class="note">Comma-separated. These become the buttons.</p>${f('ftags','Formation tags')}${f('motions','Motions')}${f('formations','Formations')}${f('runs','Run calls')}${f('passes','Pass calls')}${f('owcs','One words')}${f('glfs','Green light formations')}${f('ftags','Formation tags')}${f('tagsRun','Run play tags')}${f('tagsPass','Pass play tags')}${f('targets','Targets (routes)')}${f('players','Jersey numbers')}<div class="lab"><span>Gameplan plays for ${G().opp} (used for "not called yet"; blank = all run and pass buttons)</span></div><textarea id="s_gp">${(G().gp||[]).join(', ')}</textarea><div class="lab"><span>Film Room link</span></div><input type="text" id="s_fr" style="width:100%" value="${A.fr||FR}">
  <div class="two" style="margin-top:8px"><div><div class="lab">Explosive run</div><input type="number" id="s_er" value="${L.expRun}"></div><div><div class="lab">Explosive pass</div><input type="number" id="s_ep" value="${L.expPass}"></div></div>
  <div class="lab" style="margin-top:12px"><span>Games on this device</span></div><div id="gmlist">${A.games.map(g=>`<div class="gmrow" style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)"><div style="flex:1;min-width:0"><b>${esc2(g.opp)}</b>${g.id===A.cur?' <span class="note">(open)</span>':''}<div class="note">${g.plays.filter(x=>x.k==='p').length} plays</div></div><button class="btn bad" data-delg="${g.id}">Delete</button></div>`).join('')}</div>
  <button class="btn bad" id="skeep" style="margin-top:8px;width:100%">Delete all games except ${esc2(G().opp)}</button>
@@ -364,7 +369,7 @@ document.getElementById('setup').onclick=()=>{const L=A.lists;const f=(k,t)=>`<d
  const afterDel=()=>{if(!A.games.length)newGame('Game 1',true);if(!A.games.find(g=>g.id===A.cur))A.cur=A.games[0].id;edit=null;d=freshDraft(lastNext());save();modal_close();renderAll()};
  document.getElementById('gmlist').onclick=e=>{const b=e.target.closest('[data-delg]');if(!b)return;const g=A.games.find(x=>x.id===b.dataset.delg);if(g)arm(b,'Tap again to delete',()=>{A.games=A.games.filter(x=>x.id!==g.id);afterDel()})};
  document.getElementById('skeep').onclick=()=>{const n=A.games.length-1;if(n<1){toast('This is the only game');return}arm(document.getElementById('skeep'),'Tap again: delete '+n+' other game'+(n>1?'s':''),()=>{A.games=A.games.filter(g=>g.id===A.cur);afterDel()})};
- ssave.onclick=()=>{for(const k of['ftags','motions','formations','runs','passes','owcs','tagsRun','tagsPass','targets','players'])L[k]=document.getElementById('s_'+k).value.split(',').map(s=>s.trim()).filter(Boolean);G().gp=document.getElementById('s_gp').value.split(',').map(s=>s.trim()).filter(Boolean);A.fr=document.getElementById('s_fr').value.trim()||FR;L.expRun=+s_er.value||12;L.expPass=+s_ep.value||16;save();modal_close();renderAll()};
+ ssave.onclick=()=>{for(const k of['ftags','motions','formations','runs','passes','owcs','glfs','tagsRun','tagsPass','targets','players'])L[k]=document.getElementById('s_'+k).value.split(',').map(s=>s.trim()).filter(Boolean);G().gp=document.getElementById('s_gp').value.split(',').map(s=>s.trim()).filter(Boolean);A.fr=document.getElementById('s_fr').value.trim()||FR;L.expRun=+s_er.value||12;L.expPass=+s_ep.value||16;save();modal_close();renderAll()};
  sdemo.onclick=()=>{modal_close();buildDemo(false)};
 };
 function buildDemo(quiet){
@@ -414,12 +419,13 @@ function reportData(){const R=rangePlays(),P=R.filter(p=>p.k==='p'),N=P.filter(p
   return{call:k,n:o.n,ep,avg:o.y/o.n,x:o.x,v}}).sort((a,b)=>b.n-a.n);
  const FM={};for(const p of N){if(!p.call)continue;const k=famOf(p.call),o=FM[k]||(FM[k]={n:0,e:0,x:0,y:0,calls:new Set()});o.n++;o.y+=p.gain;o.calls.add(p.call.toUpperCase());if(eff(p)==='Y')o.e++;if(expl(p)==='Y')o.x++}
  const fams=Object.entries(FM).map(([k,o])=>({fam:k,n:o.n,ep:Math.round(100*o.e/o.n),avg:o.y/o.n,x:o.x,calls:[...o.calls].join(' / ')})).sort((a,b)=>b.n-a.n);
+ const GL={n:0,st:0,ste:0,se:0,see:0};for(const p of N){if(!p.glf)continue;GL.n++;if(p.glfOut){GL.se++;if(eff(p)==='Y')GL.see++}else{GL.st++;if(eff(p)==='Y')GL.ste++}}
  const OWS={};for(const p of N){if(!p.owc)continue;const o=OWS[p.owc]||(OWS[p.owc]={n:0,e:0,x:0,y:0});o.n++;o.y+=p.gain;if(eff(p)==='Y')o.e++;if(expl(p)==='Y')o.x++}
  const ows=Object.entries(OWS).map(([k,o])=>({ow:k,long:OW[k]?OW[k].fam:'',n:o.n,ep:Math.round(100*o.e/o.n),avg:o.y/o.n,x:o.x})).sort((a,b)=>b.n-a.n);
  const gp=(G().gp&&G().gp.length)?G().gp:[...A.lists.runs,...A.lists.passes,...(A.lists.owcs||[])];
  const called=new Set(G().plays.filter(p=>p.k==='p'&&(p.call||p.owc)).flatMap(p=>[p.call,p.owc]).filter(Boolean).map(x=>x.toUpperCase()));
  return{n:N.length,E,X,ep:pc(E,N.length),xp:pc(X,N.length),yp:N.length?yds/N.length:0,runs:N.filter(p=>p.ptype==='run').length,passes:N.filter(p=>p.ptype==='pass').length,t3:t3.length,t3c,fd:hit,drn:dr.length,
-  fams,ows,T:Object.entries(T).sort((a,b)=>(b[1].c+b[1].r)-(a[1].c+a[1].r)||b[1].t-a[1].t),calls,notCalled:gp.filter(x=>!called.has(x.toUpperCase())),unassigned:N.filter(p=>!p.player&&['RUSH','SCRAM','COMP','INC'].includes(p.result)).length}}
+  fams,ows,GL,T:Object.entries(T).sort((a,b)=>(b[1].c+b[1].r)-(a[1].c+a[1].r)||b[1].t-a[1].t),calls,notCalled:gp.filter(x=>!called.has(x.toUpperCase())),unassigned:N.filter(p=>!p.player&&['RUSH','SCRAM','COMP','INC'].includes(p.result)).length}}
 const pct=v=>v==null?'–':v+'%';
 function reportHtml(){const D=reportData(),mx=Math.max(1,...D.T.map(([k,o])=>o.c+o.r+(o.t-o.r)));
  const F=[['all','All'],['1h','1st half'],['2h','2nd half'],['last','Last drive']];
@@ -432,7 +438,8 @@ function reportHtml(){const D=reportData(),mx=Math.max(1,...D.T.map(([k,o])=>o.c
  for(const [k,o] of D.T){const inc=o.t-o.r;h+=`<div class="dist"><b>#${k}</b><div class="bar"><i class="c1" style="width:${100*o.c/mx}%"></i><i class="c2" style="width:${100*o.r/mx}%"></i><i class="c3" style="width:${100*inc/mx}%"></i></div><div class="sub">${o.c} carries · ${o.r} catches · ${o.t} targets · ${o.y} yds${o.c+o.r?' ('+(o.y/(o.c+o.r)).toFixed(1)+'/touch)':''} · ${Math.round(100*o.e/o.n)}% eff</div></div>`}
  h+=`<div class="note">Blue = carries, green = catches, gray = incomplete targets. Passer isn't tracked. ${D.unassigned?D.unassigned+' plays have no player logged.':''}</div>`;
  const tb=(v)=>D.calls.filter(c=>c.v===v);
- h+=`<div class="rh">Calls: keep, stop, watch</div><table class="t"><tr><th>Call</th><th>Snaps</th><th>Eff</th><th>Avg</th><th>Exp</th><th></th></tr>${D.calls.map(c=>`<tr><td>${c.call}</td><td>${c.n}</td><td>${c.ep}%</td><td>${c.avg>0?'+':''}${c.avg.toFixed(1)}</td><td>${c.x}</td><td class="${c.v==='KEEP'?'keep':c.v==='STOP'?'stop':'mid'}">${c.v}</td></tr>`).join('')||'<tr><td colspan=6 class="note">No calls yet.</td></tr>'}</table>
+ h+=`<div class="rh">Green light formations</div>${D.GL.n?`<table class="t"><tr><th>GLF</th><th>Snaps</th><th>Eff</th></tr><tr><td>Stayed in it (bubble / its own play)</td><td>${D.GL.st}</td><td>${D.GL.st?Math.round(100*D.GL.ste/D.GL.st)+"%":"–"}</td></tr><tr><td>Shifted out</td><td>${D.GL.se}</td><td>${D.GL.se?Math.round(100*D.GL.see/D.GL.se)+"%":"–"}</td></tr></table>`:'<div class="note">No green light formations yet.</div>'}
+ <div class="rh">Calls: keep, stop, watch</div><table class="t"><tr><th>Call</th><th>Snaps</th><th>Eff</th><th>Avg</th><th>Exp</th><th></th></tr>${D.calls.map(c=>`<tr><td>${c.call}</td><td>${c.n}</td><td>${c.ep}%</td><td>${c.avg>0?'+':''}${c.avg.toFixed(1)}</td><td>${c.x}</td><td class="${c.v==='KEEP'?'keep':c.v==='STOP'?'stop':'mid'}">${c.v}</td></tr>`).join('')||'<tr><td colspan=6 class="note">No calls yet.</td></tr>'}</table>
  <div class="note">KEEP = 2+ snaps at 50% efficient or better. STOP = 3+ snaps under 35%, or 2 snaps with none efficient. One snap is too early to judge. Small samples, so use judgment.</div>
  <div class="rh">One words</div><table class="t"><tr><th>One word</th><th>Snaps</th><th>Eff</th><th>Avg</th><th>Exp</th></tr>${D.ows.map(c=>`<tr><td>${c.ow}</td><td>${c.n}</td><td>${c.ep}%</td><td>${c.avg>0?'+':''}${c.avg.toFixed(1)}</td><td>${c.x}</td></tr>`).join('')||'<tr><td colspan=5 class="note">No one words yet.</td></tr>'}</table>
  <div class="rh">By concept (Left/Right pairs combined)</div><table class="t"><tr><th>Concept</th><th>Calls used</th><th>Snaps</th><th>Eff</th><th>Avg</th><th>Exp</th></tr>${D.fams.map(c=>`<tr><td>${c.fam}</td><td>${c.calls}</td><td>${c.n}</td><td>${c.ep}%</td><td>${c.avg>0?'+':''}${c.avg.toFixed(1)}</td><td>${c.x}</td></tr>`).join('')||'<tr><td colspan=6 class="note">No calls yet.</td></tr>'}</table>
