@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Almanac</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0f1720">
+<meta name="apple-mobile-web-app-title" content="Almanac">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{--bg:#0f1720;--card:#18232f;--line:#2a3948;--tx:#e8eef4;--mut:#8ea0b2;--acc:#3b9cff;--ok:#2fbf71;--warn:#f2b632;--bad:#ef5b5b}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px -apple-system,system-ui,sans-serif;height:100vh;height:100dvh;display:flex;flex-direction:column}
+header{display:flex;gap:8px;align-items:center;padding:8px 12px;background:#0b1118;border-bottom:1px solid var(--line);flex-wrap:wrap}
+header h1{font-size:16px;margin:0 8px 0 0}
+select,button,input{font:inherit;color:var(--tx)}
+select,input[type=number],input[type=text],textarea{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px}
+.chip,.btn,.lab,.card h3{text-transform:uppercase}
+.btn{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:9px 12px;min-height:40px}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:700}
+.btn.bad{color:var(--bad)}
+main{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:10px;padding:8px;overflow:hidden;min-height:0}
+@media(max-width:820px){main{display:block;overflow:auto}.panel{overflow:visible;margin-bottom:10px}.ent>*{grid-column:span 12!important}}
+.ent{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:6px}
+.card{background:#102030;border:1px solid var(--line);border-radius:10px;padding:5px 8px 6px;min-width:0}
+.s1{grid-column:span 1}.s7{grid-column:span 7}.s2{grid-column:span 2}.s3{grid-column:span 3}.s4{grid-column:span 4}.s5{grid-column:span 5}.s6{grid-column:span 6}.s8{grid-column:span 8}.s12{grid-column:span 12}
+.scroll{max-height:114px;overflow:auto}
+.logrow{padding-bottom:env(safe-area-inset-bottom);display:flex;gap:8px;position:sticky;bottom:0;background:var(--card);padding-top:4px}
+.logrow .logbtn{flex:1;margin:0;padding:12px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px;overflow:auto;min-height:0}
+.row{margin-bottom:10px}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin-bottom:4px;display:flex;justify-content:space-between}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:#223140;border:1px solid var(--line);border-radius:10px;padding:10px 13px;min-height:44px;min-width:44px;font-weight:600}
+.chip.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.chip.res.on{background:var(--ok);border-color:var(--ok)}
+.chip.neg.on{background:var(--bad);border-color:var(--bad)}
+.chipin{width:68px;min-height:44px;text-align:center;font-weight:700;font-size:16px;border-radius:10px;border:2px solid var(--acc);background:#16324f;color:#fff;padding:4px}.chipin.on{background:var(--acc)}.chipin::placeholder{color:#7fb6ee}
+.big{font-size:26px;font-weight:800;min-width:64px;text-align:center}
+.step{display:flex;align-items:center;gap:6px}
+.step .chip{font-size:20px;padding:6px 14px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+input[type=range]{width:100%;height:36px}
+.logbtn{width:100%;padding:16px;font-size:18px;margin-top:4px}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}
+.tile{background:#102030;border-radius:10px;padding:8px;text-align:center}
+.tile b{display:block;font-size:20px}.tile span{font-size:11px;color:var(--mut)}
+.drive{font-size:12px;color:var(--mut);margin:10px 0 4px;padding-top:6px;border-top:1px solid var(--line);display:flex;justify-content:space-between}
+.play{display:grid;grid-template-columns:62px 1fr auto;gap:6px;padding:7px 6px;border-radius:8px;align-items:center}
+.play:active,.play.sel{background:#223140}
+.play .dd{font-weight:700}.play .yl{font-size:11px;color:var(--mut)}
+.owg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.owg .chip{width:100%}.play .call{font-weight:600}.play .sub{font-size:12px;color:var(--mut)}
+.gain{font-weight:800;font-size:17px;text-align:right}.gain.pos{color:var(--ok)}.gain.neg{color:var(--bad)}
+.badge{display:inline-block;font-size:10px;font-weight:800;padding:1px 5px;border-radius:5px;margin-left:4px}
+.b-e{background:var(--ok);color:#04210f}.b-x{background:var(--warn);color:#2a1e00}
+.modal{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:9}
+.modal.show{display:flex}.modal .box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;width:min(640px,94vw);max-height:90vh;overflow:auto}
+textarea{width:100%;min-height:60px;color:var(--tx)}
+.note{color:var(--mut);font-size:12px}
+.wide{width:min(920px,96vw)!important}
+.bar{display:flex;height:22px;border-radius:6px;overflow:hidden;background:#102030}
+.bar i{display:block;height:100%}
+.c1{background:#3b9cff}.c2{background:#2fbf71}.c3{background:#5b6b7b}
+.dist{display:grid;grid-template-columns:54px 1fr;gap:8px;align-items:center;margin:6px 0}
+.dist .sub{font-size:12px;color:var(--mut);grid-column:2}
+table.t{width:100%;border-collapse:collapse;font-size:13px}
+table.t th{font-size:11px;text-transform:uppercase;color:var(--mut);text-align:left;padding:4px}
+table.t td{padding:6px 4px;border-top:1px solid var(--line)}
+.keep{color:var(--ok);font-weight:800}.stop{color:var(--bad);font-weight:800}.mid{color:var(--mut)}
+.rh{font-size:15px;font-weight:800;margin:16px 0 4px}
+.half{text-align:center;color:var(--warn);font-weight:800;margin:10px 0;padding:6px;border:1px dashed var(--warn);border-radius:8px}
+@media print{:root{--bg:#fff;--card:#fff;--line:#ccc;--tx:#000;--mut:#555}header,main,.noprint{display:none!important}.modal{position:static;background:none;display:block}.box{border:none;max-height:none!important;width:100%!important}body{height:auto}}
+.card .row{margin:0}
+.lab{margin-bottom:3px;align-items:center}
+.chips{gap:4px}
+.chip{padding:5px 9px;min-height:36px;min-width:36px;font-size:14px}
+.big{font-size:22px;min-width:44px}
+header .btn{padding:7px 10px}
+.last{font-size:12px;color:var(--mut);align-self:center;max-width:230px;line-height:1.2}
+.dclose{display:none;position:sticky;top:0;z-index:2;background:var(--card);padding-bottom:6px}
+@media(min-width:821px){main{grid-template-columns:minmax(0,1fr)}
+ #logp{display:none}main.logon{grid-template-columns:minmax(0,1fr) 300px}main.logon #logp{display:block}.dclose{display:block}}
+@media(min-width:821px) and (max-width:1000px){main.logon{grid-template-columns:minmax(0,1fr) 240px}.last{display:none}}
+@media(max-width:820px){#logbtn{display:none}}
+html,button,.chip,input,select{touch-action:manipulation;-webkit-tap-highlight-color:transparent}button,.chip{-webkit-user-select:none;user-select:none}
+.pair{display:inline-flex;gap:3px;padding:2px;border:1.5px dashed var(--line);border-radius:12px}
+.card.s7 .scroll{max-height:150px}.card.s1 .chips{flex-direction:column;align-items:flex-start}
+</style></head><body>
+<header>
+ <h1>Almanac</h1>
+ <select id="gsel"></select>
+ <button class="btn" id="newgame">+ Game</button>
+ <button class="btn" id="logbtn">Log</button>
+ <button class="btn" id="newdrive">New Drive</button>
+ <button class="btn" id="half">Halftime</button>
+ <button class="btn" id="undo">Undo</button>
+ <span style="flex:1"></span>
+ <button class="btn pri" id="rep">Report</button>
+ <button class="btn" id="send" title="Send this game to Film Room">→ Film Room</button>
+ <button class="btn" id="exp">Export</button>
+ <button class="btn" id="gpbtn">Gameplan</button>
+ <button class="btn" id="setup">Setup</button>
+</header>
+<main>
+ <section class="panel" id="entry"></section>
+ <section class="panel" id="logp"></section>
+</main>
+<div class="modal" id="modal"><div class="box" id="mbox"></div></div>
+<script>
+/* ===== PROGRAM SETTINGS: change this block (and the lists below) to set the app up for another program ===== */
+const CONFIG={program:'deer-creek',name:'Deer Creek',filmRoom:'https://claude.ai/artifact/83Jt11X8MfVHj1xD2UB6CA',storageKey:'almanac_v1',blankUntilPlan:true};
+const KEY=CONFIG.storageKey;
+const DEF={
+ ftags:['SLAM','SCRUNCH','SPILL','POUR','PINCH','STOOGE','HIP','SQUINT','ALL IN','HULK','THOR','OVER','STACK','SQUEEZE','TRI','TITE'],
+ motions:['MISSILE','OUT','JET','ORBIT','FLY','SATELLITE','POPCORN','HAY','BAR','TIDE','SWAP','CROSS SPRAY','YOYO','TRADE','BOUNCE','STAY','ZAP','MAP','ZIP','IN','HOT'],
+ formations:['Kong','Crown','Queen','King','Trips','Army','Money','Pour Slot','Joker','Splash','Ace','Slot','Wing','Jumbo','Shoot','Diamond','Mace','Bunch','Change','Twins','Jack'],
+ runs:['CAROLINA','PANTHER','LA','CHARGER','PITT','STEELER','VEGAS','RAIDER'],
+ passes:['LAP','RACE','FLASH','STRIKE','AGGIES'],
+ owcs:['TEXAS','HOUSTON','AGGIES','MINERS','SOONERS','STATE','BRONCHOS','TULSA','CAL','TROJANS','BRUINS','STANFORD'],
+ tagsRun:['X','Z','G','NOSE','TEAR','MISS','MASH','MOB','MAX','STREAK','GANG','ARC','WIDE','PISTOL','KICK','HAND','CRACK','WALL','TOSS','SWITCH','SPIN','SWORD','SHIELD','MIKE','OUTSIDE','SOLID','MIRROR','SHORT','FOLLOW','SNUZ','PULSE','POP','HOLLER','MAIL'],
+ tagsPass:['X','Z','BRONZE','GOLD','BLACK','BROWN','FLIP','POKER','WHEEL','FIRE','FLAME','GO','TRAIL','COP','FLOP','MILLY','ROCK','BANANA','HAIL','PUMP','FLEA','LATE','SNAP','CHOICE','SLIDE','TUNNEL','DRAW','PICK','CUT','PUNCH','SURF','SLING','CURL','TOAD','THROWBACK','STOP','BT','SOLID','MIRROR','SHORT','FOLLOW','SNUZ','PULSE','POP','HOLLER','MAIL'],
+ targets:['HITCH','SLANT','OUT','CURL','DIG','POST','CORNER','GO','SEAM','FLAT','WHEEL','CROSS','STICK','SCREEN','SAIL'],
+ players:['0','2','3','4','5','8','9','11','12','13','14','15','30','33','48'],
+ expRun:12,expPass:16
+};
+const RS={GH:['TROJANS','STATE','CAROLINA','PANTHER','ALTER STEELER'],BUCK:['TEXAS','VEGAS','RAIDER','G VEGAS','G RAIDER','GANG VEGAS','GANG RAIDER'],IZ:['SOONERS','WASHINGTON','COMMANDER','PHILLY','EAGLE'],GT:['HOUSTON','PITT','STEELER','CLEV','BROWNS'],POWER:['LA','CHARGER','RAVEN'],JET:['BRUINS','H RAIDER','Y VEGAS','X RAIDER','Z VEGAS']};
+/* Concept families: pairs are the Left/Right versions of one concept (shown boxed together on the button grid), FAM folds them in the report. */
+const PAIRS=[['CAROLINA','PANTHER'],['LA','CHARGER'],['VEGAS','RAIDER'],['PITT','STEELER'],['LAP','RACE'],['FLASH','STRIKE'],['G VEGAS','G RAIDER'],['GANG VEGAS','GANG RAIDER']];
+const FAM={CAROLINA:'GY Counter',PANTHER:'GY Counter',STATE:'GY Counter',TROJANS:'GY Counter',ALTER_STEELER:'GY Counter',LA:'Power',CHARGER:'Power',RAVEN:'Power',VEGAS:'Buck Sweep',RAIDER:'Buck Sweep','G VEGAS':'Buck Sweep','G RAIDER':'Buck Sweep','GANG VEGAS':'Buck Sweep','GANG RAIDER':'Buck Sweep',TEXAS:'Buck Sweep',PITT:'GT Counter',PITTSBURGH:'GT Counter',STEELER:'GT Counter',HOUSTON:'GT Counter',CLEV:'GT Counter',BROWNS:'GT Counter',SOONERS:'Zone Insert',WASHINGTON:'Zone Insert',COMMANDER:'Zone Insert',PHILLY:'Zone Insert',EAGLE:'Zone Insert',BRUINS:'Jet Sweep','H RAIDER':'Jet Sweep','Y VEGAS':'Jet Sweep','X RAIDER':'Jet Sweep','Z VEGAS':'Jet Sweep',LAP:'Cross',RACE:'Cross',CAL:'Cross',FLASH:'Verticals',STRIKE:'Verticals',MINERS:'Verticals',BRONCHOS:'Sail','BT BRONCHOS':'Sail',AGGIES:'Shock','RACE SAIL':'Sail','LAP SAIL':'Sail',STANFORD:'Post Spike',TULSA:'Post Spike'};
+FAM['ALTER STEELER']='GY Counter';delete FAM.ALTER_STEELER;
+/* One-word calls: Texas/Trips family points to field, Crown = California, Kong = Oklahoma. Run OWCs always go to the boundary; pass OWCs always carry Black/Brown to the boundary. */
+const OW={TEXAS:{t:'run',fam:'Trips',pair:['VEGAS','RAIDER'],tg:'G'},HOUSTON:{t:'run',fam:'Trips',pair:['PITT','STEELER']},STATE:{t:'run',fam:'Kong',pair:['CAROLINA','PANTHER']},SOONERS:{t:'run',fam:'Kong'},TROJANS:{t:'run',fam:'Crown',pair:['CAROLINA','PANTHER']},BRUINS:{t:'run',fam:'Crown'},
+ AGGIES:{t:'pass',fam:'Trips',pp:1},MINERS:{t:'pass',fam:'Trips',pp:1,byHash:{L:'STRIKE',R:'FLASH'},tg:'FLIP'},BRONCHOS:{t:'pass',fam:'Kong',pp:1,byHash:{L:'RACE SAIL',R:'LAP SAIL'}},TULSA:{t:'pass',fam:'Kong',pp:1},CAL:{t:'pass',fam:'Crown',pp:1,byHash:{L:'LAP',R:'RACE'}},STANFORD:{t:'pass',fam:'Crown',pp:1}};
+const ALIAS={PITTSBURGH:'PITT',PITTS:'PITT'};const al=x=>{const u=String(x||'').toUpperCase();return ALIAS[u]||x};
+const owLong=(o,h)=>{o=String(o||'').toUpperCase();const w=OW[o];if(!w)return o;if(h!=='L'&&h!=='R')return o;if(w.byHash)return w.byHash[h];if(w.pair)return w.pair[h==='L'?0:1];return o};
+const owApply=o=>{const w=OW[o.owc];if(!w)return;o.formation=w.fam;if(o.hash==='L'||o.hash==='R'){o.fib='N';o.dir=((o.fib==='Y')===(o.hash==='L'))?'LT':'RT'}if(w.tg&&!o.tags.includes(w.tg)){o.tags.push(w.tg);o.autoT=w.tg}};
+const famOf=c=>c?(FAM[String(c).toUpperCase()]||String(c).toUpperCase()):'';
+/* ===== end program settings ===== */
+const RESULTS=[['COMP','Complete'],['INC','Incomplete'],['RUSH','Rush'],['SCRAM','Scramble'],['SACK','Sack'],['PEN','Penalty'],['INT','INT'],['FUM','Fumble lost']];
+let A;
+function load(){try{A=JSON.parse(localStorage.getItem(KEY))}catch(e){A=null}
+ if(!A){A={games:[],cur:null,lists:JSON.parse(JSON.stringify(DEF))};}
+ for(const k in DEF)if(A.lists[k]==null)A.lists[k]=DEF[k];
+ if(!A.v||A.v<2){const un=(a,b)=>[...a,...b.filter(x=>!a.includes(x))],L=A.lists;L.formations=un(L.formations.filter(x=>!['Slam Kong','Jet Army','Spill','Pour'].includes(x)),DEF.formations);L.motions=un(L.motions,DEF.motions);L.runs=un(L.runs,DEF.runs);L.passes=un(L.passes,DEF.passes);A.v=2}
+ if(A.v<4){const bad=['G VEGAS','G RAIDER','GANG VEGAS','GANG RAIDER'];A.lists.runs=A.lists.runs.filter(x=>!bad.includes(x));if(!A.lists.tagsRun.includes('G'))A.lists.tagsRun.unshift('G');if(!A.lists.tagsRun.includes('GANG'))A.lists.tagsRun.push('GANG');for(const g of A.games)if(g.plan&&g.plan.runs)g.plan.runs=g.plan.runs.filter(x=>!bad.includes(x))}
+ if(A.v<3){const un=(a,b)=>[...a,...b.filter(x=>!a.includes(x))];for(const k of['ftags','motions','passes','tagsRun','tagsPass'])A.lists[k]=un(A.lists[k]||[],DEF[k]);A.v=3}
+ if(A.v<4)A.v=4;
+ if(A.v<5){const un=(a,b)=>[...a,...b.filter(x=>!a.includes(x))],L=A.lists;L.motions=un(L.motions.filter(x=>!['X OUT','Z OUT'].includes(x)),DEF.motions);for(const k of['tagsRun','tagsPass'])L[k]=un(['X','Z'],L[k]);for(const g of A.games)if(g.plan&&g.plan.motions&&g.plan.motions.some(x=>/^(X|Z) OUT$/.test(x))){g.plan.motions=g.plan.motions.filter(x=>!/^(X|Z) OUT$/.test(x));if(!g.plan.motions.includes('OUT'))g.plan.motions.push('OUT')}A.v=5}
+ if(A.v<6){const bad=['RAVEN','WASHINGTON','COMMANDER','PHILLY','EAGLE','CLEV','BROWNS','ALTER STEELER','H RAIDER','Y VEGAS','X RAIDER','Z VEGAS'];A.lists.runs=A.lists.runs.filter(x=>!bad.includes(x));for(const g of A.games)if(g.plan&&g.plan.runs)g.plan.runs=g.plan.runs.filter(x=>!bad.includes(x));A.v=6}
+ if(A.v<7){const L=A.lists,mv=new Set(DEF.owcs),dropP=['MATCH','CUT CAL','BT BRONCHOS','CAL','BRONCHOS','MINERS','STANFORD','TULSA','SHUFFLE','DEUCE'],U=x=>String(x).toUpperCase();
+  const fr=a=>(a||[]).filter(x=>!mv.has(U(x)));const fp=a=>(a||[]).filter(x=>(!mv.has(U(x))||U(x)==='AGGIES')&&!dropP.includes(U(x)));
+  L.runs=fr(L.runs);L.passes=fp(L.passes);L.owcs=[...DEF.owcs];for(const k of['tagsRun','tagsPass'])if(!L[k].includes('SHORT'))L[k].push('SHORT');
+  for(const g of A.games)if(g.plan){g.plan.owcs=[...new Set([...(g.plan.runs||[]),...(g.plan.passes||[])].map(U).filter(x=>mv.has(x)))];g.plan.runs=fr(g.plan.runs);g.plan.passes=fp(g.plan.passes)}
+  A.v=7}
+ if(A.v<8){const fx=a=>[...new Set((a||[]).map(x=>ALIAS[String(x).toUpperCase()]||x))];const L=A.lists;L.runs=fx(L.runs);
+  for(const g of A.games){if(g.gp)g.gp=fx(g.gp);if(g.plan&&g.plan.runs)g.plan.runs=fx(g.plan.runs);for(const p of g.plays)if(p.k==='p'&&p.call)p.call=al(p.call)}
+  A.v=8}
+ if(A.v<9){const nj=a=>(a||[]).filter(x=>String(x).toUpperCase()!=='JUMBO');A.lists.ftags=nj(A.lists.ftags);for(const g of A.games)if(g.plan&&g.plan.ftags)g.plan.ftags=nj(g.plan.ftags);A.v=9}
+ if(A.v<10){const T=A.lists.targets=A.lists.targets||[];if(!T.some(x=>String(x).toUpperCase()==='SAIL'))T.push('SAIL');A.v=10}
+ if(!A.games.length)buildDemo(true);
+ if(!A.cur||!A.games.find(g=>g.id===A.cur))A.cur=A.games[0].id;save()}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(A))}catch(e){}}
+function newGame(name,quiet){const g={id:'g'+Date.now(),opp:name,program:CONFIG.program,plays:[]};A.games.push(g);A.cur=g.id;d=freshDraft(null);if(!quiet){save();renderAll()}}
+const G=()=>A.games.find(g=>g.id===A.cur);
+const esc2=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let d,edit=null;
+function freshDraft(prev){return{down:prev?prev.down:1,dist:prev?prev.dist:10,f:prev?prev.f:25,ptype:'run',formation:null,dir:null,motion:null,shift:false,jumbo:false,call:null,tag:null,ftags:[],tags:[],rgs:false,shot:false,result:null,gain:0,player:null,target:null,hash:null,fib:null,mpos:null,td:false}}
+const ylNum=f=>f<=50?f:100-f, ylSide=f=>f<=50?'own':'opp';
+const ylFmt=f=>f===50?'50':f<50?'-'+f:'+'+(100-f);
+function plays(){return G().plays.filter(p=>p.k==='p')}
+function eff(p){if(p.result==='PEN')return'';if(p.td)return'Y';const g=p.gain,n=p.dist;
+ if(p.down===1)return g>=(n>=10?4:n)?'Y':'N';if(p.down===2)return g>=n/2?'Y':'N';return g>=n?'Y':'N'}
+function expl(p){if(p.result==='PEN')return'';const t=p.ptype==='run'?A.lists.expRun:A.lists.expPass;return p.gain>=t?'Y':'N'}
+function runScheme(c){if(!c)return'';for(const k in RS)if(RS[k].includes(c.toUpperCase()))return k;return''}
+function advance(p){let f=p.f,down=p.down,dist=p.dist,newDrive=false;
+ if(p.result==='PEN'){f=Math.max(1,Math.min(99,f+p.gain));dist=Math.max(1,dist-p.gain);}
+ else if(p.td||p.result==='INT'||p.result==='FUM'){newDrive=true;f=25;down=1;dist=10}
+ else{f=Math.max(1,Math.min(99,f+p.gain));if(p.gain>=dist){down=1;dist=f>=90?100-f:10}else{down++;dist-=p.gain;if(down>4){newDrive=true;f=100-f;down=1;dist=10}}}
+ return{nd:newDrive,next:{down,dist,f}}}
+function logPlay(){if(!d.result){toast('Pick a result');return}
+ const p=Object.assign({k:'p'},d);p.tags=[...(d.tags||[])];p.ftags=[...(d.ftags||[])];p.tag=p.tags.join(' ');p.ftag=p.ftags.join(' ');if(p.call)p.call=al(p.call);if(p.owc){owApply(p);p.tag=p.tags.join(' ');p.call=owLong(p.owc,p.hash);p.ptype=(OW[p.owc]||{t:p.ptype}).t}else p.owc=null;delete p.autoT;
+ if(edit!==null){G().plays[edit]=p;edit=null;d=freshDraft(lastNext())}
+ else{G().plays.push(p);const a=advance(p);if(a.nd)G().plays.push({k:'d'});d=freshDraft(a.next)}
+ save();renderAll()}
+function lastNext(){const pl=G().plays;for(let i=pl.length-1;i>=0;i--)if(pl[i].k==='p'){const a=advance(pl[i]);return a.next}return{down:1,dist:10,f:25}}
+function toast(m){const t=document.createElement('div');t.textContent=m;t.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#000c;padding:10px 16px;border-radius:10px;z-index:20';document.body.appendChild(t);setTimeout(()=>t.remove(),2200)}
+const chip=(g,v,l,on,x='')=>`<button class="chip ${x} ${on?'on':''}" data-g="${g}" data-v="${String(v).replace(/"/g,'&quot;')}">${l??v}</button>`;
+const lab=(t,r='')=>`<div class="lab"><span>${t}</span><span>${r}</span></div>`;
+function conceptChips(list){const used=new Set(),out=[];for(const x of list){if(used.has(x))continue;const pr=PAIRS.find(q=>q.includes(x)&&q.every(y=>list.includes(y)));
+  if(pr){pr.forEach(y=>used.add(y));out.push('<span class="pair">'+pr.map(y=>chip('call',y,y,d.call===y&&!d.owc)).join('')+'</span>')}else{used.add(x);out.push(chip('call',x,x,d.call===x&&!d.owc))}}return out.join('')}
+function renderEntry(){const L=A.lists,e=edit!==null;
+ if(!d.tags)d.tags=d.tag?String(d.tag).split(' ').filter(Boolean):[];if(!d.ftags)d.ftags=d.ftag?String(d.ftag).split(' ').filter(Boolean):[];
+ const runL=planL('runs',d.call),passL=planL('passes',d.call),owL=planL('owcs',d.owc),tagL=[...new Set([...planL('tagsRun',d.tags),...planL('tagsPass',d.tags)])].sort((a,b)=>a.localeCompare(b));
+ const oth=c=>`<button class="chip" data-a="oth" data-c="${c}">+ Other</button>`;
+ const C=(cls,t,r,body)=>`<div class="card ${cls}">${lab(t,r)}${body}</div>`;
+ let h='<div class="ent">';
+ if(CONFIG.blankUntilPlan&&!G().plan)h+=`<div class="s12 card" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="note" style="flex:1;min-width:200px">No gameplan loaded for ${esc2(G().opp)}. Formation tags, motions, formations and play tags stay blank until you paste it.</span><button class="btn pri" data-a="gpopen">Paste gameplan</button></div>`;
+ h+=C('s2','Down','',`<div class="chips">${[1,2,3,4].map(n=>chip('down',n,n,d.down===n)).join('')}</div>`);
+ h+=C('s6','Distance','',`<div class="chips">${[1,2,3,4,5,6,7,8,9,10].map(n=>chip('dist',n,n,d.dist===n)).join('')}<input type="number" inputmode="numeric" id="distx" class="chipin ${d.dist>10?'on':''}" placeholder="11+" value="${d.dist>10?d.dist:''}"></div>`);
+ h+=C('s4','Ball on',ylFmt(d.f),`<div class="chips" style="align-items:center">${chip('side','own','Own',ylSide(d.f)==='own')}${chip('side','opp','Opp',ylSide(d.f)==='opp')}<div class="step"><button class="chip" data-a="ym">−</button><input type="number" inputmode="numeric" id="ylx" min="1" max="50" value="${ylNum(d.f)}" style="width:62px;font-size:20px;font-weight:700;text-align:center;background:transparent;color:var(--tx);border:1px solid var(--line);border-radius:6px;padding:4px 0"><button class="chip" data-a="yp">+</button></div></div>`);
+ h+=C('s2','Hash','',`<div class="chips">${chip('hash','L','L',d.hash==='L')}${chip('hash','M','M',d.hash==='M')}${chip('hash','R','R',d.hash==='R')}</div>`);
+ h+=C('s3','Formation tag','',`<div class="chips scroll">${planL('ftags',d.ftags).slice().sort((a,b)=>a.localeCompare(b)).map(x=>chip('ftags',x,x,d.ftags.includes(x))).join('')}${oth('ftags')}</div>`);
+ h+=C('s3','Motion / Shift','',`<div class="chips scroll">${chip('mpos','X','X',d.mpos==='X')}${chip('mpos','Z','Z',d.mpos==='Z')}${planL('motions',d.motion).map(x=>chip('motion',x,x,d.motion===x)).join('')}${oth('motions')}</div>`);
+ h+=C('s3','Formation','',`<div class="chips scroll">${planL('formations',d.formation).map(x=>chip('formation',x,x,d.formation===x)).join('')}${oth('formations')}</div>`);
+ h+=d.hash==='M'?C('s1','Dir','',`<div class="chips">${chip('dir','LT','LT',d.dir==='LT')}${chip('dir','RT','RT',d.dir==='RT')}</div>`):C('s1','FIB','',`<div class="chips">${chip('fib','Y','Y',d.fib==='Y')}${chip('fib','N','N',d.fib==='N')}</div>`);
+ h+=C('s12','Play tag(s)','',`<div class="chips scroll">${tagL.map(x=>chip('tags',x,x,d.tags.includes(x))).join('')}${oth('tagsRun')}</div>`);
+ h+=C('s12','One word','',`<div class="owg">${owL.map(x=>chip('owc',x,x,d.owc===x)).join('')}</div>`);
+ h+=C('s6','Run concepts','',`<div class="chips scroll">${conceptChips(runL)}${oth('runs')}</div>`);
+ h+=C('s6','Pass concepts','',`<div class="chips scroll">${conceptChips(passL)}${oth('passes')}</div>`);
+ if(d.ptype==='pass')h+=C('s12','Target (route)','',`<div class="chips scroll">${(L.targets||[]).map(x=>chip('target',x,x,d.target===x)).join('')}<button class="chip" data-a="tother">Other</button></div>`);
+ h+=C('s5','Result','',`<div class="chips">${RESULTS.map(r=>chip('result',r[0],r[1],d.result===r[0],['SACK','INT','FUM'].includes(r[0])?'neg':'res')).join('')}${chip('td','t','TD',d.td,'res')}</div>`);
+ h+=C('s4','Gain / loss','<input id="gv" type="number" inputmode="numeric" min="-99" max="99" value="'+d.gain+'" style="width:64px;font-size:18px;font-weight:700;text-align:center;background:transparent;color:var(--tx);border:1px solid var(--bd,#345);border-radius:6px">',`<input type="range" id="gs" min="-99" max="99" value="${d.gain}"><div class="chips" style="margin-top:2px">${[-5,0,2,4,6,8,10,15].map(n=>chip('gain',n,(n>0?'+':'')+n,d.gain===n)).join('')}<button class="chip" data-a="gm">−1</button><button class="chip" data-a="gp">+1</button></div>`);
+ h+=C('s3','Player','',`<div class="chips scroll">${L.players.map(x=>chip('player',x,'#'+x,d.player===x)).join('')}<button class="chip" data-a="pother">Other</button></div>`);
+ const lp=G().plays.filter(x=>x.k==='p').pop();h+=`<div class="s12 logrow">${lp&&!e?`<div class="last"><b>Last</b> ${lp.down}&amp;${lp.dist} ${lp.tag?lp.tag+' ':''}${lp.owc||lp.call||''} <b>${lp.gain>0?'+':''}${lp.gain}</b></div>`:''}<button class="btn pri logbtn" data-a="log">${e?'Save changes':'Log play'}</button>${e?'<button class="btn" data-a="cancel">Cancel</button><button class="btn bad" data-a="del">Delete play</button>':''}</div></div>`;
+ document.getElementById('entry').innerHTML=h}
+function drivesOf(arr){const dr=[];let c=[];for(const p of arr){if(p.k!=='p'){if(c.length)dr.push(c);c=[]}else c.push(p)}if(c.length)dr.push(c);return dr}
+function summary(){const P=plays(),pen=P.filter(p=>p.result!=='PEN');const E=pen.filter(p=>eff(p)==='Y').length,X=pen.filter(p=>expl(p)==='Y').length;
+ const dr=drivesOf(G().plays);
+ let hit=0;for(const c of dr){let fd=0;for(let i=1;i<c.length;i++)if(c[i].down===1&&c[i-1].down!==1&&c[i-1].result!=='PEN')fd++;if(fd>=2||c.some(p=>p.td))hit++}
+ const pc=(a,b)=>b?Math.round(100*a/b)+'%':'–';
+ return{n:pen.length,eff:pc(E,pen.length),exp:pc(X,pen.length),fd:hit+'/'+dr.length,dr}}
+function renderLog(){const g=G(),s=summary();
+ let h=`<div class="dclose"><button class="btn" id="logclose">Close log</button></div><div class="tiles"><div class="tile"><b>${s.n}</b><span>Plays</span></div><div class="tile"><b>${s.eff}</b><span>Efficient (50)</span></div><div class="tile"><b>${s.exp}</b><span>Explosive (12)</span></div><div class="tile"><b>${s.fd}</b><span>2FDOS drives</span></div></div>`;
+ let dn=1;h+=`<div class="drive"><span>Drive 1</span></div>`;
+ g.plays.forEach((p,i)=>{if(p.k==='h'){dn++;h+=`<div class="half">HALFTIME</div><div class="drive"><span>Drive ${dn}</span></div>`;return}if(p.k==='d'){dn++;h+=`<div class="drive"><span>Drive ${dn}</span></div>`;return}
+  const E=eff(p),X=expl(p),r=RESULTS.find(x=>x[0]===p.result);
+  h+=`<div class="play ${edit===i?'sel':''}" data-i="${i}"><div><div class="dd">${p.down}&amp;${p.dist}</div><div class="yl">${ylFmt(p.f)}</div></div>
+  <div><div class="call">${p.tag?p.tag+' ':''}${p.owc||p.call||'—'}${E==='Y'?'<span class="badge b-e">EFF</span>':''}${X==='Y'?'<span class="badge b-x">EXP</span>':''}</div>
+  <div class="sub">${[p.ftag&&p.ftag,motionFull(p),p.shift&&'shift',p.hash&&p.hash+' hash',p.formation&&p.formation+(p.dir?' '+p.dir:''),p.fib&&'FIB '+p.fib,p.target&&'→ '+p.target,p.jumbo&&'jumbo',p.rgs&&'RGS',p.shot&&'shot'].filter(Boolean).join(' · ')}</div></div>
+  <div><div class="gain ${p.gain>0?'pos':p.gain<0?'neg':''}">${p.gain>0?'+':''}${p.gain}</div><div class="sub" style="text-align:right">${p.td?'TD ':''}${r?r[1]:''}${p.player?' #'+p.player:''}</div></div></div>`});
+ const el=document.getElementById('logp');el.innerHTML=h;el.scrollTop=el.scrollHeight}
+function renderHdr(){const gb=document.getElementById('gpbtn');if(gb){const on=G()&&G().plan&&Object.values(G().plan).some(a=>a&&a.length);gb.textContent=on?'Gameplan ✓':'Gameplan';gb.classList.toggle('pri',!!on)}
+document.getElementById('gsel').innerHTML=A.games.map(g=>`<option value="${g.id}" ${g.id===A.cur?'selected':''}>${g.opp}</option>`).join('')}
+function renderAll(){renderHdr();renderEntry();renderLog()}
+document.getElementById('entry').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;const a=b.dataset.a,g=b.dataset.g,v=b.dataset.v;
+ if(g){
+  if(['down','dist','gain'].includes(g))d[g]=g==='gain'?Math.max(-99,Math.min(99,+v)):+v;
+  else if(g==='side'&&(v==='own'||v==='opp')){const n=ylNum(d.f);d.f=v==='own'?n:100-n}
+  else if(['shift','jumbo','rgs','shot'].includes(g))d[g]=!d[g];
+  else if(g==='td'){d.td=!d.td;if(d.td)d.gain=100-d.f}
+  else if(g==='owc'){const w=OW[v];if(d.autoT){d.tags=d.tags.filter(x=>x!==d.autoT);d.autoT=null}if(d.owc===v)d.owc=null;else{d.owc=v;d.call=null;if(w)d.ptype=w.t}if(d.ptype==='run')d.target=null;if(d.owc)owApply(d)}
+  else if(g==='call'){const was=d.call===v&&!d.owc;if(d.autoT){d.tags=(d.tags||[]).filter(x=>x!==d.autoT);d.autoT=null}d.owc=null;d.call=was?null:v;if(d.call){d.ptype=A.lists.runs.some(x=>x.toUpperCase()===v.toUpperCase())?'run':'pass';if(d.ptype==='run')d.target=null}}
+  else if(g==='ptype'){d.ptype=v;d.call=null;d.target=null}
+  else if(g==='tags'||g==='ftags'){const a=d[g]||(d[g]=[]),i=a.indexOf(v);i<0?a.push(v):a.splice(i,1)}
+  else if(g==='result'){d.result=d.result===v?null:v;if(v==='INC')d.gain=0}
+  else d[g]=d[g]===v?null:v;
+  if(g==='hash'||g==='fib'){if(d.hash==='M')d.fib=null;if(d.hash&&d.hash!=='M'&&d.fib)d.dir=((d.fib==='Y')===(d.hash==='L'))?'LT':'RT';else d.dir=null;if(g==='hash'&&d.owc)owApply(d)}
+  renderEntry();return}
+ if(a==='dm'){d.dist=Math.max(1,d.dist-1)}else if(a==='dp'){d.dist++}
+ else if(a==='ym'||a==='yp'){const s=ylSide(d.f),n=ylNum(d.f)+(a==='yp'?1:-1);const m=Math.max(1,Math.min(50,n));d.f=s==='own'?m:100-m}
+ else if(a==='gm'){d.gain=Math.max(-99,d.gain-1)}else if(a==='gp'){d.gain=Math.min(99,d.gain+1)}
+ else if(a==='oth'){const c=b.dataset.c;ask('Type it in',x0=>{let x=x0.trim();x=c==='formations'?x.toLowerCase().replace(/\b\w/g,m=>m.toUpperCase()):x.toUpperCase();x=ALIAS[x]||x;const L=A.lists;if(!L[c].some(y=>y.toUpperCase()===x.toUpperCase()))L[c].push(x);else x=L[c].find(y=>y.toUpperCase()===x.toUpperCase());const pl=G().plan;if(pl&&pl[c]&&!pl[c].some(y=>y.toUpperCase()===x.toUpperCase()))pl[c].push(x);if(c==='tagsRun'||c==='tagsPass'){const o=c==='tagsRun'?'tagsPass':'tagsRun';if(!L[o].some(y=>y.toUpperCase()===x.toUpperCase()))L[o].push(x);if(pl&&pl[o]&&!pl[o].some(y=>y.toUpperCase()===x.toUpperCase()))pl[o].push(x)}
+   if(c==='ftags'){if(!d.ftags.includes(x))d.ftags.push(x)}else if(c==='motions')d.motion=x;else if(c==='formations')d.formation=x;else if(c==='runs'||c==='passes'){d.call=x;d.owc=null;d.ptype=c==='runs'?'run':'pass'}else{if(!d.tags.includes(x))d.tags.push(x)}save();renderEntry()});return}
+ else if(a==='gpopen'){gpState={text:'',extra:{}};gpModal();return}
+ else if(a==='tother'){ask('Route targeted',x=>{d.target=x.toUpperCase();renderEntry()});return}
+ else if(a==='pother'){ask('Jersey number',x=>{d.player=x;renderEntry()});return}
+ else if(a==='log'){logPlay();return}
+ else if(a==='cancel'){edit=null;d=freshDraft(lastNext());renderAll();return}
+ else if(a==='del'){G().plays.splice(edit,1);edit=null;d=freshDraft(lastNext());save();renderAll();return}
+ renderEntry()});
+document.getElementById('entry').addEventListener('input',ev=>{if(ev.target.id==='gs'){d.gain=+ev.target.value;document.getElementById('gv').value=d.gain}
+ else if(ev.target.id==='gv'){const x=parseInt(ev.target.value,10);if(!isNaN(x)){d.gain=Math.max(-99,Math.min(99,x));document.getElementById('gs').value=d.gain}}});
+document.getElementById('entry').addEventListener('change',ev=>{if(ev.target.id==='gv'){ev.target.value=d.gain}});
+document.getElementById('entry').addEventListener('change',ev=>{if(ev.target.id==='ylx'){const x=parseInt(ev.target.value,10);if(!isNaN(x)){const m=Math.max(1,Math.min(50,x));d.f=ylSide(d.f)==='own'?m:100-m}renderEntry();return}if(ev.target.id==='distx'){const v=parseInt(ev.target.value);if(v>0)d.dist=v;renderEntry();return}if(ev.target.id==='gs')renderEntry()});
+document.getElementById('logp').addEventListener('click',ev=>{if(ev.target.closest('#logclose')){setLog(false);return}const r=ev.target.closest('.play');if(!r)return;const i=+r.dataset.i;edit=i;const p=G().plays[i];d=Object.assign(freshDraft(null),p);delete d.k;d.tags=p.tags?[...p.tags]:(p.tag?String(p.tag).split(' ').filter(Boolean):[]);d.ftags=p.ftags?[...p.ftags]:(p.ftag?String(p.ftag).split(' ').filter(Boolean):[]);renderAll()});
+document.getElementById('gsel').onchange=e=>{A.cur=e.target.value;edit=null;d=freshDraft(lastNext());save();renderAll()};
+document.getElementById('newgame').onclick=()=>ask('Opponent',n=>{newGame(n);toast('New game: '+n);gpState={text:'',extra:{}};gpModal()});
+function setLog(on){document.querySelector('main').classList.toggle('logon',on);const b=document.getElementById('logbtn');b.textContent=on?'Log ✓':'Log';b.classList.toggle('pri',on);try{localStorage.setItem('almanac_logon',on?'1':'0')}catch(e){}if(on)renderLog()}
+document.getElementById('logbtn').onclick=()=>setLog(!document.querySelector('main').classList.contains('logon'));
+try{if(localStorage.getItem('almanac_logon')==='1')setLog(true)}catch(e){}
+document.getElementById('newdrive').onclick=()=>{G().plays.push({k:'d'});save();renderLog();toast('New drive — Drive '+(G().plays.filter(p=>p.k==='d'||p.k==='h').length+1))};
+document.getElementById('half').onclick=()=>{if(G().plays.some(p=>p.k==='h')){toast('Halftime already marked');return}G().plays.push({k:'h'});d=freshDraft({down:1,dist:10,f:25});edit=null;save();renderAll();toast('Halftime marked')};
+document.getElementById('undo').onclick=()=>{const pl=G().plays;if(pl.length){const x=pl.pop();d=freshDraft(lastNext());edit=null;save();renderAll();toast('Undid '+(x.k==='h'?'halftime':x.k==='d'?'drive marker':'last play'))}else toast('Nothing to undo')};
+const HEAD=['DOWN','DISTANCE','JUMBO Y/N','SHIFT','MOTION','PLAY TAG','RUN CALL','PASS CALL','RGS Y/N','SHOT Y/N','RESULT','PLAYER','YARD LINE','GAIN/LOSS','<50','CROSS 50','>50','BCKWD CROSS 50','GAIN/LOSS','EXPLOSIVE','EFFICIENT','RUN SCHEME','PASS SCHEME','FORMATION','DIRECTION','PLAY TYPE','FORMATION TAG','CONCEPT','TARGET','ONE WORD'];
+function resText(p){const r=p.result;if(r==='PEN')return'PENALTY';if(r==='INC')return'INC';if(r==='INT')return'INT';if(r==='FUM')return'FUM';if(r==='SACK')return'SACK';if(p.td)return p.gain+' YD TD';return String(p.gain)}
+function rows(){const out=[HEAD];for(const p of G().plays){if(p.k==='h'){out.push(['HALFTIME']);continue}if(p.k==='d'){out.push(['NEW DRIVE']);continue}
+ out.push([p.down,p.dist,p.jumbo?'Y':'',p.shift?'Y':'',motionFull(p),p.tag||'',p.ptype==='run'?p.call||'':'',p.ptype==='pass'?p.call||'':'',p.rgs?'Y':'',p.shot?'Y':'',resText(p),p.player||'',ylFmt(p.f),p.gain,'','','','',p.gain,expl(p),eff(p),p.ptype==='run'?runScheme(p.call):'','',p.formation||'',p.dir||'',p.ptype==='run'?'Run':'Pass',p.ftag||(p.jumbo?'JUMBO':''),famOf(p.call),p.target||'',p.owc||''])}return out}
+const csv=()=>rows().map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+
+const motionFull=p=>p.motion?((p.mpos?p.mpos+' ':'')+p.motion):'';
+/* ===== Hudl export: exact column order for the Hudl import ===== */
+const HUDL_HEAD=['PLAY #','ODK','HASH','P & 10','DN','DIST','GN/LS','YARD LN','PERSONNEL','EFF','EXPLOSIVE?','SHOT','PLAY TYPE','RESULT','OFF FORM','FIB?','MOTION','SHIFT','PLAY','TAG','ONE WORD CALL','TARGET','PLAYER','QB NUMBER','RUN CONCEPT FAMILY','RUN R/L','PASS PRO'];
+const HUDL_RES={COMP:'Complete',INC:'Incomplete',RUSH:'Rush',SCRAM:'Scramble',SACK:'Sack',PEN:'Penalty',INT:'Interception',FUM:'Fumble Lost'};
+const RLDIR=c=>{if(!c)return'';c=String(c).toUpperCase();const pr=PAIRS.find(q=>q.includes(c));if(pr)return pr[0]===c?'Left':'Right';if(c==='PITTSBURGH')return'Left';return''};
+function hudlRows(){const out=[HUDL_HEAD];let first=true;
+ for(const p of G().plays){if(p.k==='h'||p.k==='d'){first=true;continue}
+  const run=p.ptype==='run',form=p.formation?[p.formation+(p.dir?' '+(p.dir==='RT'?'Rt':'Lt'):''),...(p.ftag?[p.ftag]:p.jumbo?['JUMBO']:[])].join(' '):'';
+  out.push(['','O','',first?'Y':'',p.down,p.dist,p.gain,ylFmt(p.f),'',eff(p),p.result==='PEN'?'':(expl(p)==='Y'?'YES':'NO'),'',run?'Run':'Pass',(HUDL_RES[p.result]||'')+(p.td?' TD':''),form,'',motionFull(p),p.shift?'Y':'',p.call||'',p.tag||'',p.owc||'',p.target||'',p.player||'','',run?famOf(p.call):'',run?RLDIR(p.call):'',(!run&&p.owc&&(OW[p.owc]||{}).pp)?'BLACK/BROWN':'']);
+  first=false}
+ return out}
+const hudlCsv=()=>hudlRows().map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+const hudlTsv=()=>hudlRows().map(r=>r.join('\t')).join('\n');
+
+/* ===== Gameplan scoping: only show what is in this week's gameplan ===== */
+const BLANKCATS=['ftags','motions','formations','tagsRun','tagsPass'];
+const planL=(cat,sel)=>{const base=A.lists[cat]||[],pl=G().plan,sl=[].concat(sel||[]).filter(Boolean).map(x=>String(x).toUpperCase()),keep=()=>base.filter(x=>sl.includes(x.toUpperCase()));
+ if(!pl)return(CONFIG.blankUntilPlan&&BLANKCATS.includes(cat))?keep():base;
+ const p=pl[cat];if(!p||!p.length)return CONFIG.blankUntilPlan?keep():base;
+ const S=new Set(p.map(x=>x.toUpperCase()));return base.filter(x=>S.has(x.toUpperCase())||sl.includes(x.toUpperCase()))};
+const GPCATS=[['ftags','Formation tag'],['motions','Motion'],['formations','Formation'],['runs','Run concept'],['passes','Pass concept'],['owcs','One word'],['tagsRun','Play tag']];
+const GPSKIP=new Set(['RT','LT','LEFT','RIGHT','L','R']);
+function gpVocab(extra){const v=new Map(),add=(t,c)=>{t=String(t).toUpperCase().trim();if(!t)return;if(!v.has(t))v.set(t,new Set());v.get(t).add(c)};
+ const L=A.lists;for(const c of['ftags','motions','formations','runs','passes','owcs'])(L[c]||[]).forEach(x=>add(x,c));(L.tagsRun||[]).forEach(x=>add(x,'tag'));(L.tagsPass||[]).forEach(x=>add(x,'tag'));
+ for(const k in extra||{})if(extra[k]&&extra[k]!=='skip')add(k,extra[k]==='tagsRun'?'tag':extra[k]);return v}
+function gpTok(line,v){const w=line.toUpperCase().replace(/[^A-Z0-9 /&-]+/g,' ').split(/\s+/).filter(Boolean).map(x=>ALIAS[x]||x),out=[];for(let i=0;i<w.length;){let n=Math.min(3,w.length-i),hit=null;for(;n>=1;n--){const ph=w.slice(i,i+n).join(' ');if(v.has(ph)){hit=[ph,v.get(ph),n];break}}
+  if(hit){out.push({t:hit[0],c:hit[1]});i+=hit[2]}else{out.push({t:w[i],c:null});i++}}return out}
+function gpParse(text,extra){const v=gpVocab(extra),lines=text.split(/\n/).map(x=>x.trim()).filter(Boolean),plan={ftags:new Set(),motions:new Set(),formations:new Set(),runs:new Set(),passes:new Set(),owcs:new Set(),tagsRun:new Set(),tagsPass:new Set()},unk=new Map(),concepts=new Set();let n=0;
+ for(const ln of lines){const tk=gpTok(ln,v);let ci=-1;for(let i=tk.length-1;i>=0;i--)if(tk[i].c&&(tk[i].c.has('runs')||tk[i].c.has('passes')||tk[i].c.has('owcs'))){ci=i;break}
+  if(ci<0&&!tk.some(x=>x.c))continue;n++;const typ=ci>=0?(tk[ci].c.has('runs')?'run':tk[ci].c.has('passes')?'pass':((OW[tk[ci].t]||{}).t||null)):null;
+  tk.forEach((x,i)=>{if(GPSKIP.has(x.t))return;if(!x.c){unk.set(x.t,(unk.get(x.t)||0)+1);return}
+   if(i===ci){for(const c of['runs','passes','owcs'])if(x.c.has(c)){plan[c].add(x.t);concepts.add(x.t);if(c!=='owcs'){const pr=PAIRS.find(q=>q.includes(x.t));if(pr)pr.forEach(y=>{plan[c].add(y);concepts.add(y)})}}return}
+   for(const c of x.c){if(c==='ftags'||c==='motions'||c==='formations')plan[c].add(x.t);else if(c==='tag'){plan.tagsRun.add(x.t);plan.tagsPass.add(x.t)}}})}
+ return{plan,unk,concepts,n,lines:lines.length}}
+let gpState={text:'',extra:{}};
+function gpModal(){const g=G(),r=gpParse(gpState.text,gpState.extra),on=g.plan&&Object.values(g.plan).some(a=>a&&a.length);
+ const cnt=c=>r.plan[c].size;
+ const unk=[...gpParse(gpState.text,{}).unk.entries()].sort((a,b)=>b[1]-a[1]);
+ modal(`<h3 style="margin-top:0">Gameplan for ${esc2(g.opp)}</h3><p class="note">Paste the GAMEPLAN PLAYS column from the Play Script Tool, one call per line (like "PULSE JUMBO CAROLINA"). The almanac will only show the formations, motions, tags and concepts that appear. Left/Right partners come along automatically. <b>+ Other</b> is always there for anything else.${on?' <b>Scoping is on for this game.</b>':''}</p>
+ <textarea id="gptext" style="width:100%;min-height:150px" placeholder="HIP POKER BRUINS&#10;SWAP SHUFFLE&#10;TRIPS RT MUSTANG">${esc2(gpState.text)}</textarea>
+ ${r.n?`<p class="note"><b>${r.n}</b> calls read &middot; ${GPCATS.map(([c,l])=>l+': '+cnt(c)).join(' &middot; ')}</p>`:''}
+ ${unk.length?`<div class="lab"><span>Words not in your lists (${unk.length}) — tell me what each one is</span></div>${unk.map(([t,n])=>`<div style="display:flex;gap:8px;align-items:center;padding:3px 0"><b style="min-width:110px">${esc2(t)}</b><span class="note">${n}x</span><select data-w="${esc2(t)}" style="flex:1"><option value="">Ignore</option>${GPCATS.map(([c,l])=>`<option value="${c}" ${gpState.extra[t]===c?'selected':''}>${l}</option>`).join('')}</select></div>`).join('')}`:''}
+ <p style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px"><button class="btn" id="gpread">Read it</button><button class="btn pri" id="gpapply">Apply to ${esc2(g.opp)}</button><button class="btn bad" id="gpclear">Clear gameplan</button><button class="btn" onclick="modal_close()">Close</button></p>`);
+ gptext.oninput=e=>{gpState.text=e.target.value};document.getElementById('gpread').onclick=()=>{gpState.text=gptext.value;gpModal()};
+ document.querySelectorAll('#mbox select[data-w]').forEach(s=>s.onchange=e=>{gpState.extra[e.target.dataset.w]=e.target.value;gpModal()});
+ const ap=document.getElementById('gpapply');if(ap)ap.onclick=()=>{gpState.text=gptext.value;const r=gpParse(gpState.text,gpState.extra);if(!r.n){toast('No plays found — paste the GAMEPLAN PLAYS column first');return}const L=A.lists,pl={};
+  for(const k in gpState.extra){const c=gpState.extra[k];if(!c)continue;const nm=c==='formations'?k.toLowerCase().replace(/\b\w/g,m=>m.toUpperCase()):k;if(!L[c].some(y=>y.toUpperCase()===k))L[c].push(nm);if(c==='tagsRun'&&!L.tagsPass.some(y=>y.toUpperCase()===k))L.tagsPass.push(nm)}
+  const r2=gpParse(gpState.text,gpState.extra);
+  for(const c in r2.plan){const set=r2.plan[c];pl[c]=(L[c]||[]).filter(x=>set.has(x.toUpperCase()))}
+  g.plan=pl;g.gp=[...r2.concepts];save();modal_close();d=freshDraft(lastNext());renderAll();toast('Gameplan applied')};
+ const cl=document.getElementById('gpclear');if(cl)cl.onclick=()=>{const was=on;g.plan=null;g.gp=null;gpState={text:'',extra:{}};save();modal_close();d=freshDraft(lastNext());renderAll();toast(was?'Gameplan cleared — all buttons showing':'No gameplan was set')}}
+document.getElementById('gpbtn').onclick=()=>{gpState={text:'',extra:{}};gpModal()};
+
+function ask(title,cb,val){modal(`<h3 style="margin-top:0">${title}</h3><input type="text" id="askin" autocapitalize="characters" autocomplete="off" style="width:100%;font-size:20px;padding:10px" value="${esc2(val||'')}"><p style="display:flex;gap:10px"><button class="btn pri" id="askok">OK</button><button class="btn" id="askno">Cancel</button></p>`);
+ const i=document.getElementById('askin');setTimeout(()=>{try{i.focus()}catch(e){}},60);const go=()=>{const v=i.value.trim();modal_close();if(v)cb(v)};document.getElementById('askok').onclick=go;document.getElementById('askno').onclick=modal_close;i.onkeydown=e=>{if(e.key==='Enter')go()}}
+function arm(b,label,fn){if(b.dataset.armed){fn();return}b.dataset.armed='1';const t=b.textContent;b.textContent=label;setTimeout(()=>{if(b.isConnected){delete b.dataset.armed;b.textContent=t}},4000)}
+const FR=CONFIG.filmRoom;
+function copyText(t){return(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).catch(()=>{const x=document.createElement('textarea');x.value=t;document.body.appendChild(x);x.select();document.execCommand('copy');x.remove()})}
+// Copy first, inside the tap (iPhone/iPad only allow clipboard writes during the tap), then let the coach open Film Room with a second tap.
+function copyNow(t){let ok=false;try{const x=document.createElement('textarea');x.value=t;x.setAttribute('readonly','');x.style.position='fixed';x.style.opacity='0';document.body.appendChild(x);x.select();x.setSelectionRange(0,t.length);ok=document.execCommand('copy');x.remove()}catch(e){}
+  if(navigator.clipboard)navigator.clipboard.writeText(t).catch(()=>{});return ok}
+document.getElementById('send').onclick=()=>{const t='ALMANAC\t'+G().opp+'\t'+(G().program||CONFIG.program)+'\n'+tsv();const ok=copyNow(t);const n=rows().filter(r=>r.length>3).length-1;
+  modal(`<h3 style="margin-top:0">${ok?'Copied ✓':'Copy this game'}</h3><p class="note">${n} plays from ${G().opp}. ${ok?'':'Tap the box, Select All, Copy. '}Then open Film Room, pick or start the game, and tap <b>Paste from Almanac app</b>. If Film Room shows a paste box, press and hold in it and tap Paste.</p>
+  <textarea readonly style="width:100%;min-height:90px;font-size:12px" onclick="this.select();this.setSelectionRange(0,this.value.length)">${t.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</textarea>
+  <p style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn" href="${A.fr||FR}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;display:inline-flex;align-items:center">Open Film Room</a><button class="btn" onclick="modal_close()">Done</button></p>`)};
+const tsv=()=>rows().map(r=>r.join('\t')).join('\n');
+function dl(name,txt,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type}));a.download=name;document.body.appendChild(a);a.click();a.remove()}
+function modal(h){const m=document.getElementById('modal');document.getElementById('mbox').classList.remove('wide');document.getElementById('mbox').innerHTML=h;m.classList.add('show')}
+if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
+document.getElementById('modal').onclick=e=>{if(e.target.id==='modal')e.target.classList.remove('show')};
+document.getElementById('exp').onclick=()=>{modal(`<h3 style="margin-top:0">Export ${G().opp}</h3><p class="note">Hudl order (27 columns, header row, one row per offensive play). HASH, PERSONNEL, FIB?, ONE WORD CALL, QB NUMBER and PASS PRO (it is in TAG) are left blank for Film Room or rules to fill.</p>
+ <div class="chips"><button class="btn pri" id="e1">Download Hudl CSV</button><button class="btn" id="e2">Copy for Google Sheets</button></div>
+ <p class="note" style="margin-top:12px">Other formats</p><div class="chips"><button class="btn" id="e4">Old almanac order (CSV)</button><button class="btn" id="e3">Backup all games (JSON)</button></div>`);
+ e1.onclick=()=>dl(G().opp.replace(/\W+/g,'_')+'_hudl.csv',hudlCsv(),'text/csv');
+ e2.onclick=()=>{const t=hudlTsv();(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).catch(()=>{const x=document.createElement('textarea');x.value=t;document.body.appendChild(x);x.select();document.execCommand('copy');x.remove()}).finally(()=>toast('Copied'))};
+ e4.onclick=()=>dl(G().opp.replace(/\W+/g,'_')+'_almanac.csv',csv(),'text/csv');
+ e3.onclick=()=>dl('almanac_backup.json',JSON.stringify(A),'application/json')};
+document.getElementById('setup').onclick=()=>{const L=A.lists;const f=(k,t)=>`<div class="lab"><span>${t}</span></div><textarea id="s_${k}">${L[k].join(', ')}</textarea>`;
+ modal(`<h3 style="margin-top:0">Setup</h3><p class="note">Comma-separated. These become the buttons.</p>${f('ftags','Formation tags')}${f('motions','Motions')}${f('formations','Formations')}${f('runs','Run calls')}${f('passes','Pass calls')}${f('owcs','One words')}${f('ftags','Formation tags')}${f('tagsRun','Run play tags')}${f('tagsPass','Pass play tags')}${f('targets','Targets (routes)')}${f('players','Jersey numbers')}<div class="lab"><span>Gameplan plays for ${G().opp} (used for "not called yet"; blank = all run and pass buttons)</span></div><textarea id="s_gp">${(G().gp||[]).join(', ')}</textarea><div class="lab"><span>Film Room link</span></div><input type="text" id="s_fr" style="width:100%" value="${A.fr||FR}">
+ <div class="two" style="margin-top:8px"><div><div class="lab">Explosive run</div><input type="number" id="s_er" value="${L.expRun}"></div><div><div class="lab">Explosive pass</div><input type="number" id="s_ep" value="${L.expPass}"></div></div>
+ <div class="lab" style="margin-top:12px"><span>Games on this device</span></div><div id="gmlist">${A.games.map(g=>`<div class="gmrow" style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)"><div style="flex:1;min-width:0"><b>${esc2(g.opp)}</b>${g.id===A.cur?' <span class="note">(open)</span>':''}<div class="note">${g.plays.filter(x=>x.k==='p').length} plays</div></div><button class="btn bad" data-delg="${g.id}">Delete</button></div>`).join('')}</div>
+ <button class="btn bad" id="skeep" style="margin-top:8px;width:100%">Delete all games except ${esc2(G().opp)}</button>
+ <div class="two" style="margin-top:10px"><button class="btn pri" id="ssave">Save</button></div><button class="btn" id="sdemo" style="margin-top:8px">Add demo game</button>`);
+ const afterDel=()=>{if(!A.games.length)newGame('Game 1',true);if(!A.games.find(g=>g.id===A.cur))A.cur=A.games[0].id;edit=null;d=freshDraft(lastNext());save();modal_close();renderAll()};
+ document.getElementById('gmlist').onclick=e=>{const b=e.target.closest('[data-delg]');if(!b)return;const g=A.games.find(x=>x.id===b.dataset.delg);if(g)arm(b,'Tap again to delete',()=>{A.games=A.games.filter(x=>x.id!==g.id);afterDel()})};
+ document.getElementById('skeep').onclick=()=>{const n=A.games.length-1;if(n<1){toast('This is the only game');return}arm(document.getElementById('skeep'),'Tap again: delete '+n+' other game'+(n>1?'s':''),()=>{A.games=A.games.filter(g=>g.id===A.cur);afterDel()})};
+ ssave.onclick=()=>{for(const k of['ftags','motions','formations','runs','passes','owcs','tagsRun','tagsPass','targets','players'])L[k]=document.getElementById('s_'+k).value.split(',').map(s=>s.trim()).filter(Boolean);G().gp=document.getElementById('s_gp').value.split(',').map(s=>s.trim()).filter(Boolean);A.fr=document.getElementById('s_fr').value.trim()||FR;L.expRun=+s_er.value||12;L.expPass=+s_ep.value||16;save();modal_close();renderAll()};
+ sdemo.onclick=()=>{modal_close();buildDemo(false)};
+};
+function buildDemo(quiet){
+ let sd=20261119;const rnd=()=>{sd|=0;sd=sd+0x6D2B79F5|0;let t=Math.imul(sd^sd>>>15,1|sd);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+ const pick=a=>a[Math.floor(rnd()*a.length)],ri=(a,b)=>a+Math.floor(rnd()*(b-a+1));
+ const wp=(a,w)=>{let r=rnd()*w.reduce((x,y)=>x+y,0);for(let i=0;i<a.length;i++){r-=w[i];if(r<0)return a[i]}return a[a.length-1]};
+ const g={id:'g'+Date.now(),opp:'DEMO - sample game',program:CONFIG.program,demo:true,plays:[],gp:['SOONERS','CAROLINA','TEXAS','PITT','G RAIDER','HOUSTON','LA','CHARGER','BRUINS','MATCH','AGGIES','CUT CAL','RACE','BT BRONCHOS']};
+ let down=1,dist=10,f=28,n=0,half=false;
+ const newDrive=()=>{if(n>=26&&!half){half=true;g.plays.push({k:'h'})}else g.plays.push({k:'d'});down=1;dist=10;f=ri(20,42)};
+ while(n<56){
+  if(down===4&&f<62){newDrive();continue}
+  const run=rnd()<.55;
+  const p={k:'p',down,dist,f,ptype:run?'run':'pass',formation:pick(['Kong','Crown','Queen','King']),dir:pick(['RT','LT']),motion:rnd()<.3?pick(['MISSILE','X OUT','JET','ORBIT']):null,shift:rnd()<.08,jumbo:rnd()<.06,call:null,tag:rnd()<.5?pick(['NOSE','TEAR','MISS','MASH','BRONZE']):null,rgs:false,shot:false,result:'',gain:0,player:null,td:false};
+  const r=rnd();
+  if(run){p.call=wp(['SOONERS','CAROLINA','TEXAS','PITT','G RAIDER','HOUSTON'],[5,4,3,2,2,1]);p.rgs=rnd()<.2;p.player=wp(['4','33','0','9','12'],[10,3,1,2,1]);p.result='RUSH';
+   const q=rnd();p.gain=q<.12?-ri(1,3):q<.62?ri(1,5):q<.9?ri(6,10):ri(11,22);if(r<.04){p.result='PEN';p.gain=pick([-5,5]);p.player=null}}
+  else{p.call=wp(['MATCH','AGGIES','CUT CAL','RACE','BT BRONCHOS'],[4,3,3,2,2]);p.shot=rnd()<.12;p.player=wp(['11','2','5','8','13','14','15','48','30'],[4,4,3,2,2,2,2,1,1]);
+   if(r<.07){p.result='SACK';p.gain=-ri(4,8);p.player=pick(['9','12'])}
+   else if(r<.38){p.result='INC';p.gain=0}
+   else if(r<.395){p.result='INT';p.gain=0}
+   else{p.result='COMP';const q=rnd();p.gain=q<.6?ri(3,9):q<.88?ri(10,17):ri(18,40);}
+   if(rnd()<.03){p.result='PEN';p.gain=pick([-5,5]);p.player=null}}
+  if(p.result!=='PEN'&&p.result!=='INC'&&f+p.gain>=100){p.gain=100-f;p.td=true}
+  g.plays.push(p);n++;
+  const a=advance(p);down=a.next.down;dist=a.next.dist;f=a.next.f;
+  if(a.nd){newDrive()}
+ }
+ A.games.push(g);A.cur=g.id;
+ if(!quiet){edit=null;d=freshDraft(lastNext());save();renderAll()}}
+let RF='all';
+function rangePlays(){const a=G().plays;let r=a;
+ if(RF==='1h'){const i=a.findIndex(p=>p.k==='h');r=i<0?a:a.slice(0,i)}
+ else if(RF==='2h'){const i=a.findIndex(p=>p.k==='h');r=i<0?[]:a.slice(i+1)}
+ else if(RF==='last'){let i=-1;a.forEach((p,j)=>{if(p.k!=='p')i=j});r=a.slice(i+1)}
+ return r}
+function reportData(){const R=rangePlays(),P=R.filter(p=>p.k==='p'),N=P.filter(p=>p.result!=='PEN');
+ const pc=(a,b)=>b?Math.round(100*a/b):null;
+ const E=N.filter(p=>eff(p)==='Y').length,X=N.filter(p=>expl(p)==='Y').length,yds=N.reduce((t,p)=>t+p.gain,0);
+ const t3=N.filter(p=>p.down===3),t3c=t3.filter(p=>p.td||p.gain>=p.dist).length;
+ let hit=0;const dr=drivesOf(R);for(const c of dr){let fd=0;for(let i=1;i<c.length;i++)if(c[i].down===1&&c[i-1].down!==1&&c[i-1].result!=='PEN')fd++;if(fd>=2||c.some(p=>p.td))hit++}
+ const T={};for(const p of N){if(!p.player)continue;const o=T[p.player]||(T[p.player]={c:0,r:0,t:0,y:0,e:0,n:0});o.n++;
+  if(p.result==='RUSH'||p.result==='SCRAM'){o.c++;o.y+=p.gain}else if(p.result==='COMP'){o.r++;o.t++;o.y+=p.gain}else if(p.result==='INC'){o.t++}
+  if(eff(p)==='Y')o.e++}
+ const C={};for(const p of N){if(!p.call)continue;const ck=p.owc||p.call;const o=C[ck]||(C[ck]={n:0,e:0,x:0,y:0});o.n++;o.y+=p.gain;if(eff(p)==='Y')o.e++;if(expl(p)==='Y')o.x++}
+ const calls=Object.entries(C).map(([k,o])=>{const ep=Math.round(100*o.e/o.n);let v='Too early';
+  if(o.n>=2&&ep>=50)v='KEEP';else if((o.n>=3&&ep<35)||(o.n===2&&ep===0))v='STOP';else if(o.n>=2)v='Neutral';
+  return{call:k,n:o.n,ep,avg:o.y/o.n,x:o.x,v}}).sort((a,b)=>b.n-a.n);
+ const FM={};for(const p of N){if(!p.call)continue;const k=famOf(p.call),o=FM[k]||(FM[k]={n:0,e:0,x:0,y:0,calls:new Set()});o.n++;o.y+=p.gain;o.calls.add(p.call.toUpperCase());if(eff(p)==='Y')o.e++;if(expl(p)==='Y')o.x++}
+ const fams=Object.entries(FM).map(([k,o])=>({fam:k,n:o.n,ep:Math.round(100*o.e/o.n),avg:o.y/o.n,x:o.x,calls:[...o.calls].join(' / ')})).sort((a,b)=>b.n-a.n);
+ const OWS={};for(const p of N){if(!p.owc)continue;const o=OWS[p.owc]||(OWS[p.owc]={n:0,e:0,x:0,y:0});o.n++;o.y+=p.gain;if(eff(p)==='Y')o.e++;if(expl(p)==='Y')o.x++}
+ const ows=Object.entries(OWS).map(([k,o])=>({ow:k,long:OW[k]?OW[k].fam:'',n:o.n,ep:Math.round(100*o.e/o.n),avg:o.y/o.n,x:o.x})).sort((a,b)=>b.n-a.n);
+ const gp=(G().gp&&G().gp.length)?G().gp:[...A.lists.runs,...A.lists.passes,...(A.lists.owcs||[])];
+ const called=new Set(G().plays.filter(p=>p.k==='p'&&(p.call||p.owc)).flatMap(p=>[p.call,p.owc]).filter(Boolean).map(x=>x.toUpperCase()));
+ return{n:N.length,E,X,ep:pc(E,N.length),xp:pc(X,N.length),yp:N.length?yds/N.length:0,runs:N.filter(p=>p.ptype==='run').length,passes:N.filter(p=>p.ptype==='pass').length,t3:t3.length,t3c,fd:hit,drn:dr.length,
+  fams,ows,T:Object.entries(T).sort((a,b)=>(b[1].c+b[1].r)-(a[1].c+a[1].r)||b[1].t-a[1].t),calls,notCalled:gp.filter(x=>!called.has(x.toUpperCase())),unassigned:N.filter(p=>!p.player&&['RUSH','SCRAM','COMP','INC'].includes(p.result)).length}}
+const pct=v=>v==null?'–':v+'%';
+function reportHtml(){const D=reportData(),mx=Math.max(1,...D.T.map(([k,o])=>o.c+o.r+(o.t-o.r)));
+ const F=[['all','All'],['1h','1st half'],['2h','2nd half'],['last','Last drive']];
+ let h=`<div class="noprint" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${F.map(f=>`<button class="chip ${RF===f[0]?'on':''}" data-rf="${f[0]}">${f[1]}</button>`).join('')}<span style="flex:1"></span><button class="btn" id="rprint">Print / PDF</button><button class="btn" id="rcopy">Copy text</button></div>
+ <h3 style="margin:4px 0">${G().opp} — ${F.find(f=>f[0]===RF)[1]}</h3>
+ <div class="tiles"><div class="tile"><b>${D.n}</b><span>Plays (${D.runs}R / ${D.passes}P)</span></div><div class="tile"><b>${pct(D.ep)}</b><span>Efficient (goal 50)</span></div><div class="tile"><b>${pct(D.xp)}</b><span>Explosive (goal 12)</span></div><div class="tile"><b>${D.fd}/${D.drn}</b><span>2FDOS drives</span></div></div>
+ <div class="tiles"><div class="tile"><b>${D.yp.toFixed(1)}</b><span>Yds / play</span></div><div class="tile"><b>${D.t3c}/${D.t3}</b><span>3rd down</span></div><div class="tile"><b>${D.X}</b><span>Explosives</span></div><div class="tile"><b>${D.n-D.E}</b><span>Non-efficient</span></div></div>
+ <div class="rh">Who touched the ball</div>`;
+ if(!D.T.length)h+='<div class="note">No players logged yet.</div>';
+ for(const [k,o] of D.T){const inc=o.t-o.r;h+=`<div class="dist"><b>#${k}</b><div class="bar"><i class="c1" style="width:${100*o.c/mx}%"></i><i class="c2" style="width:${100*o.r/mx}%"></i><i class="c3" style="width:${100*inc/mx}%"></i></div><div class="sub">${o.c} carries · ${o.r} catches · ${o.t} targets · ${o.y} yds${o.c+o.r?' ('+(o.y/(o.c+o.r)).toFixed(1)+'/touch)':''} · ${Math.round(100*o.e/o.n)}% eff</div></div>`}
+ h+=`<div class="note">Blue = carries, green = catches, gray = incomplete targets. Passer isn't tracked. ${D.unassigned?D.unassigned+' plays have no player logged.':''}</div>`;
+ const tb=(v)=>D.calls.filter(c=>c.v===v);
+ h+=`<div class="rh">Calls: keep, stop, watch</div><table class="t"><tr><th>Call</th><th>Snaps</th><th>Eff</th><th>Avg</th><th>Exp</th><th></th></tr>${D.calls.map(c=>`<tr><td>${c.call}</td><td>${c.n}</td><td>${c.ep}%</td><td>${c.avg>0?'+':''}${c.avg.toFixed(1)}</td><td>${c.x}</td><td class="${c.v==='KEEP'?'keep':c.v==='STOP'?'stop':'mid'}">${c.v}</td></tr>`).join('')||'<tr><td colspan=6 class="note">No calls yet.</td></tr>'}</table>
+ <div class="note">KEEP = 2+ snaps at 50% efficient or better. STOP = 3+ snaps under 35%, or 2 snaps with none efficient. One snap is too early to judge. Small samples, so use judgment.</div>
+ <div class="rh">One words</div><table class="t"><tr><th>One word</th><th>Snaps</th><th>Eff</th><th>Avg</th><th>Exp</th></tr>${D.ows.map(c=>`<tr><td>${c.ow}</td><td>${c.n}</td><td>${c.ep}%</td><td>${c.avg>0?'+':''}${c.avg.toFixed(1)}</td><td>${c.x}</td></tr>`).join('')||'<tr><td colspan=5 class="note">No one words yet.</td></tr>'}</table>
+ <div class="rh">By concept (Left/Right pairs combined)</div><table class="t"><tr><th>Concept</th><th>Calls used</th><th>Snaps</th><th>Eff</th><th>Avg</th><th>Exp</th></tr>${D.fams.map(c=>`<tr><td>${c.fam}</td><td>${c.calls}</td><td>${c.n}</td><td>${c.ep}%</td><td>${c.avg>0?'+':''}${c.avg.toFixed(1)}</td><td>${c.x}</td></tr>`).join('')||'<tr><td colspan=6 class="note">No calls yet.</td></tr>'}</table>
+ <div class="rh">Not called yet (${D.notCalled.length})</div><div class="chips">${D.notCalled.map(x=>`<span class="chip" style="min-height:0;padding:4px 9px;font-weight:500">${x}</span>`).join('')||'<span class="note">Everything on the plan has been called.</span>'}</div>
+ <div class="note">${G().gp&&G().gp.length?'From this week\'s gameplan list.':'No gameplan list set (Setup), so this is every run and pass button. Whole game to date.'}</div>`;
+ return h}
+function reportText(){const D=reportData();return [G().opp+' — '+RF,`Plays ${D.n} (${D.runs}R/${D.passes}P) | Eff ${pct(D.ep)} | Exp ${pct(D.xp)} | 2FDOS ${D.fd}/${D.drn} | 3rd ${D.t3c}/${D.t3} | ${D.yp.toFixed(1)} yds/play`,'','TOUCHES',...D.T.map(([k,o])=>`#${k}: ${o.c} car, ${o.r} rec, ${o.t} tgt, ${o.y} yds`),'','KEEP: '+(D.calls.filter(c=>c.v==='KEEP').map(c=>c.call).join(', ')||'-'),'STOP: '+(D.calls.filter(c=>c.v==='STOP').map(c=>c.call).join(', ')||'-'),'ONE WORDS: '+(D.ows.map(c=>`${c.ow} ${c.n} (${c.ep}% eff)`).join(', ')||'-'),'BY CONCEPT: '+(D.fams.map(c=>`${c.fam} ${c.n} (${c.ep}% eff)`).join(', ')||'-'),'NOT CALLED: '+(D.notCalled.join(', ')||'-')].join('\n')}
+function openReport(){modal(reportHtml());document.getElementById('mbox').classList.add('wide');wireReport()}
+function wireReport(){const b=document.getElementById('mbox');b.querySelectorAll('[data-rf]').forEach(x=>x.onclick=()=>{RF=x.dataset.rf;b.innerHTML=reportHtml();wireReport()});
+ document.getElementById('rprint').onclick=()=>window.print();
+ document.getElementById('rcopy').onclick=()=>{const t=reportText();(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).catch(()=>{const x=document.createElement('textarea');x.value=t;document.body.appendChild(x);x.select();document.execCommand('copy');x.remove()}).finally(()=>toast('Copied'))}}
+document.getElementById('rep').onclick=openReport;
+function modal_close(){document.getElementById('modal').classList.remove('show')}
+load();d=freshDraft(lastNext());renderAll();
+</script></body></html>
