@@ -127,12 +127,13 @@ const DEF={
 const RS={GH:['TROJANS','STATE','CAROLINA','PANTHER','ALTER STEELER'],BUCK:['TEXAS','VEGAS','RAIDER','G VEGAS','G RAIDER','GANG VEGAS','GANG RAIDER'],IZ:['SOONERS','WASHINGTON','COMMANDER','PHILLY','EAGLE'],GT:['HOUSTON','PITT','STEELER','CLEV','BROWNS'],POWER:['LA','CHARGER','RAVEN'],JET:['BRUINS','H RAIDER','Y VEGAS','X RAIDER','Z VEGAS']};
 /* Concept families: pairs are the Left/Right versions of one concept (shown boxed together on the button grid), FAM folds them in the report. */
 const PAIRS=[['CAROLINA','PANTHER'],['LA','CHARGER'],['VEGAS','RAIDER'],['PITT','STEELER'],['LAP','RACE'],['FLASH','STRIKE'],['G VEGAS','G RAIDER'],['GANG VEGAS','GANG RAIDER']];
-const FAM={CAROLINA:'GY Counter',PANTHER:'GY Counter',STATE:'GY Counter',TROJANS:'GY Counter',ALTER_STEELER:'GY Counter',LA:'Power',CHARGER:'Power',RAVEN:'Power',VEGAS:'Buck Sweep',RAIDER:'Buck Sweep','G VEGAS':'Buck Sweep','G RAIDER':'Buck Sweep','GANG VEGAS':'Buck Sweep','GANG RAIDER':'Buck Sweep',TEXAS:'Buck Sweep',PITT:'GT Counter',PITTSBURGH:'GT Counter',STEELER:'GT Counter',HOUSTON:'GT Counter',CLEV:'GT Counter',BROWNS:'GT Counter',SOONERS:'Zone Insert',WASHINGTON:'Zone Insert',COMMANDER:'Zone Insert',PHILLY:'Zone Insert',EAGLE:'Zone Insert',BRUINS:'Jet Sweep','H RAIDER':'Jet Sweep','Y VEGAS':'Jet Sweep','X RAIDER':'Jet Sweep','Z VEGAS':'Jet Sweep',LAP:'Cross',RACE:'Cross',CAL:'Cross',FLASH:'Verticals',STRIKE:'Verticals',MINERS:'Verticals',BRONCHOS:'Sail','BT BRONCHOS':'Sail',AGGIES:'Shock','RACE SAIL':'Sail','LAP SAIL':'Sail',STANFORD:'Post Spike',TULSA:'Post Spike'};
+const FAM={CAROLINA:'GY Counter',PANTHER:'GY Counter',STATE:'GY Counter',TROJANS:'GY Counter',ALTER_STEELER:'GY Counter',LA:'Power',CHARGER:'Power',RAVEN:'Power',VEGAS:'Buck Sweep',RAIDER:'Buck Sweep','G VEGAS':'Buck Sweep','G RAIDER':'Buck Sweep','GANG VEGAS':'Buck Sweep','GANG RAIDER':'Buck Sweep',TEXAS:'Buck Sweep',PITT:'GT Counter',PITTSBURGH:'GT Counter',STEELER:'GT Counter',HOUSTON:'GT Counter',CLEV:'GT Counter',BROWNS:'GT Counter',SOONERS:'Zone Insert',WASHINGTON:'Zone Insert',COMMANDER:'Zone Insert',PHILLY:'Zone Insert',EAGLE:'Zone Insert',BRUINS:'Jet Sweep','H RAIDER':'Jet Sweep','Y VEGAS':'Jet Sweep','X RAIDER':'Jet Sweep','Z VEGAS':'Jet Sweep',LAP:'Cross',RACE:'Cross',CAL:'Cross',FLASH:'Verticals',STRIKE:'Verticals',MINERS:'Verticals',BRONCHOS:'Sail','BT BRONCHOS':'Sail',AGGIES:'Shock','FLIP FLASH/STRIKE':'Verticals','RACE SAIL':'Sail','LAP SAIL':'Sail',STANFORD:'Post Spike',TULSA:'Post Spike'};
 FAM['ALTER STEELER']='GY Counter';delete FAM.ALTER_STEELER;
 /* One-word calls: Texas/Trips family points to field, Crown = California, Kong = Oklahoma. Run OWCs always go to the boundary; pass OWCs always carry Black/Brown to the boundary. */
-const OW={TEXAS:{t:'run',fam:'Trips',pair:['VEGAS','RAIDER']},HOUSTON:{t:'run',fam:'Trips',pair:['PITT','STEELER']},STATE:{t:'run',fam:'Kong',pair:['CAROLINA','PANTHER']},SOONERS:{t:'run',fam:'Kong'},TROJANS:{t:'run',fam:'Crown',pair:['CAROLINA','PANTHER']},BRUINS:{t:'run',fam:'Crown'},
- AGGIES:{t:'pass',fam:'Trips',pp:1},MINERS:{t:'pass',fam:'Trips',pp:1},BRONCHOS:{t:'pass',fam:'Kong',pp:1,byHash:{L:'RACE SAIL',R:'LAP SAIL'}},TULSA:{t:'pass',fam:'Kong',pp:1},CAL:{t:'pass',fam:'Crown',pp:1,byHash:{L:'LAP',R:'RACE'}},STANFORD:{t:'pass',fam:'Crown',pp:1}};
-const owLong=(o,h)=>{o=String(o||'').toUpperCase();const w=OW[o];if(!w||(h!=='L'&&h!=='R'))return o;if(w.byHash)return w.byHash[h];if(w.pair)return w.pair[h==='L'?0:1];return o};
+const OW={TEXAS:{t:'run',fam:'Trips',pair:['VEGAS','RAIDER'],g:1},HOUSTON:{t:'run',fam:'Trips',pair:['PITT','STEELER']},STATE:{t:'run',fam:'Kong',pair:['CAROLINA','PANTHER']},SOONERS:{t:'run',fam:'Kong'},TROJANS:{t:'run',fam:'Crown',pair:['CAROLINA','PANTHER']},BRUINS:{t:'run',fam:'Crown'},
+ AGGIES:{t:'pass',fam:'Trips',pp:1},MINERS:{t:'pass',fam:'Trips',pp:1,long:'FLIP FLASH/STRIKE'},BRONCHOS:{t:'pass',fam:'Kong',pp:1,byHash:{L:'RACE SAIL',R:'LAP SAIL'}},TULSA:{t:'pass',fam:'Kong',pp:1},CAL:{t:'pass',fam:'Crown',pp:1,byHash:{L:'LAP',R:'RACE'}},STANFORD:{t:'pass',fam:'Crown',pp:1}};
+const owLong=(o,h)=>{o=String(o||'').toUpperCase();const w=OW[o];if(!w)return o;if(w.long)return w.long;if(h!=='L'&&h!=='R')return o;if(w.byHash)return w.byHash[h];if(w.pair)return w.pair[h==='L'?0:1];return o};
+const owApply=o=>{const w=OW[o.owc];if(!w)return;o.formation=w.fam;if(o.hash==='L'||o.hash==='R'){o.fib='N';o.dir=((o.fib==='Y')===(o.hash==='L'))?'LT':'RT'}if(w.g){if(!o.tags.includes('G')){o.tags.push('G');o.autoG=true}}};
 const famOf=c=>c?(FAM[String(c).toUpperCase()]||String(c).toUpperCase()):'';
 /* ===== end program settings ===== */
 const RESULTS=[['COMP','Complete'],['INC','Incomplete'],['RUSH','Rush'],['SCRAM','Scramble'],['SACK','Sack'],['PEN','Penalty'],['INT','INT'],['FUM','Fumble lost']];
@@ -172,7 +173,7 @@ function advance(p){let f=p.f,down=p.down,dist=p.dist,newDrive=false;
  else{f=Math.max(1,Math.min(99,f+p.gain));if(p.gain>=dist){down=1;dist=f>=90?100-f:10}else{down++;dist-=p.gain;if(down>4){newDrive=true;f=100-f;down=1;dist=10}}}
  return{nd:newDrive,next:{down,dist,f}}}
 function logPlay(){if(!d.result){toast('Pick a result');return}
- const p=Object.assign({k:'p'},d);p.tags=[...(d.tags||[])];p.ftags=[...(d.ftags||[])];p.tag=p.tags.join(' ');p.ftag=p.ftags.join(' ');if(p.owc){p.call=owLong(p.owc,p.hash);p.ptype=(OW[p.owc]||{t:p.ptype}).t}else p.owc=null;
+ const p=Object.assign({k:'p'},d);p.tags=[...(d.tags||[])];p.ftags=[...(d.ftags||[])];p.tag=p.tags.join(' ');p.ftag=p.ftags.join(' ');if(p.owc){owApply(p);p.tag=p.tags.join(' ');p.call=owLong(p.owc,p.hash);p.ptype=(OW[p.owc]||{t:p.ptype}).t}else p.owc=null;delete p.autoG;
  if(edit!==null){G().plays[edit]=p;edit=null;d=freshDraft(lastNext())}
  else{G().plays.push(p);const a=advance(p);if(a.nd)G().plays.push({k:'d'});d=freshDraft(a.next)}
  save();renderAll()}
@@ -197,8 +198,8 @@ function renderEntry(){const L=A.lists,e=edit!==null;
  h+=C('s3','Motion / shift','',`<div class="chips scroll">${chip('mpos','X','X',d.mpos==='X')}${chip('mpos','Z','Z',d.mpos==='Z')}${planL('motions',d.motion).map(x=>chip('motion',x,x,d.motion===x)).join('')}${oth('motions')}</div>`);
  h+=C('s3','Formation','',`<div class="chips scroll">${planL('formations',d.formation).map(x=>chip('formation',x,x,d.formation===x)).join('')}${oth('formations')}</div>`);
  h+=d.hash==='M'?C('s1','Dir','',`<div class="chips">${chip('dir','LT','LT',d.dir==='LT')}${chip('dir','RT','RT',d.dir==='RT')}</div>`):C('s1','FIB','',`<div class="chips">${chip('fib','Y','Y',d.fib==='Y')}${chip('fib','N','N',d.fib==='N')}</div>`);
- h+=C('s5','Play tag(s)','',`<div class="chips scroll">${tagL.map(x=>chip('tags',x,x,d.tags.includes(x))).join('')}${oth(d.ptype==='run'?'tagsRun':'tagsPass')}</div>`);
- h+=C('s7','One word','',`<div class="owg">${owL.map(x=>chip('owc',x,x,d.owc===x)).join('')}</div>`);
+ h+=C('s12','Play tag(s)','',`<div class="chips scroll">${tagL.map(x=>chip('tags',x,x,d.tags.includes(x))).join('')}${oth(d.ptype==='run'?'tagsRun':'tagsPass')}</div>`);
+ h+=C('s12','One word','',`<div class="owg">${owL.map(x=>chip('owc',x,x,d.owc===x)).join('')}</div>`);
  h+=C('s6','Run concepts','',`<div class="chips scroll">${conceptChips(runL)}${oth('runs')}</div>`);
  h+=C('s6','Pass concepts','',`<div class="chips scroll">${conceptChips(passL)}${oth('passes')}</div>`);
  if(d.ptype==='pass')h+=C('s12','Target (route)','',`<div class="chips scroll">${(L.targets||[]).map(x=>chip('target',x,x,d.target===x)).join('')}<button class="chip" data-a="tother">Other</button></div>`);
@@ -232,13 +233,13 @@ document.getElementById('entry').addEventListener('click',ev=>{const b=ev.target
   else if(g==='side'&&(v==='own'||v==='opp')){const n=ylNum(d.f);d.f=v==='own'?n:100-n}
   else if(['shift','jumbo','rgs','shot'].includes(g))d[g]=!d[g];
   else if(g==='td'){d.td=!d.td;if(d.td)d.gain=100-d.f}
-  else if(g==='owc'){const w=OW[v];if(d.owc===v)d.owc=null;else{d.owc=v;d.call=null;if(w)d.ptype=w.t}const tl=A.lists[d.ptype==='run'?'tagsRun':'tagsPass'].map(x=>x.toUpperCase());d.tags=(d.tags||[]).filter(x=>tl.includes(x.toUpperCase()));if(d.ptype==='run')d.target=null}
-  else if(g==='call'){const was=d.call===v&&!d.owc;d.owc=null;d.call=was?null:v;if(d.call){d.ptype=A.lists.runs.some(x=>x.toUpperCase()===v.toUpperCase())?'run':'pass';const tl=A.lists[d.ptype==='run'?'tagsRun':'tagsPass'].map(x=>x.toUpperCase());d.tags=(d.tags||[]).filter(x=>tl.includes(x.toUpperCase()));if(d.ptype==='run')d.target=null}}
+  else if(g==='owc'){const w=OW[v];if(d.autoG){d.tags=d.tags.filter(x=>x!=='G');d.autoG=false}if(d.owc===v)d.owc=null;else{d.owc=v;d.call=null;if(w)d.ptype=w.t}const tl=A.lists[d.ptype==='run'?'tagsRun':'tagsPass'].map(x=>x.toUpperCase());d.tags=(d.tags||[]).filter(x=>tl.includes(x.toUpperCase()));if(d.ptype==='run')d.target=null;if(d.owc)owApply(d)}
+  else if(g==='call'){const was=d.call===v&&!d.owc;if(d.autoG){d.tags=(d.tags||[]).filter(x=>x!=='G');d.autoG=false}d.owc=null;d.call=was?null:v;if(d.call){d.ptype=A.lists.runs.some(x=>x.toUpperCase()===v.toUpperCase())?'run':'pass';const tl=A.lists[d.ptype==='run'?'tagsRun':'tagsPass'].map(x=>x.toUpperCase());d.tags=(d.tags||[]).filter(x=>tl.includes(x.toUpperCase()));if(d.ptype==='run')d.target=null}}
   else if(g==='ptype'){d.ptype=v;d.call=null;d.tags=[];d.tag=null;d.target=null}
   else if(g==='tags'||g==='ftags'){const a=d[g]||(d[g]=[]),i=a.indexOf(v);i<0?a.push(v):a.splice(i,1)}
   else if(g==='result'){d.result=d.result===v?null:v;if(v==='INC')d.gain=0}
   else d[g]=d[g]===v?null:v;
-  if(g==='hash'||g==='fib'){if(d.hash==='M')d.fib=null;if(d.hash&&d.hash!=='M'&&d.fib)d.dir=((d.fib==='Y')===(d.hash==='L'))?'LT':'RT';else d.dir=null}
+  if(g==='hash'||g==='fib'){if(d.hash==='M')d.fib=null;if(d.hash&&d.hash!=='M'&&d.fib)d.dir=((d.fib==='Y')===(d.hash==='L'))?'LT':'RT';else d.dir=null;if(g==='hash'&&d.owc)owApply(d)}
   renderEntry();return}
  if(a==='dm'){d.dist=Math.max(1,d.dist-1)}else if(a==='dp'){d.dist++}
  else if(a==='ym'||a==='yp'){const s=ylSide(d.f),n=ylNum(d.f)+(a==='yp'?1:-1);const m=Math.max(1,Math.min(50,n));d.f=s==='own'?m:100-m}
