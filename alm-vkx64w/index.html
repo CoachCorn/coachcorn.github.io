@@ -19,9 +19,15 @@ select,input[type=number],input[type=text],textarea{background:var(--card);borde
 .btn{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:9px 12px;min-height:40px}
 .btn.pri{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:700}
 .btn.bad{color:var(--bad)}
-main{flex:1;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:10px;padding:10px;overflow:hidden}
-@media(max-width:820px){main{grid-template-columns:1fr;overflow:auto}}
-.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;overflow:auto}
+main{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:10px;padding:8px;overflow:hidden;min-height:0}
+@media(max-width:820px){main{display:block;overflow:auto}.panel{overflow:visible;margin-bottom:10px}.ent>*{grid-column:span 12!important}}
+.ent{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:6px}
+.card{background:#102030;border:1px solid var(--line);border-radius:10px;padding:5px 8px 6px;min-width:0}
+.s1{grid-column:span 1}.s7{grid-column:span 7}.s2{grid-column:span 2}.s3{grid-column:span 3}.s4{grid-column:span 4}.s5{grid-column:span 5}.s6{grid-column:span 6}.s8{grid-column:span 8}.s12{grid-column:span 12}
+.scroll{max-height:114px;overflow:auto}
+.logrow{display:flex;gap:8px;position:sticky;bottom:0;background:var(--card);padding-top:4px}
+.logrow .logbtn{flex:1;margin:0;padding:12px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px;overflow:auto;min-height:0}
 .row{margin-bottom:10px}
 .lab{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin-bottom:4px;display:flex;justify-content:space-between}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
@@ -64,17 +70,30 @@ table.t td{padding:6px 4px;border-top:1px solid var(--line)}
 .rh{font-size:15px;font-weight:800;margin:16px 0 4px}
 .half{text-align:center;color:var(--warn);font-weight:800;margin:10px 0;padding:6px;border:1px dashed var(--warn);border-radius:8px}
 @media print{:root{--bg:#fff;--card:#fff;--line:#ccc;--tx:#000;--mut:#555}header,main,.noprint{display:none!important}.modal{position:static;background:none;display:block}.box{border:none;max-height:none!important;width:100%!important}body{height:auto}}
+.card .row{margin:0}
+.lab{margin-bottom:3px;align-items:center}
+.chips{gap:4px}
+.chip{padding:5px 9px;min-height:36px;min-width:36px;font-size:14px}
+.big{font-size:22px;min-width:44px}
+header .btn{padding:7px 10px}
+.last{font-size:12px;color:var(--mut);align-self:center;max-width:230px;line-height:1.2}
+.dclose{display:none;position:sticky;top:0;z-index:2;background:var(--card);padding-bottom:6px}
+@media(min-width:821px){main{grid-template-columns:minmax(0,1fr)}
+ #logp{position:fixed;top:0;right:0;bottom:0;width:min(380px,92vw);z-index:6;transform:translateX(104%);transition:transform .18s;box-shadow:-10px 0 30px #000b;border-radius:0;padding:10px}
+ #logp.open{transform:none}.dclose{display:block}}
+@media(max-width:820px){#logbtn{display:none}}
 </style></head><body>
 <header>
  <h1>Almanac</h1>
  <select id="gsel"></select>
  <button class="btn" id="newgame">+ Game</button>
+ <button class="btn" id="logbtn">Log</button>
  <button class="btn" id="newdrive">New Drive</button>
  <button class="btn" id="half">Halftime</button>
  <button class="btn" id="undo">Undo</button>
  <span style="flex:1"></span>
  <button class="btn pri" id="rep">Report</button>
- <button class="btn" id="send">Send to Film Room</button>
+ <button class="btn" id="send" title="Send this game to Film Room">→ Film Room</button>
  <button class="btn" id="exp">Export</button>
  <button class="btn" id="setup">Setup</button>
 </header>
@@ -133,23 +152,20 @@ const chip=(g,v,l,on,x='')=>`<button class="chip ${x} ${on?'on':''}" data-g="${g
 const lab=(t,r='')=>`<div class="lab"><span>${t}</span><span>${r}</span></div>`;
 function renderEntry(){const L=A.lists,e=edit!==null;
  const calls=d.ptype==='run'?L.runs:L.passes;
- let h=`<div class="two"><div class="row">${lab('Down')}<div class="chips">${[1,2,3,4].map(n=>chip('down',n,n,d.down===n)).join('')}</div></div>
- <div class="row">${lab('Distance')}<div class="step"><button class="chip" data-a="dm">−</button><div class="big" id="distv">${d.dist}</div><button class="chip" data-a="dp">+</button></div></div></div>
- <div class="row"><div class="chips">${[1,2,3,4,5,6,7,8,9,10].map(n=>chip('dist',n,n,d.dist===n)).join('')}<input type="number" inputmode="numeric" id="distx" class="chipin ${d.dist>10?'on':''}" placeholder="11+" value="${d.dist>10?d.dist:''}"></div></div>
- <div class="row">${lab('Ball on',ylFmt(d.f))}<div class="step"><div class="chips">${chip('side','own','Own',ylSide(d.f)==='own')}${chip('side','opp','Opp',ylSide(d.f)==='opp')}</div><button class="chip" data-a="ym">−</button><div class="big" id="ylv">${ylNum(d.f)}</div><button class="chip" data-a="yp">+</button></div></div>
- <div class="row">${lab('Formation call')}<div class="chips">${L.formations.map(x=>chip('formation',x,x,d.formation===x)).join('')}</div></div>
- <div class="row">${lab('Formation direction')}<div class="chips">${chip('dir','RT','RT',d.dir==='RT')}${chip('dir','LT','LT',d.dir==='LT')}</div></div>
- <div class="row">${lab('Motion / shift / jumbo')}<div class="chips">${L.motions.map(x=>chip('motion',x,x,d.motion===x)).join('')}${chip('shift','t','Shift',d.shift)}${chip('jumbo','t','Jumbo',d.jumbo)}</div></div>
- <div class="row">${lab('Play')}<div class="chips">${chip('ptype','run','RUN',d.ptype==='run')}${chip('ptype','pass','PASS',d.ptype==='pass')}</div></div>
- <div class="row"><div class="chips">${calls.map(x=>chip('call',x,x,d.call===x)).join('')}</div></div>
- <div class="row">${lab('Tag')}<div class="chips">${L.tags.map(x=>chip('tag',x,x,d.tag===x)).join('')}${chip('rgs','t','RGS',d.rgs)}${chip('shot','t','Shot',d.shot)}</div></div>
- <div class="row">${lab('Result')}<div class="chips">${RESULTS.map(r=>chip('result',r[0],r[1],d.result===r[0],['SACK','INT','FUM'].includes(r[0])?'neg':'res')).join('')}${chip('td','t','TD',d.td,'res')}</div></div>
- <div class="row">${lab('Gain / loss','<b id="gv" style="font-size:18px;color:var(--tx)">'+(d.gain>0?'+':'')+d.gain+'</b>')}
-  <input type="range" id="gs" min="-20" max="80" value="${d.gain}">
-  <div class="chips" style="margin-top:4px">${[-5,-2,0,1,2,3,4,5,6,8,10,15,20].map(n=>chip('gain',n,(n>0?'+':'')+n,d.gain===n)).join('')}<button class="chip" data-a="gm">−1</button><button class="chip" data-a="gp">+1</button></div></div>
- <div class="row">${lab('Player')}<div class="chips">${L.players.map(x=>chip('player',x,'#'+x,d.player===x)).join('')}<button class="chip" data-a="pother">Other</button></div></div>
- <button class="btn pri logbtn" data-a="log">${e?'Save changes':'Log play'}</button>
- ${e?'<div class="two"><button class="btn" data-a="cancel">Cancel</button><button class="btn bad" data-a="del">Delete play</button></div>':''}`;
+ const C=(cls,t,r,body)=>`<div class="card ${cls}">${lab(t,r)}${body}</div>`;
+ let h='<div class="ent">';
+ h+=C('s2','Down','',`<div class="chips">${[1,2,3,4].map(n=>chip('down',n,n,d.down===n)).join('')}</div>`);
+ h+=C('s6','Distance','',`<div class="chips">${[1,2,3,4,5,6,7,8,9,10].map(n=>chip('dist',n,n,d.dist===n)).join('')}<input type="number" inputmode="numeric" id="distx" class="chipin ${d.dist>10?'on':''}" placeholder="11+" value="${d.dist>10?d.dist:''}"></div>`);
+ h+=C('s4','Ball on',ylFmt(d.f),`<div class="chips" style="align-items:center">${chip('side','own','Own',ylSide(d.f)==='own')}${chip('side','opp','Opp',ylSide(d.f)==='opp')}<div class="step"><button class="chip" data-a="ym">−</button><div class="big" id="ylv">${ylNum(d.f)}</div><button class="chip" data-a="yp">+</button></div></div>`);
+ h+=C('s5','Formation call','',`<div class="chips">${L.formations.map(x=>chip('formation',x,x,d.formation===x)).join('')}</div>`);
+ h+=C('s2','Direction','',`<div class="chips">${chip('dir','RT','RT',d.dir==='RT')}${chip('dir','LT','LT',d.dir==='LT')}</div>`);
+ h+=C('s5','Motion / shift / jumbo','',`<div class="chips">${L.motions.map(x=>chip('motion',x,x,d.motion===x)).join('')}${chip('shift','t','Shift',d.shift)}${chip('jumbo','t','Jumbo',d.jumbo)}</div>`);
+ h+=C('s7','Play',`<span class="chips">${chip('ptype','run','RUN',d.ptype==='run')}${chip('ptype','pass','PASS',d.ptype==='pass')}</span>`,`<div class="chips scroll">${calls.map(x=>chip('call',x,x,d.call===x)).join('')}</div>`);
+ h+=C('s5','Tag','',`<div class="chips scroll">${L.tags.map(x=>chip('tag',x,x,d.tag===x)).join('')}${chip('rgs','t','RGS',d.rgs)}${chip('shot','t','Shot',d.shot)}</div>`);
+ h+=C('s5','Result','',`<div class="chips">${RESULTS.map(r=>chip('result',r[0],r[1],d.result===r[0],['SACK','INT','FUM'].includes(r[0])?'neg':'res')).join('')}${chip('td','t','TD',d.td,'res')}</div>`);
+ h+=C('s4','Gain / loss','<b id="gv" style="font-size:18px;color:var(--tx)">'+(d.gain>0?'+':'')+d.gain+'</b>',`<input type="range" id="gs" min="-20" max="80" value="${d.gain}"><div class="chips" style="margin-top:2px">${[-5,0,2,4,6,8,10,15].map(n=>chip('gain',n,(n>0?'+':'')+n,d.gain===n)).join('')}<button class="chip" data-a="gm">−1</button><button class="chip" data-a="gp">+1</button></div>`);
+ h+=C('s3','Player','',`<div class="chips scroll">${L.players.map(x=>chip('player',x,'#'+x,d.player===x)).join('')}<button class="chip" data-a="pother">Other</button></div>`);
+ const lp=G().plays.filter(x=>x.k==='p').pop();h+=`<div class="s12 logrow">${lp&&!e?`<div class="last"><b>Last</b> ${lp.down}&amp;${lp.dist} ${lp.call||''}${lp.tag?' · '+lp.tag:''} <b>${lp.gain>0?'+':''}${lp.gain}</b></div>`:''}<button class="btn pri logbtn" data-a="log">${e?'Save changes':'Log play'}</button>${e?'<button class="btn" data-a="cancel">Cancel</button><button class="btn bad" data-a="del">Delete play</button>':''}</div></div>`;
  document.getElementById('entry').innerHTML=h}
 function drivesOf(arr){const dr=[];let c=[];for(const p of arr){if(p.k!=='p'){if(c.length)dr.push(c);c=[]}else c.push(p)}if(c.length)dr.push(c);return dr}
 function summary(){const P=plays(),pen=P.filter(p=>p.result!=='PEN');const E=pen.filter(p=>eff(p)==='Y').length,X=pen.filter(p=>expl(p)==='Y').length;
@@ -158,7 +174,7 @@ function summary(){const P=plays(),pen=P.filter(p=>p.result!=='PEN');const E=pen
  const pc=(a,b)=>b?Math.round(100*a/b)+'%':'–';
  return{n:pen.length,eff:pc(E,pen.length),exp:pc(X,pen.length),fd:hit+'/'+dr.length,dr}}
 function renderLog(){const g=G(),s=summary();
- let h=`<div class="tiles"><div class="tile"><b>${s.n}</b><span>Plays</span></div><div class="tile"><b>${s.eff}</b><span>Efficient (50)</span></div><div class="tile"><b>${s.exp}</b><span>Explosive (12)</span></div><div class="tile"><b>${s.fd}</b><span>2FDOS drives</span></div></div>`;
+ let h=`<div class="dclose"><button class="btn" id="logclose">Close log</button></div><div class="tiles"><div class="tile"><b>${s.n}</b><span>Plays</span></div><div class="tile"><b>${s.eff}</b><span>Efficient (50)</span></div><div class="tile"><b>${s.exp}</b><span>Explosive (12)</span></div><div class="tile"><b>${s.fd}</b><span>2FDOS drives</span></div></div>`;
  let dn=1;h+=`<div class="drive"><span>Drive 1</span></div>`;
  g.plays.forEach((p,i)=>{if(p.k==='h'){dn++;h+=`<div class="half">HALFTIME</div><div class="drive"><span>Drive ${dn}</span></div>`;return}if(p.k==='d'){dn++;h+=`<div class="drive"><span>Drive ${dn}</span></div>`;return}
   const E=eff(p),X=expl(p),r=RESULTS.find(x=>x[0]===p.result);
@@ -189,9 +205,10 @@ document.getElementById('entry').addEventListener('click',ev=>{const b=ev.target
  renderEntry()});
 document.getElementById('entry').addEventListener('input',ev=>{if(ev.target.id==='gs'){d.gain=+ev.target.value;document.getElementById('gv').textContent=(d.gain>0?'+':'')+d.gain}});
 document.getElementById('entry').addEventListener('change',ev=>{if(ev.target.id==='distx'){const v=parseInt(ev.target.value);if(v>0)d.dist=v;renderEntry();return}if(ev.target.id==='gs')renderEntry()});
-document.getElementById('logp').addEventListener('click',ev=>{const r=ev.target.closest('.play');if(!r)return;const i=+r.dataset.i;edit=i;const p=G().plays[i];d=Object.assign(freshDraft(null),p);delete d.k;renderAll()});
+document.getElementById('logp').addEventListener('click',ev=>{if(ev.target.closest('#logclose')){document.getElementById('logp').classList.remove('open');return}const r=ev.target.closest('.play');if(!r)return;document.getElementById('logp').classList.remove('open');const i=+r.dataset.i;edit=i;const p=G().plays[i];d=Object.assign(freshDraft(null),p);delete d.k;renderAll()});
 document.getElementById('gsel').onchange=e=>{A.cur=e.target.value;edit=null;d=freshDraft(lastNext());save();renderAll()};
 document.getElementById('newgame').onclick=()=>{const n=prompt('Opponent');if(n)newGame(n)};
+document.getElementById('logbtn').onclick=()=>document.getElementById('logp').classList.toggle('open');
 document.getElementById('newdrive').onclick=()=>{G().plays.push({k:'d'});save();renderLog()};
 document.getElementById('half').onclick=()=>{if(G().plays.some(p=>p.k==='h')&&!confirm('Halftime is already marked. Add another?'))return;G().plays.push({k:'h'});d=freshDraft({down:1,dist:10,f:25});edit=null;save();renderAll()};
 document.getElementById('undo').onclick=()=>{const pl=G().plays;if(pl.length){pl.pop();d=freshDraft(lastNext());edit=null;save();renderAll()}};
