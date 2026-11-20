@@ -294,7 +294,7 @@ const RLDIR=c=>{if(!c)return'';c=String(c).toUpperCase();const pr=PAIRS.find(q=>
 function hudlRows(){const out=[HUDL_HEAD];let first=true;
  for(const p of G().plays){if(p.k==='h'||p.k==='d'){first=true;continue}
   const run=p.ptype==='run',form=p.formation?[p.formation+(p.dir?' '+(p.dir==='RT'?'Rt':'Lt'):''),...(p.ftag?[p.ftag]:p.jumbo?['JUMBO']:[])].join(' '):'';
-  out.push(['','O','',first?'Y':'',p.down,p.dist,p.gain,ylFmt(p.f),'',eff(p),p.result==='PEN'?'':(expl(p)==='Y'?'YES':'NO'),'',run?'Run':'Pass',(HUDL_RES[p.result]||'')+(p.td?' TD':''),form,'',motionFull(p),p.shift?'Y':'',p.call||'',p.tag||'',p.owc||'',p.target||'',p.player||'','',run?famOf(p.call):'',run?RLDIR(p.call):'',(!run&&p.owc&&(OW[p.owc]||{}).pp)?'BLACK/BROWN':'']);
+  out.push(['','O','',first?'Y':'',p.down,p.dist,p.gain,ylFmt(p.f),'',eff(p),p.result==='PEN'?'':(expl(p)==='Y'?'YES':'NO'),'',run?'Run':'Pass',(HUDL_RES[p.result]||'')+(p.td?' TD':''),form,'',motionFull(p),p.shift?'Y':'',p.call||'',p.tag||'',p.owc||'',p.target||'',p.player||'',p.passer||'',run?famOf(p.call):'',run?RLDIR(p.call):'',(!run&&p.owc&&(OW[p.owc]||{}).pp)?'BLACK/BROWN':'']);
   first=false}
  return out}
 const hudlCsv=()=>hudlRows().map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
