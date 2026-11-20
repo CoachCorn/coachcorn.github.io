@@ -112,13 +112,13 @@ html,button,.chip,input,select{touch-action:manipulation;-webkit-tap-highlight-c
 const CONFIG={program:'deer-creek',name:'Deer Creek',filmRoom:'https://claude.ai/artifact/83Jt11X8MfVHj1xD2UB6CA',storageKey:'almanac_v1'};
 const KEY=CONFIG.storageKey;
 const DEF={
- ftags:['JUMBO','SLAM','SCRUNCH','SPILL','POUR','PINCH','STOOGE','HIP','SQUINT','ALL IN','HULK','THOR','OVER','STACK'],
- motions:['MISSILE','X OUT','Z OUT','JET','ORBIT','FLY','SATELLITE','POPCORN','HAY','BAR','TIDE','SWAP','CROSS SPRAY','YOYO','TRADE','BOUNCE','STAY'],
+ ftags:['JUMBO','SLAM','SCRUNCH','SPILL','POUR','PINCH','STOOGE','HIP','SQUINT','ALL IN','HULK','THOR','OVER','STACK','SQUEEZE','TRI','TITE'],
+ motions:['MISSILE','X OUT','Z OUT','JET','ORBIT','FLY','SATELLITE','POPCORN','HAY','BAR','TIDE','SWAP','CROSS SPRAY','YOYO','TRADE','BOUNCE','STAY','ZAP','MAP','ZIP','IN'],
  formations:['Kong','Crown','Queen','King','Trips','Army','Money','Pour Slot','Joker','Splash','Ace','Slot','Wing','Jumbo','Shoot','Diamond','Mace','Bunch','Change','Twins','Jack'],
  runs:['SOONERS','CAROLINA','PITT','TEXAS','HOUSTON','LA','CHARGER','RAVEN','WASHINGTON','COMMANDER','PHILLY','EAGLE','STEELER','CLEV','BROWNS','PANTHER','TROJANS','STATE','ALTER STEELER','G VEGAS','G RAIDER','GANG VEGAS','GANG RAIDER','BRUINS','H RAIDER','Y VEGAS','X RAIDER','Z VEGAS','VEGAS','RAIDER'],
- passes:['MATCH','CUT CAL','AGGIES','RACE','BT BRONCHOS','LAP','FLASH','STRIKE','CAL','BRONCHOS','MINERS','STANFORD','TULSA'],
- tagsRun:['NOSE','TEAR','MISS','MASH','MOB','MAX','STREAK','GANG','ARC','WIDE','PISTOL','KICK','HAND','CRACK','WALL','TOSS','SWITCH','SPIN','SWORD','SHIELD','MIKE','OUTSIDE','SOLID'],
- tagsPass:['BRONZE','GOLD','BLACK','BROWN','FLIP','POKER','WHEEL','FIRE','FLAME','GO','TRAIL','COP','FLOP','MILLY','ROCK','BANANA','HAIL','PUMP','FLEA','LATE','SNAP','CHOICE','SLIDE','TUNNEL','DRAW','PICK','CUT','PUNCH','SURF','SLING','CURL','TOAD','THROWBACK','STOP','BT','SOLID'],
+ passes:['MATCH','CUT CAL','AGGIES','RACE','BT BRONCHOS','LAP','FLASH','STRIKE','CAL','BRONCHOS','MINERS','STANFORD','TULSA','SHUFFLE','DEUCE'],
+ tagsRun:['NOSE','TEAR','MISS','MASH','MOB','MAX','STREAK','GANG','ARC','WIDE','PISTOL','KICK','HAND','CRACK','WALL','TOSS','SWITCH','SPIN','SWORD','SHIELD','MIKE','OUTSIDE','SOLID','MIRROR','FOLLOW','SNUZ','PULSE','POP','HOLLER','MAIL'],
+ tagsPass:['BRONZE','GOLD','BLACK','BROWN','FLIP','POKER','WHEEL','FIRE','FLAME','GO','TRAIL','COP','FLOP','MILLY','ROCK','BANANA','HAIL','PUMP','FLEA','LATE','SNAP','CHOICE','SLIDE','TUNNEL','DRAW','PICK','CUT','PUNCH','SURF','SLING','CURL','TOAD','THROWBACK','STOP','BT','SOLID','MIRROR','FOLLOW','SNUZ','PULSE','POP','HOLLER','MAIL'],
  targets:['HITCH','SLANT','OUT','CURL','DIG','POST','CORNER','GO','SEAM','FLAT','WHEEL','CROSS','STICK','SCREEN'],
  players:['0','2','3','4','5','8','9','11','12','13','14','15','30','33','48'],
  expRun:12,expPass:16
@@ -160,6 +160,7 @@ function logPlay(){if(!d.result){toast('Pick a result');return}
  const p=Object.assign({k:'p'},d);p.tags=[...(d.tags||[])];p.ftags=[...(d.ftags||[])];p.tag=p.tags.join(' ');p.ftag=p.ftags.join(' ');
  if(edit!==null){G().plays[edit]=p;edit=null;d=freshDraft(lastNext())}
  else{G().plays.push(p);const a=advance(p);if(a.nd)G().plays.push({k:'d'});d=freshDraft(a.next)}
+ if(A.v<3){const un=(a,b)=>[...a,...b.filter(x=>!a.includes(x))];for(const k of['ftags','motions','passes','tagsRun','tagsPass'])A.lists[k]=un(A.lists[k]||[],DEF[k]);A.v=3}
  save();renderAll()}
 function lastNext(){const pl=G().plays;for(let i=pl.length-1;i>=0;i--)if(pl[i].k==='p'){const a=advance(pl[i]);return a.next}return{down:1,dist:10,f:25}}
 function toast(m){const t=document.createElement('div');t.textContent=m;t.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#000c;padding:10px 16px;border-radius:10px;z-index:20';document.body.appendChild(t);setTimeout(()=>t.remove(),2200)}
