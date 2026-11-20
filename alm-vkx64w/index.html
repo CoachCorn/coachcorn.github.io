@@ -11,7 +11,7 @@
 <style>
 :root{--bg:#0f1720;--card:#18232f;--line:#2a3948;--tx:#e8eef4;--mut:#8ea0b2;--acc:#3b9cff;--ok:#2fbf71;--warn:#f2b632;--bad:#ef5b5b}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{margin:0;background:var(--bg);color:var(--tx);font:15px -apple-system,system-ui,sans-serif;height:100vh;display:flex;flex-direction:column}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px -apple-system,system-ui,sans-serif;height:100vh;height:100dvh;display:flex;flex-direction:column}
 header{display:flex;gap:8px;align-items:center;padding:8px 12px;background:#0b1118;border-bottom:1px solid var(--line);flex-wrap:wrap}
 header h1{font-size:16px;margin:0 8px 0 0}
 select,button,input{font:inherit;color:var(--tx)}
@@ -25,7 +25,7 @@ main{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:10px;padd
 .card{background:#102030;border:1px solid var(--line);border-radius:10px;padding:5px 8px 6px;min-width:0}
 .s1{grid-column:span 1}.s7{grid-column:span 7}.s2{grid-column:span 2}.s3{grid-column:span 3}.s4{grid-column:span 4}.s5{grid-column:span 5}.s6{grid-column:span 6}.s8{grid-column:span 8}.s12{grid-column:span 12}
 .scroll{max-height:114px;overflow:auto}
-.logrow{display:flex;gap:8px;position:sticky;bottom:0;background:var(--card);padding-top:4px}
+.logrow{padding-bottom:env(safe-area-inset-bottom);display:flex;gap:8px;position:sticky;bottom:0;background:var(--card);padding-top:4px}
 .logrow .logbtn{flex:1;margin:0;padding:12px}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px;overflow:auto;min-height:0}
 .row{margin-bottom:10px}
@@ -82,6 +82,7 @@ header .btn{padding:7px 10px}
  #logp{position:fixed;top:0;right:0;bottom:0;width:min(380px,92vw);z-index:6;transform:translateX(104%);transition:transform .18s;box-shadow:-10px 0 30px #000b;border-radius:0;padding:10px}
  #logp.open{transform:none}.dclose{display:block}}
 @media(max-width:820px){#logbtn{display:none}}
+html,button,.chip,input,select{touch-action:manipulation;-webkit-tap-highlight-color:transparent}button,.chip{-webkit-user-select:none;user-select:none}
 </style></head><body>
 <header>
  <h1>Almanac</h1>
@@ -156,7 +157,7 @@ function renderEntry(){const L=A.lists,e=edit!==null;
  let h='<div class="ent">';
  h+=C('s2','Down','',`<div class="chips">${[1,2,3,4].map(n=>chip('down',n,n,d.down===n)).join('')}</div>`);
  h+=C('s6','Distance','',`<div class="chips">${[1,2,3,4,5,6,7,8,9,10].map(n=>chip('dist',n,n,d.dist===n)).join('')}<input type="number" inputmode="numeric" id="distx" class="chipin ${d.dist>10?'on':''}" placeholder="11+" value="${d.dist>10?d.dist:''}"></div>`);
- h+=C('s4','Ball on',ylFmt(d.f),`<div class="chips" style="align-items:center">${chip('side','own','Own',ylSide(d.f)==='own')}${chip('side','opp','Opp',ylSide(d.f)==='opp')}<div class="step"><button class="chip" data-a="ym">−</button><div class="big" id="ylv">${ylNum(d.f)}</div><button class="chip" data-a="yp">+</button></div></div>`);
+ h+=C('s4','Ball on',ylFmt(d.f),`<div class="chips" style="align-items:center">${chip('side','own','Own',ylSide(d.f)==='own')}${chip('side','opp','Opp',ylSide(d.f)==='opp')}<div class="step"><button class="chip" data-a="ym">−</button><input type="number" inputmode="numeric" id="ylx" min="1" max="50" value="${ylNum(d.f)}" style="width:62px;font-size:20px;font-weight:700;text-align:center;background:transparent;color:var(--tx);border:1px solid var(--line);border-radius:6px;padding:4px 0"><button class="chip" data-a="yp">+</button></div></div>`);
  h+=C('s5','Formation call','',`<div class="chips">${L.formations.map(x=>chip('formation',x,x,d.formation===x)).join('')}</div>`);
  h+=C('s2','Direction','',`<div class="chips">${chip('dir','RT','RT',d.dir==='RT')}${chip('dir','LT','LT',d.dir==='LT')}</div>`);
  h+=C('s5','Motion / shift / jumbo','',`<div class="chips">${L.motions.map(x=>chip('motion',x,x,d.motion===x)).join('')}${chip('shift','t','Shift',d.shift)}${chip('jumbo','t','Jumbo',d.jumbo)}</div>`);
@@ -206,7 +207,7 @@ document.getElementById('entry').addEventListener('click',ev=>{const b=ev.target
 document.getElementById('entry').addEventListener('input',ev=>{if(ev.target.id==='gs'){d.gain=+ev.target.value;document.getElementById('gv').value=d.gain}
  else if(ev.target.id==='gv'){const x=parseInt(ev.target.value,10);if(!isNaN(x)){d.gain=Math.max(-99,Math.min(99,x));document.getElementById('gs').value=d.gain}}});
 document.getElementById('entry').addEventListener('change',ev=>{if(ev.target.id==='gv'){ev.target.value=d.gain}});
-document.getElementById('entry').addEventListener('change',ev=>{if(ev.target.id==='distx'){const v=parseInt(ev.target.value);if(v>0)d.dist=v;renderEntry();return}if(ev.target.id==='gs')renderEntry()});
+document.getElementById('entry').addEventListener('change',ev=>{if(ev.target.id==='ylx'){const x=parseInt(ev.target.value,10);if(!isNaN(x)){const m=Math.max(1,Math.min(50,x));d.f=ylSide(d.f)==='own'?m:100-m}renderEntry();return}if(ev.target.id==='distx'){const v=parseInt(ev.target.value);if(v>0)d.dist=v;renderEntry();return}if(ev.target.id==='gs')renderEntry()});
 document.getElementById('logp').addEventListener('click',ev=>{if(ev.target.closest('#logclose')){document.getElementById('logp').classList.remove('open');return}const r=ev.target.closest('.play');if(!r)return;document.getElementById('logp').classList.remove('open');const i=+r.dataset.i;edit=i;const p=G().plays[i];d=Object.assign(freshDraft(null),p);delete d.k;renderAll()});
 document.getElementById('gsel').onchange=e=>{A.cur=e.target.value;edit=null;d=freshDraft(lastNext());save();renderAll()};
 document.getElementById('newgame').onclick=()=>{const n=prompt('Opponent');if(n)newGame(n)};
