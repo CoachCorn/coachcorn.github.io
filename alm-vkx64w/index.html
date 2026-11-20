@@ -120,7 +120,7 @@ const DEF={
  owcs:['TEXAS','HOUSTON','AGGIES','MINERS','SOONERS','STATE','BRONCHOS','TULSA','CAL','TROJANS','BRUINS','STANFORD'],
  tagsRun:['X','Z','G','NOSE','TEAR','MISS','MASH','MOB','MAX','STREAK','GANG','ARC','WIDE','PISTOL','KICK','HAND','CRACK','WALL','TOSS','SWITCH','SPIN','SWORD','SHIELD','MIKE','OUTSIDE','SOLID','MIRROR','SHORT','FOLLOW','SNUZ','PULSE','POP','HOLLER','MAIL'],
  tagsPass:['X','Z','BRONZE','GOLD','BLACK','BROWN','FLIP','POKER','WHEEL','FIRE','FLAME','GO','TRAIL','COP','FLOP','MILLY','ROCK','BANANA','HAIL','PUMP','FLEA','LATE','SNAP','CHOICE','SLIDE','TUNNEL','DRAW','PICK','CUT','PUNCH','SURF','SLING','CURL','TOAD','THROWBACK','STOP','BT','SOLID','MIRROR','SHORT','FOLLOW','SNUZ','PULSE','POP','HOLLER','MAIL'],
- targets:['HITCH','SLANT','OUT','CURL','DIG','POST','CORNER','GO','SEAM','FLAT','WHEEL','CROSS','STICK','SCREEN'],
+ targets:['HITCH','SLANT','OUT','CURL','DIG','POST','CORNER','GO','SEAM','FLAT','WHEEL','CROSS','STICK','SCREEN','SAIL'],
  players:['0','2','3','4','5','8','9','11','12','13','14','15','30','33','48'],
  expRun:12,expPass:16
 };
@@ -157,6 +157,7 @@ function load(){try{A=JSON.parse(localStorage.getItem(KEY))}catch(e){A=null}
   for(const g of A.games){if(g.gp)g.gp=fx(g.gp);if(g.plan&&g.plan.runs)g.plan.runs=fx(g.plan.runs);for(const p of g.plays)if(p.k==='p'&&p.call)p.call=al(p.call)}
   A.v=8}
  if(A.v<9){const nj=a=>(a||[]).filter(x=>String(x).toUpperCase()!=='JUMBO');A.lists.ftags=nj(A.lists.ftags);for(const g of A.games)if(g.plan&&g.plan.ftags)g.plan.ftags=nj(g.plan.ftags);A.v=9}
+ if(A.v<10){const T=A.lists.targets=A.lists.targets||[];if(!T.some(x=>String(x).toUpperCase()==='SAIL'))T.push('SAIL');A.v=10}
  if(!A.games.length)buildDemo(true);
  if(!A.cur||!A.games.find(g=>g.id===A.cur))A.cur=A.games[0].id;save()}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(A))}catch(e){}}
@@ -225,7 +226,7 @@ function renderLog(){const g=G(),s=summary();
  g.plays.forEach((p,i)=>{if(p.k==='h'){dn++;h+=`<div class="half">HALFTIME</div><div class="drive"><span>Drive ${dn}</span></div>`;return}if(p.k==='d'){dn++;h+=`<div class="drive"><span>Drive ${dn}</span></div>`;return}
   const E=eff(p),X=expl(p),r=RESULTS.find(x=>x[0]===p.result);
   h+=`<div class="play ${edit===i?'sel':''}" data-i="${i}"><div><div class="dd">${p.down}&amp;${p.dist}</div><div class="yl">${ylFmt(p.f)}</div></div>
-  <div><div class="call">${p.owc?p.owc+(p.call&&p.call!==p.owc?' ('+p.call+')':''):(p.call||'—')}${p.tag?' · '+p.tag:''}${E==='Y'?'<span class="badge b-e">EFF</span>':''}${X==='Y'?'<span class="badge b-x">EXP</span>':''}</div>
+  <div><div class="call">${p.owc||p.call||'—'}${p.tag?' · '+p.tag:''}${E==='Y'?'<span class="badge b-e">EFF</span>':''}${X==='Y'?'<span class="badge b-x">EXP</span>':''}</div>
   <div class="sub">${[p.ftag&&p.ftag,motionFull(p),p.shift&&'shift',p.hash&&p.hash+' hash',p.formation&&p.formation+(p.dir?' '+p.dir:''),p.fib&&'FIB '+p.fib,p.target&&'→ '+p.target,p.jumbo&&'jumbo',p.rgs&&'RGS',p.shot&&'shot'].filter(Boolean).join(' · ')}</div></div>
   <div><div class="gain ${p.gain>0?'pos':p.gain<0?'neg':''}">${p.gain>0?'+':''}${p.gain}</div><div class="sub" style="text-align:right">${p.td?'TD ':''}${r?r[1]:''}${p.player?' #'+p.player:''}</div></div></div>`});
  const el=document.getElementById('logp');el.innerHTML=h;el.scrollTop=el.scrollHeight}
