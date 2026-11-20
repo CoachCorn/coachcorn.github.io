@@ -170,8 +170,22 @@ function save(){try{localStorage.setItem(KEY,JSON.stringify(A))}catch(e){}}
 function newGame(name,quiet){const g={id:'g'+Date.now(),opp:name,program:CONFIG.program,plays:[]};A.games.push(g);A.cur=g.id;d=freshDraft(null);if(!quiet){save();renderAll()}}
 const G=()=>A.games.find(g=>g.id===A.cur);
 const esc2=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let d,edit=null,TQ='',TFOC=false;
+let d,edit=null,TQ='',TFOC=false,SQ={target:'',player:''},FOCID=null;
 function freshDraft(prev){return{down:prev?prev.down:1,dist:prev?prev.dist:10,f:prev?prev.f:25,ptype:'run',formation:null,dir:null,motion:null,shift:false,jumbo:false,call:null,tag:null,ftags:[],tags:[],rgs:false,shot:false,result:null,gain:0,player:null,target:null,hash:null,fib:null,mpos:null,glf:null,passer:lastPasser(),td:false}}
+const allTags=()=>[...new Set([...(A.lists.tagsRun||[]),...(A.lists.tagsPass||[])])].sort((a,b)=>a.localeCompare(b));
+const lastTerm=()=>(TQ.split(',').pop()||'').trim().toUpperCase();
+function tagChipsHtml(){const q=lastTerm();const src=TQ?allTags():[...new Set([...planL('tagsRun',d.tags),...planL('tagsPass',d.tags)])].sort((a,b)=>a.localeCompare(b));
+ return src.filter(x=>!q||d.tags.includes(x)||x.toUpperCase().includes(q)).map(x=>chip('tags',x,x,d.tags.includes(x))).join('')+`<button class="chip" data-a="oth" data-c="tagsRun">+ Other</button>`}
+function addTagWord(raw){let x=String(raw||'').trim().toUpperCase();if(!x)return null;x=ALIAS[x]||x;const L=A.lists,g0=G();g0.extra=g0.extra||{};const pl=g0.plan;
+ for(const k of['tagsRun','tagsPass']){const a=g0.extra[k]=g0.extra[k]||[];if(!a.some(y=>y.toUpperCase()===x))a.push(x);if(!L[k].some(y=>y.toUpperCase()===x))L[k].push(x);if(pl&&pl[k]&&!pl[k].some(y=>y.toUpperCase()===x))pl[k].push(x)}
+ return(allTags().find(y=>y.toUpperCase()===x))||x}
+function pickTags(text){let n=0;for(const t0 of text.split(',')){const t=t0.trim().toUpperCase();if(!t)continue;const all=allTags();const v=all.find(y=>y.toUpperCase()===t)||all.find(y=>y.toUpperCase().includes(t))||addTagWord(t);if(v&&!d.tags.includes(v)){d.tags.push(v);n++}}return n}
+const sortedTargets=()=>[...(A.lists.targets||[])].sort((p,q)=>String(p).localeCompare(String(q)));
+const sbox=(id,ph,v)=>`<input id="${id}" type="search" placeholder="${ph}" autocomplete="off" autocapitalize="characters" value="${String(v).replace(/"/g,'')}" style="width:100%;margin-bottom:6px;padding:8px 10px;font-size:16px;background:transparent;color:var(--tx);border:1px solid var(--line);border-radius:8px">`;
+function tgtChipsHtml(){const q=SQ.target.trim().toUpperCase();return sortedTargets().filter(x=>!q||d.target===x||String(x).toUpperCase().includes(q)).map(x=>chip('target',x,x,d.target===x)).join('')+'<button class="chip" data-a="tother">+ Other</button>'}
+function plyChipsHtml(){const q=SQ.player.replace(/#/g,'').trim();return (A.lists.players||[]).filter(x=>!q||d.player===x||String(x).includes(q)).map(x=>chip('player',x,'#'+x,d.player===x)).join('')+'<button class="chip" data-a="pother">+ Other</button>'}
+function pickTarget(text){for(const t0 of text.split(',')){const t=t0.trim().toUpperCase();if(!t)continue;const T=A.lists.targets=A.lists.targets||[];const f=T.find(y=>String(y).toUpperCase()===t)||T.find(y=>String(y).toUpperCase().includes(t));if(f)d.target=f;else{T.push(t);d.target=t}}}
+function pickPlayer(text){const t=text.replace(/#/g,'').split(',').pop().trim();if(!t)return;const P=A.lists.players=A.lists.players||[];const f=P.find(y=>String(y)===t)||P.find(y=>String(y).includes(t));if(f)d.player=f;else{P.push(t);d.player=t}}
 function lastPasser(){try{const pl=G().plays;for(let i=pl.length-1;i>=0;i--)if(pl[i].k==='p'&&pl[i].passer)return pl[i].passer}catch(e){}return null}
 const ylNum=f=>f<=50?f:100-f, ylSide=f=>f<=50?'own':'opp';
 const ylFmt=f=>f===50?'50':f<50?'-'+f:'+'+(100-f);
@@ -214,17 +228,17 @@ function renderEntry(){const L=A.lists,e=edit!==null;
  h+=C('s3','Formation','',`<div class="chips scroll">${planL('formations',d.formation).map(x=>chip('formation',x,x,d.formation===x)).join('')}${oth('formations')}</div>`);
  h+=d.hash==='M'?C('s1','Dir','',`<div class="chips">${chip('dir','LT','LT',d.dir==='LT')}${chip('dir','RT','RT',d.dir==='RT')}</div>`):C('s1','FIB','',`<div class="chips">${chip('fib','Y','Y',d.fib==='Y')}${chip('fib','N','N',d.fib==='N')}</div>`);
  h+=C('s12','Green light formation (GLF)',d.glf?`<span class="note">${d.formation&&d.formation.toUpperCase()!==d.glf?'shifted out to '+d.formation:'stayed in it'}</span>`:'',`<div class="chips">${(L.glfs||[]).map(x=>chip('glf',x,x,d.glf===x)).join('')}</div>`);
- h+=C('s12','Play tag(s)','',`<input id="tsrch" type="search" placeholder="Search tags… (Enter picks the first match)" autocomplete="off" autocapitalize="characters" value="${TQ.replace(/"/g,'')}" style="width:100%;margin-bottom:6px;padding:8px 10px;font-size:16px;background:transparent;color:var(--tx);border:1px solid var(--line);border-radius:8px"><div class="chips scroll" id="tchips">${tagL.filter(x=>!TQ||d.tags.includes(x)||x.toUpperCase().includes(TQ.toUpperCase())).map(x=>chip('tags',x,x,d.tags.includes(x))).join('')}${oth('tagsRun')}</div>`);
+ h+=C('s12','Play tag(s)','',`<input id="tsrch" type="search" placeholder="Search all tags — commas for several, Enter adds" autocomplete="off" autocapitalize="characters" value="${TQ.replace(/"/g,'')}" style="width:100%;margin-bottom:6px;padding:8px 10px;font-size:16px;background:transparent;color:var(--tx);border:1px solid var(--line);border-radius:8px"><div class="chips scroll" id="tchips">${tagChipsHtml()}</div>`);
  h+=C('s12','One word','',`<div class="owg">${owL.map(x=>chip('owc',x,x,d.owc===x)).join('')}</div>`);
  h+=C('s6','Run concepts','',`<div class="chips scroll">${conceptChips(runL)}${oth('runs')}</div>`);
  h+=C('s6','Pass concepts','',`<div class="chips scroll">${conceptChips(passL)}${oth('passes')}</div>`);
- h+=C('s12','Target (route)','',`<div class="chips scroll">${[...(L.targets||[])].sort((p,q)=>String(p).localeCompare(String(q))).map(x=>chip('target',x,x,d.target===x)).join('')}<button class="chip" data-a="tother">+ Other</button></div>`);
+ h+=C('s12','Target (route)','',`${sbox('tgsrch','Search routes — Enter picks',SQ.target)}<div class="chips scroll" id="tgchips">${tgtChipsHtml()}</div>`);
  h+=C('s4','Result','',`<div class="chips">${RESULTS.map(r=>chip('result',r[0],r[1],d.result===r[0],['SACK','INT','FUM'].includes(r[0])?'neg':'res')).join('')}${chip('td','t','TD',d.td,'res')}</div>`);
  h+=C('s5','Gain / loss','',`<div class="chips" style="align-items:center;justify-content:center"><div class="step"><button class="chip" data-a="gm">−</button><input id="gv" type="number" inputmode="numeric" min="-99" max="99" value="${d.gain}" style="width:62px;font-size:20px;font-weight:700;text-align:center;background:transparent;color:var(--tx);border:1px solid var(--line);border-radius:6px;padding:4px 0"><button class="chip" data-a="gp">+</button></div></div><div class="chips" style="margin-top:6px;justify-content:center">${[-5,0,2,4,6,8,10,15,20].map(n=>chip('gain',n,(n>0?'+':'')+n,d.gain===n)).join('')}</div>`);
  h+=C('s3','Passer','',`<div class="chips">${(L.passers||[]).map(x=>chip('passer',x,'#'+x,d.passer===x)).join('')}<button class="chip" data-a="qother">+ Other</button></div>`);
- h+=C('s12','Player','',`<div class="chips scroll">${L.players.map(x=>chip('player',x,'#'+x,d.player===x)).join('')}<button class="chip" data-a="pother">+ Other</button></div>`);
+ h+=C('s12','Player','',`${sbox('plsrch','Search number — Enter picks',SQ.player)}<div class="chips scroll" id="plchips">${plyChipsHtml()}</div>`);
  const lp=G().plays.filter(x=>x.k==='p').pop();h+=`<div class="s12 logrow">${lp&&!e?`<div class="last"><b>Last</b> ${lp.down}&amp;${lp.dist} ${lp.tag?lp.tag+' ':''}${lp.owc||lp.call||''} <b>${lp.gain>0?'+':''}${lp.gain}</b></div>`:''}<button class="btn pri logbtn" data-a="log">${e?'Save changes':'Log play'}</button>${e?'<button class="btn" data-a="cancel">Cancel</button><button class="btn bad" data-a="del">Delete play</button>':''}</div></div>`;
- document.getElementById('entry').innerHTML=h;if(TFOC){TFOC=false;const t=document.getElementById('tsrch');if(t){t.focus();t.setSelectionRange(t.value.length,t.value.length)}}}
+ document.getElementById('entry').innerHTML=h;if(TFOC)FOCID='tsrch';TFOC=false;if(FOCID){const t=document.getElementById(FOCID);FOCID=null;if(t){t.focus();t.setSelectionRange(t.value.length,t.value.length)}}}
 function drivesOf(arr){const dr=[];let c=[];for(const p of arr){if(p.k!=='p'){if(c.length)dr.push(c);c=[]}else c.push(p)}if(c.length)dr.push(c);return dr}
 function summary(){const P=plays(),pen=P.filter(p=>p.result!=='PEN');const E=pen.filter(p=>eff(p)==='Y').length,X=pen.filter(p=>expl(p)==='Y').length;
  const dr=drivesOf(G().plays);
@@ -244,7 +258,9 @@ function renderLog(){const g=G(),s=summary();
 function renderHdr(){const gb=document.getElementById('gpbtn');if(gb){const on=G()&&G().plan&&Object.values(G().plan).some(a=>a&&a.length);gb.textContent=on?'Gameplan ✓':'Gameplan';gb.classList.toggle('pri',!!on)}
 document.getElementById('gsel').innerHTML=A.games.map(g=>`<option value="${g.id}" ${g.id===A.cur?'selected':''}>${g.opp}</option>`).join('')}
 function renderAll(){renderHdr();renderEntry();renderLog()}
-document.getElementById('entry').addEventListener('keydown',ev=>{if(ev.target.id==='tsrch'&&ev.key==='Enter'){ev.preventDefault();const q=TQ.toUpperCase();if(!q)return;const m=[...document.querySelectorAll('#tchips [data-g=tags]')].filter(b=>b.style.display!=='none'&&!b.classList.contains('on')&&b.dataset.v.toUpperCase().includes(q));const ex=m.find(b=>b.dataset.v.toUpperCase()===q)||m[0];if(ex){const v=ex.dataset.v;if(!d.tags.includes(v))d.tags.push(v);TQ='';TFOC=true;renderEntry()}else{const o=document.querySelector('#tchips [data-a=oth]');if(o){TQ='';o.click()}}}});
+document.getElementById('entry').addEventListener('keydown',ev=>{if(ev.key==='Enter'&&ev.target.id==='tgsrch'){ev.preventDefault();if(!SQ.target.trim())return;pickTarget(SQ.target);SQ.target='';save();renderEntry();return}
+if(ev.key==='Enter'&&ev.target.id==='plsrch'){ev.preventDefault();if(!SQ.player.trim())return;pickPlayer(SQ.player);SQ.player='';save();renderEntry();return}
+if(ev.target.id==='tsrch'&&ev.key==='Enter'){ev.preventDefault();if(!TQ.trim())return;pickTags(TQ);TQ='';TFOC=true;save();renderEntry()}});
 document.getElementById('entry').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;const a=b.dataset.a,g=b.dataset.g,v=b.dataset.v;
  if(g){
   if(['down','dist','gain'].includes(g))d[g]=g==='gain'?Math.max(-99,Math.min(99,+v)):+v;
@@ -256,6 +272,8 @@ document.getElementById('entry').addEventListener('click',ev=>{const b=ev.target
   else if(g==='call'){const was=d.call===v&&!d.owc;if(d.autoT){d.tags=(d.tags||[]).filter(x=>x!==d.autoT);d.autoT=null}d.owc=null;d.call=was?null:v;if(d.call){d.ptype=A.lists.runs.some(x=>x.toUpperCase()===v.toUpperCase())?'run':'pass';}}
   else if(g==='ptype'){d.ptype=v;d.call=null}
   else if(g==='tags'||g==='ftags'){const a=d[g]||(d[g]=[]),i=a.indexOf(v);i<0?a.push(v):a.splice(i,1);if(g==='tags')TQ=''}
+  else if(g==='target'){d.target=d.target===v?null:v;SQ.target=''}
+  else if(g==='player'){d.player=d.player===v?null:v;SQ.player=''}
   else if(g==='result'){d.result=d.result===v?null:v;if(v==='INC')d.gain=0}
   else d[g]=d[g]===v?null:v;
   if(g==='hash'||g==='fib'){if(d.hash==='M')d.fib=null;if(d.hash&&d.hash!=='M'&&d.fib)d.dir=((d.fib==='Y')===(d.hash==='L'))?'LT':'RT';else d.dir=null;if(g==='hash'&&d.owc)owApply(d)}
@@ -273,7 +291,9 @@ document.getElementById('entry').addEventListener('click',ev=>{const b=ev.target
  else if(a==='cancel'){edit=null;d=freshDraft(lastNext());renderAll();return}
  else if(a==='del'){G().plays.splice(edit,1);edit=null;d=freshDraft(lastNext());save();renderAll();return}
  renderEntry()});
-document.getElementById('entry').addEventListener('input',ev=>{if(ev.target.id==='tsrch'){TQ=ev.target.value.trim();const q=TQ.toUpperCase();document.querySelectorAll('#tchips [data-g=tags]').forEach(b=>{b.style.display=(!q||b.classList.contains('on')||b.dataset.v.toUpperCase().includes(q))?'':'none'});return}
+document.getElementById('entry').addEventListener('input',ev=>{if(ev.target.id==='tgsrch'){SQ.target=ev.target.value;document.getElementById('tgchips').innerHTML=tgtChipsHtml();return}
+if(ev.target.id==='plsrch'){SQ.player=ev.target.value;document.getElementById('plchips').innerHTML=plyChipsHtml();return}
+if(ev.target.id==='tsrch'){TQ=ev.target.value;document.getElementById('tchips').innerHTML=tagChipsHtml();return}
 if(ev.target.id==='gv'){const x=parseInt(ev.target.value,10);if(!isNaN(x))d.gain=Math.max(-99,Math.min(99,x))}});
 document.getElementById('entry').addEventListener('change',ev=>{if(ev.target.id==='gv'){ev.target.value=d.gain}});
 document.getElementById('entry').addEventListener('change',ev=>{if(ev.target.id==='ylx'){const x=parseInt(ev.target.value,10);if(!isNaN(x)){const m=Math.max(1,Math.min(50,x));d.f=ylSide(d.f)==='own'?m:100-m}renderEntry();return}if(ev.target.id==='distx'){const v=parseInt(ev.target.value);if(v>0)d.dist=v;renderEntry();return}if(ev.target.id==='gs')renderEntry()});
