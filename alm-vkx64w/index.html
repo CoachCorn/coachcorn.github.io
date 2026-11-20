@@ -112,7 +112,7 @@ html,button,.chip,input,select{touch-action:manipulation;-webkit-tap-highlight-c
 const CONFIG={program:'deer-creek',name:'Deer Creek',filmRoom:'https://claude.ai/artifact/83Jt11X8MfVHj1xD2UB6CA',storageKey:'almanac_v1',blankUntilPlan:true};
 const KEY=CONFIG.storageKey;
 const DEF={
- ftags:['JUMBO','SLAM','SCRUNCH','SPILL','POUR','PINCH','STOOGE','HIP','SQUINT','ALL IN','HULK','THOR','OVER','STACK','SQUEEZE','TRI','TITE'],
+ ftags:['SLAM','SCRUNCH','SPILL','POUR','PINCH','STOOGE','HIP','SQUINT','ALL IN','HULK','THOR','OVER','STACK','SQUEEZE','TRI','TITE'],
  motions:['MISSILE','OUT','JET','ORBIT','FLY','SATELLITE','POPCORN','HAY','BAR','TIDE','SWAP','CROSS SPRAY','YOYO','TRADE','BOUNCE','STAY','ZAP','MAP','ZIP','IN','HOT'],
  formations:['Kong','Crown','Queen','King','Trips','Army','Money','Pour Slot','Joker','Splash','Ace','Slot','Wing','Jumbo','Shoot','Diamond','Mace','Bunch','Change','Twins','Jack'],
  runs:['CAROLINA','PANTHER','LA','CHARGER','PITT','STEELER','VEGAS','RAIDER'],
@@ -156,6 +156,7 @@ function load(){try{A=JSON.parse(localStorage.getItem(KEY))}catch(e){A=null}
  if(A.v<8){const fx=a=>[...new Set((a||[]).map(x=>ALIAS[String(x).toUpperCase()]||x))];const L=A.lists;L.runs=fx(L.runs);
   for(const g of A.games){if(g.gp)g.gp=fx(g.gp);if(g.plan&&g.plan.runs)g.plan.runs=fx(g.plan.runs);for(const p of g.plays)if(p.k==='p'&&p.call)p.call=al(p.call)}
   A.v=8}
+ if(A.v<9){const nj=a=>(a||[]).filter(x=>String(x).toUpperCase()!=='JUMBO');A.lists.ftags=nj(A.lists.ftags);for(const g of A.games)if(g.plan&&g.plan.ftags)g.plan.ftags=nj(g.plan.ftags);A.v=9}
  if(!A.games.length)buildDemo(true);
  if(!A.cur||!A.games.find(g=>g.id===A.cur))A.cur=A.games[0].id;save()}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(A))}catch(e){}}
