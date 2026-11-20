@@ -121,7 +121,7 @@ const DEF={
  owcs:['TEXAS','HOUSTON','AGGIES','MINERS','SOONERS','STATE','BRONCHOS','TULSA','CAL','TROJANS','BRUINS','STANFORD'],
  tagsRun:['X','Z','G','NOSE','TEAR','MISS','MASH','MOB','MAX','STREAK','GANG','ARC','WIDE','PISTOL','KICK','HAND','CRACK','WALL','TOSS','SWITCH','SPIN','SWORD','SHIELD','MIKE','OUTSIDE','SOLID','MIRROR','SHORT','FOLLOW','SNUZ','PULSE','POP','HOLLER','MAIL'],
  tagsPass:['X','Z','BRONZE','GOLD','BLACK','BROWN','FLIP','POKER','WHEEL','FIRE','FLAME','GO','TRAIL','COP','FLOP','MILLY','ROCK','BANANA','HAIL','PUMP','FLEA','LATE','SNAP','CHOICE','SLIDE','TUNNEL','DRAW','PICK','CUT','PUNCH','SURF','SLING','CURL','TOAD','THROWBACK','STOP','BT','SOLID','MIRROR','SHORT','FOLLOW','SNUZ','PULSE','POP','HOLLER','MAIL'],
- targets:['HITCH','SLANT','OUT','CURL','DIG','POST','CORNER','GO','SEAM','FLAT','WHEEL','CROSS','STICK','SCREEN','SAIL'],
+ targets:['HITCH','SLANT','OUT','CURL','DIG','POST','CORNER','GO','SEAM','FLAT','WHEEL','CROSS','STICK','SCREEN','SAIL','BUBBLE'],
  players:['0','2','3','4','5','8','9','11','12','13','14','15','30','33','48'],
  expRun:12,expPass:16
 };
@@ -159,6 +159,7 @@ function load(){try{A=JSON.parse(localStorage.getItem(KEY))}catch(e){A=null}
   A.v=8}
  if(A.v<9){const nj=a=>(a||[]).filter(x=>String(x).toUpperCase()!=='JUMBO');A.lists.ftags=nj(A.lists.ftags);for(const g of A.games)if(g.plan&&g.plan.ftags)g.plan.ftags=nj(g.plan.ftags);A.v=9}
  if(A.v<10){const T=A.lists.targets=A.lists.targets||[];if(!T.some(x=>String(x).toUpperCase()==='SAIL'))T.push('SAIL');A.v=10}
+ if(A.v<11){const T=A.lists.targets=A.lists.targets||[];if(!T.some(x=>String(x).toUpperCase()==='BUBBLE'))T.push('BUBBLE');A.v=11}
  if(!A.games.length)buildDemo(true);
  if(!A.cur||!A.games.find(g=>g.id===A.cur))A.cur=A.games[0].id;save()}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(A))}catch(e){}}
@@ -214,7 +215,7 @@ function renderEntry(){const L=A.lists,e=edit!==null;
  h+=C('s6','Pass concepts','',`<div class="chips scroll">${conceptChips(passL)}${oth('passes')}</div>`);
  if(d.ptype==='pass')h+=C('s12','Target (route)','',`<div class="chips scroll">${(L.targets||[]).map(x=>chip('target',x,x,d.target===x)).join('')}<button class="chip" data-a="tother">Other</button></div>`);
  h+=C('s5','Result','',`<div class="chips">${RESULTS.map(r=>chip('result',r[0],r[1],d.result===r[0],['SACK','INT','FUM'].includes(r[0])?'neg':'res')).join('')}${chip('td','t','TD',d.td,'res')}</div>`);
- h+=C('s4','Gain / loss','<input id="gv" type="number" inputmode="numeric" min="-99" max="99" value="'+d.gain+'" style="width:64px;font-size:18px;font-weight:700;text-align:center;background:transparent;color:var(--tx);border:1px solid var(--bd,#345);border-radius:6px">',`<input type="range" id="gs" min="-99" max="99" value="${d.gain}"><div class="chips" style="margin-top:2px">${[-5,0,2,4,6,8,10,15].map(n=>chip('gain',n,(n>0?'+':'')+n,d.gain===n)).join('')}<button class="chip" data-a="gm">−1</button><button class="chip" data-a="gp">+1</button></div>`);
+ h+=C('s4','Gain / loss','<span style="display:inline-flex;gap:6px;align-items:center"><button class="chip" data-a="gm" style="min-width:48px;font-size:20px">◀</button><input id="gv" type="number" inputmode="numeric" min="-99" max="99" value="'+d.gain+'" style="width:64px;font-size:18px;font-weight:700;text-align:center;background:transparent;color:var(--tx);border:1px solid var(--bd,#345);border-radius:6px"><button class="chip" data-a="gp" style="min-width:48px;font-size:20px">▶</button></span>',`<input type="range" id="gs" min="-99" max="99" value="${d.gain}"><div class="chips" style="margin-top:2px">${[-5,0,2,4,6,8,10,15].map(n=>chip('gain',n,(n>0?'+':'')+n,d.gain===n)).join('')}</div>`);
  h+=C('s3','Player','',`<div class="chips scroll">${L.players.map(x=>chip('player',x,'#'+x,d.player===x)).join('')}<button class="chip" data-a="pother">Other</button></div>`);
  const lp=G().plays.filter(x=>x.k==='p').pop();h+=`<div class="s12 logrow">${lp&&!e?`<div class="last"><b>Last</b> ${lp.down}&amp;${lp.dist} ${lp.tag?lp.tag+' ':''}${lp.owc||lp.call||''} <b>${lp.gain>0?'+':''}${lp.gain}</b></div>`:''}<button class="btn pri logbtn" data-a="log">${e?'Save changes':'Log play'}</button>${e?'<button class="btn" data-a="cancel">Cancel</button><button class="btn bad" data-a="del">Delete play</button>':''}</div></div>`;
  document.getElementById('entry').innerHTML=h}
@@ -255,7 +256,7 @@ document.getElementById('entry').addEventListener('click',ev=>{const b=ev.target
  if(a==='dm'){d.dist=Math.max(1,d.dist-1)}else if(a==='dp'){d.dist++}
  else if(a==='ym'||a==='yp'){const s=ylSide(d.f),n=ylNum(d.f)+(a==='yp'?1:-1);const m=Math.max(1,Math.min(50,n));d.f=s==='own'?m:100-m}
  else if(a==='gm'){d.gain=Math.max(-99,d.gain-1)}else if(a==='gp'){d.gain=Math.min(99,d.gain+1)}
- else if(a==='oth'){const c=b.dataset.c;ask('Type it in',x0=>{let x=x0.trim();x=c==='formations'?x.toLowerCase().replace(/\b\w/g,m=>m.toUpperCase()):x.toUpperCase();x=ALIAS[x]||x;const L=A.lists;if(!L[c].some(y=>y.toUpperCase()===x.toUpperCase()))L[c].push(x);else x=L[c].find(y=>y.toUpperCase()===x.toUpperCase());const pl=G().plan;if(pl&&pl[c]&&!pl[c].some(y=>y.toUpperCase()===x.toUpperCase()))pl[c].push(x);if(c==='tagsRun'||c==='tagsPass'){const o=c==='tagsRun'?'tagsPass':'tagsRun';if(!L[o].some(y=>y.toUpperCase()===x.toUpperCase()))L[o].push(x);if(pl&&pl[o]&&!pl[o].some(y=>y.toUpperCase()===x.toUpperCase()))pl[o].push(x)}
+ else if(a==='oth'){const c=b.dataset.c;ask('Type it in',x0=>{let x=x0.trim();x=c==='formations'?x.toLowerCase().replace(/\b\w/g,m=>m.toUpperCase()):x.toUpperCase();x=ALIAS[x]||x;const L=A.lists;{const g0=G();g0.extra=g0.extra||{};for(const k of((c==='tagsRun'||c==='tagsPass')?['tagsRun','tagsPass']:[c])){const a=g0.extra[k]=g0.extra[k]||[];if(!a.some(y=>y.toUpperCase()===x.toUpperCase()))a.push(x)}}if(!L[c].some(y=>y.toUpperCase()===x.toUpperCase()))L[c].push(x);else x=L[c].find(y=>y.toUpperCase()===x.toUpperCase());const pl=G().plan;if(pl&&pl[c]&&!pl[c].some(y=>y.toUpperCase()===x.toUpperCase()))pl[c].push(x);if(c==='tagsRun'||c==='tagsPass'){const o=c==='tagsRun'?'tagsPass':'tagsRun';if(!L[o].some(y=>y.toUpperCase()===x.toUpperCase()))L[o].push(x);if(pl&&pl[o]&&!pl[o].some(y=>y.toUpperCase()===x.toUpperCase()))pl[o].push(x)}
    if(c==='ftags'){if(!d.ftags.includes(x))d.ftags.push(x)}else if(c==='motions')d.motion=x;else if(c==='formations')d.formation=x;else if(c==='runs'||c==='passes'){d.call=x;d.owc=null;d.ptype=c==='runs'?'run':'pass'}else{if(!d.tags.includes(x))d.tags.push(x)}save();renderEntry()});return}
  else if(a==='gpopen'){gpState={text:'',extra:{}};gpModal();return}
  else if(a==='tother'){ask('Route targeted',x=>{d.target=x.toUpperCase();renderEntry()});return}
@@ -299,7 +300,7 @@ const hudlTsv=()=>hudlRows().map(r=>r.join('\t')).join('\n');
 
 /* ===== Gameplan scoping: only show what is in this week's gameplan ===== */
 const BLANKCATS=['ftags','motions','formations','tagsRun','tagsPass'];
-const planL=(cat,sel)=>{const base=A.lists[cat]||[],pl=G().plan,sl=[].concat(sel||[]).filter(Boolean).map(x=>String(x).toUpperCase()),keep=()=>base.filter(x=>sl.includes(x.toUpperCase()));
+const planL=(cat,sel)=>{const base=A.lists[cat]||[],pl=G().plan,sl=[].concat(sel||[],(G().extra||{})[cat]||[]).filter(Boolean).map(x=>String(x).toUpperCase()),keep=()=>base.filter(x=>sl.includes(x.toUpperCase()));
  if(!pl)return(CONFIG.blankUntilPlan&&BLANKCATS.includes(cat))?keep():base;
  const p=pl[cat];if(!p||!p.length)return CONFIG.blankUntilPlan?keep():base;
  const S=new Set(p.map(x=>x.toUpperCase()));return base.filter(x=>S.has(x.toUpperCase())||sl.includes(x.toUpperCase()))};
@@ -333,7 +334,7 @@ function gpModal(){const g=G(),r=gpParse(gpState.text,gpState.extra),on=g.plan&&
   const r2=gpParse(gpState.text,gpState.extra);
   for(const c in r2.plan){const set=r2.plan[c];pl[c]=(L[c]||[]).filter(x=>set.has(x.toUpperCase()))}
   g.plan=pl;g.gp=[...r2.concepts];save();modal_close();d=freshDraft(lastNext());renderAll();toast('Gameplan applied')};
- const cl=document.getElementById('gpclear');if(cl)cl.onclick=()=>{const was=on;g.plan=null;g.gp=null;gpState={text:'',extra:{}};save();modal_close();d=freshDraft(lastNext());renderAll();toast(was?'Gameplan cleared — all buttons showing':'No gameplan was set')}}
+ const cl=document.getElementById('gpclear');if(cl)cl.onclick=()=>{const was=on;g.plan=null;g.gp=null;g.extra=null;gpState={text:'',extra:{}};save();modal_close();d=freshDraft(lastNext());renderAll();toast(was?'Gameplan cleared — all buttons showing':'No gameplan was set')}}
 document.getElementById('gpbtn').onclick=()=>{gpState={text:'',extra:{}};gpModal()};
 
 function ask(title,cb,val){modal(`<h3 style="margin-top:0">${title}</h3><input type="text" id="askin" autocapitalize="characters" autocomplete="off" style="width:100%;font-size:20px;padding:10px" value="${esc2(val||'')}"><p style="display:flex;gap:10px"><button class="btn pri" id="askok">OK</button><button class="btn" id="askno">Cancel</button></p>`);
