@@ -114,15 +114,15 @@ html,button,.chip,input,select{touch-action:manipulation;-webkit-tap-highlight-c
 const CONFIG={program:'deer-creek',name:'Deer Creek',filmRoom:'https://claude.ai/artifact/83Jt11X8MfVHj1xD2UB6CA',storageKey:'almanac_v1',blankUntilPlan:true};
 const KEY=CONFIG.storageKey;
 const DEF={
- ftags:['SLAM','SCRUNCH','SPILL','POUR','PINCH','STOOGE','HIP','SQUINT','ALL IN','HULK','THOR','OVER','STACK','SQUEEZE','TRI','TITE'],
- motions:['MISSILE','OUT','JET','ORBIT','FLY','SATELLITE','POPCORN','HAY','BAR','TIDE','SWAP','CROSS SPRAY','YOYO','TRADE','BOUNCE','STAY','ZAP','MAP','ZIP','IN','HOT'],
+ ftags:['SLAM','SCRUNCH','SPILL','POUR','PINCH','STOOGE','HIP','SQUINT','ALL IN','HULK','THOR','OVER','STACK','SQUEEZE','TRI','TITE','LITE','HEAVY'],
+ motions:['MISSILE','OUT','JET','ORBIT','FLY','SATELLITE','POPCORN','HAY','BAR','TIDE','SWAP','CROSS SPRAY','YOYO','TRADE','BOUNCE','STAY','ZAP','MAP','ZIP','IN','HOT','AIRPLANE','BUMP'],
  formations:['Kong','Crown','Queen','King','Trips','Army','Money','Pour Slot','Joker','Splash','Ace','Slot','Wing','Jumbo','Shoot','Diamond','Mace','Bunch','Change','Twins','Jack'],
  runs:['CAROLINA','PANTHER','LA','CHARGER','PITT','STEELER','VEGAS','RAIDER'],
  passes:['LAP','RACE','FLASH','STRIKE','AGGIES'],
  glfs:['SHUFFLE','DIAMOND','QUAD','SCRAMBLE','MONEY','MATCH'],
  owcs:['TEXAS','HOUSTON','AGGIES','MINERS','SOONERS','STATE','BRONCHOS','TULSA','CAL','TROJANS','BRUINS','STANFORD'],
- tagsRun:['X','Z','G','NOSE','TEAR','MISS','MASH','MOB','MAX','STREAK','GANG','ARC','WIDE','PISTOL','KICK','HAND','CRACK','WALL','TOSS','SWITCH','SPIN','SWORD','SHIELD','MIKE','OUTSIDE','SOLID','MIRROR','SHORT','FOLLOW','SNUZ','PULSE','POP','HOLLER','MAIL'],
- tagsPass:['X','Z','BRONZE','GOLD','BLACK','BROWN','FLIP','POKER','WHEEL','FIRE','FLAME','GO','TRAIL','COP','FLOP','MILLY','ROCK','BANANA','HAIL','PUMP','FLEA','LATE','SNAP','CHOICE','SLIDE','TUNNEL','DRAW','PICK','CUT','PUNCH','SURF','SLING','CURL','TOAD','THROWBACK','STOP','BT','SOLID','MIRROR','SHORT','FOLLOW','SNUZ','PULSE','POP','HOLLER','MAIL'],
+ tagsRun:['X','Z','G','NOSE','TEAR','MISS','MASH','MOB','MAX','STREAK','GANG','ARC','WIDE','PISTOL','KICK','HAND','CRACK','WALL','TOSS','SWITCH','SPIN','SWORD','SHIELD','MIKE','OUTSIDE','SOLID','MIRROR','SHORT','FOLLOW','SNUZ','PULSE','POP','HOLLER','MAIL','BOOT','SWEEP','READ','LOOK','S','LASER','ROCKET','DRIP','LEAK','ARROW','BULL','YELL','GREY','YELLOW'],
+ tagsPass:['X','Z','BRONZE','GOLD','BLACK','BROWN','FLIP','POKER','WHEEL','FIRE','FLAME','GO','TRAIL','COP','FLOP','MILLY','ROCK','BANANA','HAIL','PUMP','FLEA','LATE','SNAP','CHOICE','SLIDE','TUNNEL','DRAW','PICK','CUT','PUNCH','SURF','SLING','CURL','TOAD','THROWBACK','STOP','BT','SOLID','MIRROR','SHORT','FOLLOW','SNUZ','PULSE','POP','HOLLER','MAIL','BOOT','SWEEP','READ','LOOK','S','LASER','ROCKET','DRIP','LEAK','ARROW','BULL','YELL','GREY','YELLOW'],
  targets:['HITCH','SLANT','OUT','CURL','DIG','POST','CORNER','GO','SEAM','FLAT','WHEEL','CROSS','STICK','SCREEN','SAIL','BUBBLE'],
  passers:['9','12'],players:['0','2','3','4','5','8','9','11','12','13','14','15','30','33','48'],
  expRun:12,expPass:16
@@ -163,6 +163,7 @@ function load(){try{A=JSON.parse(localStorage.getItem(KEY))}catch(e){A=null}
  if(A.v<10){const T=A.lists.targets=A.lists.targets||[];if(!T.some(x=>String(x).toUpperCase()==='SAIL'))T.push('SAIL');A.v=10}
  if(A.v<11){const T=A.lists.targets=A.lists.targets||[];if(!T.some(x=>String(x).toUpperCase()==='BUBBLE'))T.push('BUBBLE');A.v=11}
  if(A.v<12){if(!A.lists.passers)A.lists.passers=['9','12'];A.v=12}
+ if(A.v<13){const L=A.lists,add=(k,a)=>{L[k]=L[k]||[];for(const x of a)if(!L[k].some(y=>String(y).toUpperCase()===x))L[k].push(x)};const T=['BOOT', 'SWEEP', 'READ', 'LOOK', 'S', 'LASER', 'ROCKET', 'DRIP', 'LEAK', 'ARROW', 'BULL', 'YELL', 'GREY', 'YELLOW'];add('tagsRun',T);add('tagsPass',T);add('motions',['AIRPLANE','BUMP']);add('ftags',['LITE','HEAVY']);A.v=13}
  if(!A.games.length)buildDemo(true);
  if(!A.cur||!A.games.find(g=>g.id===A.cur))A.cur=A.games[0].id;save()}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(A))}catch(e){}}
@@ -311,7 +312,7 @@ const planL=(cat,sel)=>{const base=A.lists[cat]||[],pl=G().plan,sl=[].concat(sel
  if(!pl)return(CONFIG.blankUntilPlan&&BLANKCATS.includes(cat))?keep():base;
  const p=pl[cat];if(!p||!p.length)return CONFIG.blankUntilPlan?keep():base;
  const S=new Set(p.map(x=>x.toUpperCase()));return base.filter(x=>S.has(x.toUpperCase())||sl.includes(x.toUpperCase()))};
-const GPCATS=[['ftags','Formation tag'],['motions','Motion'],['formations','Formation'],['runs','Run concept'],['passes','Pass concept'],['owcs','One word'],['tagsRun','Play tag']];
+const GPCATS=[['ftags','Formation tag'],['motions','Motion / Shift'],['formations','Formation'],['runs','Run concept'],['passes','Pass concept'],['owcs','One word'],['tagsRun','Play tag']];
 const GPSKIP=new Set(['RT','LT','LEFT','RIGHT','L','R']);
 function gpVocab(extra){const v=new Map(),add=(t,c)=>{t=String(t).toUpperCase().trim();if(!t)return;if(!v.has(t))v.set(t,new Set());v.get(t).add(c)};
  const L=A.lists;for(const c of['ftags','motions','formations','runs','passes','owcs'])(L[c]||[]).forEach(x=>add(x,c));(L.tagsRun||[]).forEach(x=>add(x,'tag'));(L.tagsPass||[]).forEach(x=>add(x,'tag'));
@@ -369,7 +370,7 @@ document.getElementById('exp').onclick=()=>{modal(`<h3 style="margin-top:0">Expo
  e4.onclick=()=>dl(G().opp.replace(/\W+/g,'_')+'_almanac.csv',csv(),'text/csv');
  e3.onclick=()=>dl('almanac_backup.json',JSON.stringify(A),'application/json')};
 document.getElementById('setup').onclick=()=>{const L=A.lists;const f=(k,t)=>`<div class="lab"><span>${t}</span></div><textarea id="s_${k}">${L[k].join(', ')}</textarea>`;
- modal(`<h3 style="margin-top:0">Setup</h3><p class="note">Comma-separated. These become the buttons.</p>${f('ftags','Formation tags')}${f('motions','Motions')}${f('formations','Formations')}${f('runs','Run calls')}${f('passes','Pass calls')}${f('owcs','One words')}${f('glfs','Green light formations')}${f('ftags','Formation tags')}${f('tagsRun','Run play tags')}${f('tagsPass','Pass play tags')}${f('targets','Targets (routes)')}${f('passers','Passers (QBs)')}${f('players','Jersey numbers')}<div class="lab"><span>Gameplan plays for ${G().opp} (used for "not called yet"; blank = all run and pass buttons)</span></div><textarea id="s_gp">${(G().gp||[]).join(', ')}</textarea><div class="lab"><span>Film Room link</span></div><input type="text" id="s_fr" style="width:100%" value="${A.fr||FR}">
+ modal(`<h3 style="margin-top:0">Setup</h3><p class="note">Comma-separated. These become the buttons.</p>${f('ftags','Formation tags')}${f('motions','Motion / Shift')}${f('formations','Formations')}${f('runs','Run calls')}${f('passes','Pass calls')}${f('owcs','One words')}${f('glfs','Green light formations')}${f('ftags','Formation tags')}${f('tagsRun','Run play tags')}${f('tagsPass','Pass play tags')}${f('targets','Targets (routes)')}${f('passers','Passers (QBs)')}${f('players','Jersey numbers')}<div class="lab"><span>Gameplan plays for ${G().opp} (used for "not called yet"; blank = all run and pass buttons)</span></div><textarea id="s_gp">${(G().gp||[]).join(', ')}</textarea><div class="lab"><span>Film Room link</span></div><input type="text" id="s_fr" style="width:100%" value="${A.fr||FR}">
  <div class="two" style="margin-top:8px"><div><div class="lab">Explosive run</div><input type="number" id="s_er" value="${L.expRun}"></div><div><div class="lab">Explosive pass</div><input type="number" id="s_ep" value="${L.expPass}"></div></div>
  <div class="lab" style="margin-top:12px"><span>Games on this device</span></div><div id="gmlist">${A.games.map(g=>`<div class="gmrow" style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)"><div style="flex:1;min-width:0"><b>${esc2(g.opp)}</b>${g.id===A.cur?' <span class="note">(open)</span>':''}<div class="note">${g.plays.filter(x=>x.k==='p').length} plays</div></div><button class="btn bad" data-delg="${g.id}">Delete</button></div>`).join('')}</div>
  <button class="btn bad" id="skeep" style="margin-top:8px;width:100%">Delete all games except ${esc2(G().opp)}</button>
