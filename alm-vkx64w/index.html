@@ -163,7 +163,7 @@ function renderEntry(){const L=A.lists,e=edit!==null;
  h+=C('s7','Play',`<span class="chips">${chip('ptype','run','RUN',d.ptype==='run')}${chip('ptype','pass','PASS',d.ptype==='pass')}</span>`,`<div class="chips scroll">${calls.map(x=>chip('call',x,x,d.call===x)).join('')}</div>`);
  h+=C('s5','Tag','',`<div class="chips scroll">${L.tags.map(x=>chip('tag',x,x,d.tag===x)).join('')}${chip('rgs','t','RGS',d.rgs)}${chip('shot','t','Shot',d.shot)}</div>`);
  h+=C('s5','Result','',`<div class="chips">${RESULTS.map(r=>chip('result',r[0],r[1],d.result===r[0],['SACK','INT','FUM'].includes(r[0])?'neg':'res')).join('')}${chip('td','t','TD',d.td,'res')}</div>`);
- h+=C('s4','Gain / loss','<b id="gv" style="font-size:18px;color:var(--tx)">'+(d.gain>0?'+':'')+d.gain+'</b>',`<input type="range" id="gs" min="-20" max="80" value="${d.gain}"><div class="chips" style="margin-top:2px">${[-5,0,2,4,6,8,10,15].map(n=>chip('gain',n,(n>0?'+':'')+n,d.gain===n)).join('')}<button class="chip" data-a="gm">−1</button><button class="chip" data-a="gp">+1</button></div>`);
+ h+=C('s4','Gain / loss','<input id="gv" type="number" inputmode="numeric" min="-99" max="99" value="'+d.gain+'" style="width:64px;font-size:18px;font-weight:700;text-align:center;background:transparent;color:var(--tx);border:1px solid var(--bd,#345);border-radius:6px">',`<input type="range" id="gs" min="-99" max="99" value="${d.gain}"><div class="chips" style="margin-top:2px">${[-5,0,2,4,6,8,10,15].map(n=>chip('gain',n,(n>0?'+':'')+n,d.gain===n)).join('')}<button class="chip" data-a="gm">−1</button><button class="chip" data-a="gp">+1</button></div>`);
  h+=C('s3','Player','',`<div class="chips scroll">${L.players.map(x=>chip('player',x,'#'+x,d.player===x)).join('')}<button class="chip" data-a="pother">Other</button></div>`);
  const lp=G().plays.filter(x=>x.k==='p').pop();h+=`<div class="s12 logrow">${lp&&!e?`<div class="last"><b>Last</b> ${lp.down}&amp;${lp.dist} ${lp.call||''}${lp.tag?' · '+lp.tag:''} <b>${lp.gain>0?'+':''}${lp.gain}</b></div>`:''}<button class="btn pri logbtn" data-a="log">${e?'Save changes':'Log play'}</button>${e?'<button class="btn" data-a="cancel">Cancel</button><button class="btn bad" data-a="del">Delete play</button>':''}</div></div>`;
  document.getElementById('entry').innerHTML=h}
@@ -187,7 +187,7 @@ function renderHdr(){document.getElementById('gsel').innerHTML=A.games.map(g=>`<
 function renderAll(){renderHdr();renderEntry();renderLog()}
 document.getElementById('entry').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;const a=b.dataset.a,g=b.dataset.g,v=b.dataset.v;
  if(g){
-  if(['down','dist','gain'].includes(g))d[g]=+v;
+  if(['down','dist','gain'].includes(g))d[g]=g==='gain'?Math.max(-99,Math.min(99,+v)):+v;
   else if(g==='side'&&(v==='own'||v==='opp')){const n=ylNum(d.f);d.f=v==='own'?n:100-n}
   else if(['shift','jumbo','rgs','shot'].includes(g))d[g]=!d[g];
   else if(g==='td'){d.td=!d.td;if(d.td)d.gain=100-d.f}
@@ -197,13 +197,15 @@ document.getElementById('entry').addEventListener('click',ev=>{const b=ev.target
   renderEntry();return}
  if(a==='dm'){d.dist=Math.max(1,d.dist-1)}else if(a==='dp'){d.dist++}
  else if(a==='ym'||a==='yp'){const s=ylSide(d.f),n=ylNum(d.f)+(a==='yp'?1:-1);const m=Math.max(1,Math.min(50,n));d.f=s==='own'?m:100-m}
- else if(a==='gm'){d.gain--}else if(a==='gp'){d.gain++}
+ else if(a==='gm'){d.gain=Math.max(-99,d.gain-1)}else if(a==='gp'){d.gain=Math.min(99,d.gain+1)}
  else if(a==='pother'){const x=prompt('Jersey number');if(x)d.player=x.trim()}
  else if(a==='log'){logPlay();return}
  else if(a==='cancel'){edit=null;d=freshDraft(lastNext());renderAll();return}
  else if(a==='del'){G().plays.splice(edit,1);edit=null;d=freshDraft(lastNext());save();renderAll();return}
  renderEntry()});
-document.getElementById('entry').addEventListener('input',ev=>{if(ev.target.id==='gs'){d.gain=+ev.target.value;document.getElementById('gv').textContent=(d.gain>0?'+':'')+d.gain}});
+document.getElementById('entry').addEventListener('input',ev=>{if(ev.target.id==='gs'){d.gain=+ev.target.value;document.getElementById('gv').value=d.gain}
+ else if(ev.target.id==='gv'){const x=parseInt(ev.target.value,10);if(!isNaN(x)){d.gain=Math.max(-99,Math.min(99,x));document.getElementById('gs').value=d.gain}}});
+document.getElementById('entry').addEventListener('change',ev=>{if(ev.target.id==='gv'){ev.target.value=d.gain}});
 document.getElementById('entry').addEventListener('change',ev=>{if(ev.target.id==='distx'){const v=parseInt(ev.target.value);if(v>0)d.dist=v;renderEntry();return}if(ev.target.id==='gs')renderEntry()});
 document.getElementById('logp').addEventListener('click',ev=>{if(ev.target.closest('#logclose')){document.getElementById('logp').classList.remove('open');return}const r=ev.target.closest('.play');if(!r)return;document.getElementById('logp').classList.remove('open');const i=+r.dataset.i;edit=i;const p=G().plays[i];d=Object.assign(freshDraft(null),p);delete d.k;renderAll()});
 document.getElementById('gsel').onchange=e=>{A.cur=e.target.value;edit=null;d=freshDraft(lastNext());save();renderAll()};
