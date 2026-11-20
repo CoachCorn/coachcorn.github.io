@@ -213,7 +213,7 @@ function renderEntry(){const L=A.lists,e=edit!==null;
  h+=C('s12','One word','',`<div class="owg">${owL.map(x=>chip('owc',x,x,d.owc===x)).join('')}</div>`);
  h+=C('s6','Run concepts','',`<div class="chips scroll">${conceptChips(runL)}${oth('runs')}</div>`);
  h+=C('s6','Pass concepts','',`<div class="chips scroll">${conceptChips(passL)}${oth('passes')}</div>`);
- if(d.ptype==='pass')h+=C('s12','Target (route)','',`<div class="chips scroll">${(L.targets||[]).map(x=>chip('target',x,x,d.target===x)).join('')}<button class="chip" data-a="tother">Other</button></div>`);
+ h+=C('s12','Target (route)','',`<div class="chips scroll">${(L.targets||[]).map(x=>chip('target',x,x,d.target===x)).join('')}<button class="chip" data-a="tother">Other</button></div>`);
  h+=C('s5','Result','',`<div class="chips">${RESULTS.map(r=>chip('result',r[0],r[1],d.result===r[0],['SACK','INT','FUM'].includes(r[0])?'neg':'res')).join('')}${chip('td','t','TD',d.td,'res')}</div>`);
  h+=C('s4','Gain / loss','<span style="display:inline-flex;gap:6px;align-items:center"><button class="chip" data-a="gm" style="min-width:48px;font-size:20px">◀</button><input id="gv" type="number" inputmode="numeric" min="-99" max="99" value="'+d.gain+'" style="width:64px;font-size:18px;font-weight:700;text-align:center;background:transparent;color:var(--tx);border:1px solid var(--bd,#345);border-radius:6px"><button class="chip" data-a="gp" style="min-width:48px;font-size:20px">▶</button></span>',`<input type="range" id="gs" min="-99" max="99" value="${d.gain}"><div class="chips" style="margin-top:2px">${[-5,0,2,4,6,8,10,15].map(n=>chip('gain',n,(n>0?'+':'')+n,d.gain===n)).join('')}</div>`);
  h+=C('s3','Player','',`<div class="chips scroll">${L.players.map(x=>chip('player',x,'#'+x,d.player===x)).join('')}<button class="chip" data-a="pother">Other</button></div>`);
@@ -245,9 +245,9 @@ document.getElementById('entry').addEventListener('click',ev=>{const b=ev.target
   else if(['shift','jumbo','rgs','shot'].includes(g))d[g]=!d[g];
   else if(g==='td'){d.td=!d.td;if(d.td)d.gain=100-d.f}
   else if(g==='glf'){d.glf=d.glf===v?null:v;if(d.glf&&!d.call&&!d.owc)d.ptype='pass'}
-  else if(g==='owc'){const w=OW[v];if(d.autoT){d.tags=d.tags.filter(x=>x!==d.autoT);d.autoT=null}if(d.owc===v)d.owc=null;else{d.owc=v;d.call=null;if(w)d.ptype=w.t}if(d.ptype==='run')d.target=null;if(d.owc)owApply(d)}
-  else if(g==='call'){const was=d.call===v&&!d.owc;if(d.autoT){d.tags=(d.tags||[]).filter(x=>x!==d.autoT);d.autoT=null}d.owc=null;d.call=was?null:v;if(d.call){d.ptype=A.lists.runs.some(x=>x.toUpperCase()===v.toUpperCase())?'run':'pass';if(d.ptype==='run')d.target=null}}
-  else if(g==='ptype'){d.ptype=v;d.call=null;d.target=null}
+  else if(g==='owc'){const w=OW[v];if(d.autoT){d.tags=d.tags.filter(x=>x!==d.autoT);d.autoT=null}if(d.owc===v)d.owc=null;else{d.owc=v;d.call=null;if(w)d.ptype=w.t}if(d.owc)owApply(d)}
+  else if(g==='call'){const was=d.call===v&&!d.owc;if(d.autoT){d.tags=(d.tags||[]).filter(x=>x!==d.autoT);d.autoT=null}d.owc=null;d.call=was?null:v;if(d.call){d.ptype=A.lists.runs.some(x=>x.toUpperCase()===v.toUpperCase())?'run':'pass';}}
+  else if(g==='ptype'){d.ptype=v;d.call=null}
   else if(g==='tags'||g==='ftags'){const a=d[g]||(d[g]=[]),i=a.indexOf(v);i<0?a.push(v):a.splice(i,1)}
   else if(g==='result'){d.result=d.result===v?null:v;if(v==='INC')d.gain=0}
   else d[g]=d[g]===v?null:v;
@@ -259,7 +259,7 @@ document.getElementById('entry').addEventListener('click',ev=>{const b=ev.target
  else if(a==='oth'){const c=b.dataset.c;ask('Type it in',x0=>{let x=x0.trim();x=c==='formations'?x.toLowerCase().replace(/\b\w/g,m=>m.toUpperCase()):x.toUpperCase();x=ALIAS[x]||x;const L=A.lists;{const g0=G();g0.extra=g0.extra||{};for(const k of((c==='tagsRun'||c==='tagsPass')?['tagsRun','tagsPass']:[c])){const a=g0.extra[k]=g0.extra[k]||[];if(!a.some(y=>y.toUpperCase()===x.toUpperCase()))a.push(x)}}if(!L[c].some(y=>y.toUpperCase()===x.toUpperCase()))L[c].push(x);else x=L[c].find(y=>y.toUpperCase()===x.toUpperCase());const pl=G().plan;if(pl&&pl[c]&&!pl[c].some(y=>y.toUpperCase()===x.toUpperCase()))pl[c].push(x);if(c==='tagsRun'||c==='tagsPass'){const o=c==='tagsRun'?'tagsPass':'tagsRun';if(!L[o].some(y=>y.toUpperCase()===x.toUpperCase()))L[o].push(x);if(pl&&pl[o]&&!pl[o].some(y=>y.toUpperCase()===x.toUpperCase()))pl[o].push(x)}
    if(c==='ftags'){if(!d.ftags.includes(x))d.ftags.push(x)}else if(c==='motions')d.motion=x;else if(c==='formations')d.formation=x;else if(c==='runs'||c==='passes'){d.call=x;d.owc=null;d.ptype=c==='runs'?'run':'pass'}else{if(!d.tags.includes(x))d.tags.push(x)}save();renderEntry()});return}
  else if(a==='gpopen'){gpState={text:'',extra:{}};gpModal();return}
- else if(a==='tother'){ask('Route targeted',x=>{d.target=x.toUpperCase();renderEntry()});return}
+ else if(a==='tother'){ask('Route targeted',x=>{x=x.trim().toUpperCase();if(!x)return;const T=A.lists.targets=A.lists.targets||[];const f=T.find(y=>String(y).toUpperCase()===x);if(f)x=f;else T.push(x);d.target=x;save();renderEntry()});return}
  else if(a==='pother'){ask('Jersey number',x=>{d.player=x;renderEntry()});return}
  else if(a==='log'){logPlay();return}
  else if(a==='cancel'){edit=null;d=freshDraft(lastNext());renderAll();return}
