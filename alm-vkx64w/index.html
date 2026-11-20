@@ -115,15 +115,15 @@ const DEF={
  ftags:['JUMBO','SLAM','SCRUNCH','SPILL','POUR','PINCH','STOOGE','HIP','SQUINT','ALL IN','HULK','THOR','OVER','STACK','SQUEEZE','TRI','TITE'],
  motions:['MISSILE','X OUT','Z OUT','JET','ORBIT','FLY','SATELLITE','POPCORN','HAY','BAR','TIDE','SWAP','CROSS SPRAY','YOYO','TRADE','BOUNCE','STAY','ZAP','MAP','ZIP','IN'],
  formations:['Kong','Crown','Queen','King','Trips','Army','Money','Pour Slot','Joker','Splash','Ace','Slot','Wing','Jumbo','Shoot','Diamond','Mace','Bunch','Change','Twins','Jack'],
- runs:['SOONERS','CAROLINA','PITT','TEXAS','HOUSTON','LA','CHARGER','RAVEN','WASHINGTON','COMMANDER','PHILLY','EAGLE','STEELER','CLEV','BROWNS','PANTHER','TROJANS','STATE','ALTER STEELER','G VEGAS','G RAIDER','GANG VEGAS','GANG RAIDER','BRUINS','H RAIDER','Y VEGAS','X RAIDER','Z VEGAS','VEGAS','RAIDER'],
+ runs:['SOONERS','CAROLINA','PITT','TEXAS','HOUSTON','LA','CHARGER','RAVEN','WASHINGTON','COMMANDER','PHILLY','EAGLE','STEELER','CLEV','BROWNS','PANTHER','TROJANS','STATE','ALTER STEELER','BRUINS','H RAIDER','Y VEGAS','X RAIDER','Z VEGAS','VEGAS','RAIDER'],
  passes:['MATCH','CUT CAL','AGGIES','RACE','BT BRONCHOS','LAP','FLASH','STRIKE','CAL','BRONCHOS','MINERS','STANFORD','TULSA','SHUFFLE','DEUCE'],
- tagsRun:['NOSE','TEAR','MISS','MASH','MOB','MAX','STREAK','GANG','ARC','WIDE','PISTOL','KICK','HAND','CRACK','WALL','TOSS','SWITCH','SPIN','SWORD','SHIELD','MIKE','OUTSIDE','SOLID','MIRROR','FOLLOW','SNUZ','PULSE','POP','HOLLER','MAIL'],
+ tagsRun:['G','NOSE','TEAR','MISS','MASH','MOB','MAX','STREAK','GANG','ARC','WIDE','PISTOL','KICK','HAND','CRACK','WALL','TOSS','SWITCH','SPIN','SWORD','SHIELD','MIKE','OUTSIDE','SOLID','MIRROR','FOLLOW','SNUZ','PULSE','POP','HOLLER','MAIL'],
  tagsPass:['BRONZE','GOLD','BLACK','BROWN','FLIP','POKER','WHEEL','FIRE','FLAME','GO','TRAIL','COP','FLOP','MILLY','ROCK','BANANA','HAIL','PUMP','FLEA','LATE','SNAP','CHOICE','SLIDE','TUNNEL','DRAW','PICK','CUT','PUNCH','SURF','SLING','CURL','TOAD','THROWBACK','STOP','BT','SOLID','MIRROR','FOLLOW','SNUZ','PULSE','POP','HOLLER','MAIL'],
  targets:['HITCH','SLANT','OUT','CURL','DIG','POST','CORNER','GO','SEAM','FLAT','WHEEL','CROSS','STICK','SCREEN'],
  players:['0','2','3','4','5','8','9','11','12','13','14','15','30','33','48'],
  expRun:12,expPass:16
 };
-const RS={GH:['TROJANS','STATE','CAROLINA','PANTHER','ALTER STEELER'],BUCK:['TEXAS','G VEGAS','G RAIDER','GANG VEGAS','GANG RAIDER'],IZ:['SOONERS','WASHINGTON','COMMANDER','PHILLY','EAGLE'],GT:['HOUSTON','PITT','STEELER','CLEV','BROWNS'],POWER:['LA','CHARGER','RAVEN'],JET:['BRUINS','H RAIDER','Y VEGAS','X RAIDER','Z VEGAS']};
+const RS={GH:['TROJANS','STATE','CAROLINA','PANTHER','ALTER STEELER'],BUCK:['TEXAS','VEGAS','RAIDER','G VEGAS','G RAIDER','GANG VEGAS','GANG RAIDER'],IZ:['SOONERS','WASHINGTON','COMMANDER','PHILLY','EAGLE'],GT:['HOUSTON','PITT','STEELER','CLEV','BROWNS'],POWER:['LA','CHARGER','RAVEN'],JET:['BRUINS','H RAIDER','Y VEGAS','X RAIDER','Z VEGAS']};
 /* Concept families: pairs are the Left/Right versions of one concept (shown boxed together on the button grid), FAM folds them in the report. */
 const PAIRS=[['CAROLINA','PANTHER'],['LA','CHARGER'],['VEGAS','RAIDER'],['PITT','STEELER'],['LAP','RACE'],['FLASH','STRIKE'],['WASHINGTON','COMMANDER'],['PHILLY','EAGLE'],['CLEV','BROWNS'],['G VEGAS','G RAIDER'],['GANG VEGAS','GANG RAIDER']];
 const FAM={CAROLINA:'GY Counter',PANTHER:'GY Counter',STATE:'GY Counter',TROJANS:'GY Counter',ALTER_STEELER:'GY Counter',LA:'Power',CHARGER:'Power',RAVEN:'Power',VEGAS:'Buck Sweep',RAIDER:'Buck Sweep','G VEGAS':'Buck Sweep','G RAIDER':'Buck Sweep','GANG VEGAS':'Buck Sweep','GANG RAIDER':'Buck Sweep',TEXAS:'Buck Sweep',PITT:'GT Counter',PITTSBURGH:'GT Counter',STEELER:'GT Counter',HOUSTON:'GT Counter',CLEV:'GT Counter',BROWNS:'GT Counter',SOONERS:'Zone Insert',WASHINGTON:'Zone Insert',COMMANDER:'Zone Insert',PHILLY:'Zone Insert',EAGLE:'Zone Insert',BRUINS:'Jet Sweep','H RAIDER':'Jet Sweep','Y VEGAS':'Jet Sweep','X RAIDER':'Jet Sweep','Z VEGAS':'Jet Sweep',LAP:'Cross',RACE:'Cross',CAL:'Cross',FLASH:'Verticals',STRIKE:'Verticals',MINERS:'Verticals',BRONCHOS:'Sail','BT BRONCHOS':'Sail',AGGIES:'Shock',STANFORD:'Post Spike',TULSA:'Post Spike'};
@@ -136,8 +136,11 @@ function load(){try{A=JSON.parse(localStorage.getItem(KEY))}catch(e){A=null}
  if(!A){A={games:[],cur:null,lists:JSON.parse(JSON.stringify(DEF))};}
  for(const k in DEF)if(A.lists[k]==null)A.lists[k]=DEF[k];
  if(!A.v||A.v<2){const un=(a,b)=>[...a,...b.filter(x=>!a.includes(x))],L=A.lists;L.formations=un(L.formations.filter(x=>!['Slam Kong','Jet Army','Spill','Pour'].includes(x)),DEF.formations);L.motions=un(L.motions,DEF.motions);L.runs=un(L.runs,DEF.runs);L.passes=un(L.passes,DEF.passes);A.v=2}
+ if(A.v<4){const bad=['G VEGAS','G RAIDER','GANG VEGAS','GANG RAIDER'];A.lists.runs=A.lists.runs.filter(x=>!bad.includes(x));if(!A.lists.tagsRun.includes('G'))A.lists.tagsRun.unshift('G');if(!A.lists.tagsRun.includes('GANG'))A.lists.tagsRun.push('GANG');for(const g of A.games)if(g.plan&&g.plan.runs)g.plan.runs=g.plan.runs.filter(x=>!bad.includes(x))}
+ if(A.v<3){const un=(a,b)=>[...a,...b.filter(x=>!a.includes(x))];for(const k of['ftags','motions','passes','tagsRun','tagsPass'])A.lists[k]=un(A.lists[k]||[],DEF[k]);A.v=3}
+ if(A.v<4)A.v=4;
  if(!A.games.length)buildDemo(true);
- if(!A.cur||!A.games.find(g=>g.id===A.cur))A.cur=A.games[0].id;}
+ if(!A.cur||!A.games.find(g=>g.id===A.cur))A.cur=A.games[0].id;save()}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(A))}catch(e){}}
 function newGame(name,quiet){const g={id:'g'+Date.now(),opp:name,program:CONFIG.program,plays:[]};A.games.push(g);A.cur=g.id;d=freshDraft(null);if(!quiet){save();renderAll()}}
 const G=()=>A.games.find(g=>g.id===A.cur);
@@ -160,7 +163,6 @@ function logPlay(){if(!d.result){toast('Pick a result');return}
  const p=Object.assign({k:'p'},d);p.tags=[...(d.tags||[])];p.ftags=[...(d.ftags||[])];p.tag=p.tags.join(' ');p.ftag=p.ftags.join(' ');
  if(edit!==null){G().plays[edit]=p;edit=null;d=freshDraft(lastNext())}
  else{G().plays.push(p);const a=advance(p);if(a.nd)G().plays.push({k:'d'});d=freshDraft(a.next)}
- if(A.v<3){const un=(a,b)=>[...a,...b.filter(x=>!a.includes(x))];for(const k of['ftags','motions','passes','tagsRun','tagsPass'])A.lists[k]=un(A.lists[k]||[],DEF[k]);A.v=3}
  save();renderAll()}
 function lastNext(){const pl=G().plays;for(let i=pl.length-1;i>=0;i--)if(pl[i].k==='p'){const a=advance(pl[i]);return a.next}return{down:1,dist:10,f:25}}
 function toast(m){const t=document.createElement('div');t.textContent=m;t.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#000c;padding:10px 16px;border-radius:10px;z-index:20';document.body.appendChild(t);setTimeout(()=>t.remove(),2200)}
