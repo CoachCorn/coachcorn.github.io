@@ -142,7 +142,7 @@ function newGame(name,quiet){const g={id:'g'+Date.now(),opp:name,program:CONFIG.
 const G=()=>A.games.find(g=>g.id===A.cur);
 const esc2=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let d,edit=null;
-function freshDraft(prev){return{down:prev?prev.down:1,dist:prev?prev.dist:10,f:prev?prev.f:25,ptype:'run',formation:null,dir:null,motion:null,shift:false,jumbo:false,call:null,tag:null,ftags:[],tags:[],rgs:false,shot:false,result:null,gain:0,player:null,target:null,td:false}}
+function freshDraft(prev){return{down:prev?prev.down:1,dist:prev?prev.dist:10,f:prev?prev.f:25,ptype:'run',formation:null,dir:null,motion:null,shift:false,jumbo:false,call:null,tag:null,ftags:[],tags:[],rgs:false,shot:false,result:null,gain:0,player:null,target:null,hash:null,fib:null,td:false}}
 const ylNum=f=>f<=50?f:100-f, ylSide=f=>f<=50?'own':'opp';
 const ylFmt=f=>f===50?'50':f<50?'-'+f:'+'+(100-f);
 function plays(){return G().plays.filter(p=>p.k==='p')}
@@ -175,10 +175,11 @@ function renderEntry(){const L=A.lists,e=edit!==null;
  h+=C('s2','Down','',`<div class="chips">${[1,2,3,4].map(n=>chip('down',n,n,d.down===n)).join('')}</div>`);
  h+=C('s6','Distance','',`<div class="chips">${[1,2,3,4,5,6,7,8,9,10].map(n=>chip('dist',n,n,d.dist===n)).join('')}<input type="number" inputmode="numeric" id="distx" class="chipin ${d.dist>10?'on':''}" placeholder="11+" value="${d.dist>10?d.dist:''}"></div>`);
  h+=C('s4','Ball on',ylFmt(d.f),`<div class="chips" style="align-items:center">${chip('side','own','Own',ylSide(d.f)==='own')}${chip('side','opp','Opp',ylSide(d.f)==='opp')}<div class="step"><button class="chip" data-a="ym">−</button><input type="number" inputmode="numeric" id="ylx" min="1" max="50" value="${ylNum(d.f)}" style="width:62px;font-size:20px;font-weight:700;text-align:center;background:transparent;color:var(--tx);border:1px solid var(--line);border-radius:6px;padding:4px 0"><button class="chip" data-a="yp">+</button></div></div>`);
+ h+=C('s2','Hash','',`<div class="chips">${chip('hash','L','L',d.hash==='L')}${chip('hash','M','M',d.hash==='M')}${chip('hash','R','R',d.hash==='R')}</div>`);
  h+=C('s3','Formation tag','',`<div class="chips scroll">${chip('jumbo','t','Jumbo',d.jumbo)}${planL('ftags',d.ftags).filter(x=>x!=='JUMBO').map(x=>chip('ftags',x,x,d.ftags.includes(x))).join('')}${oth('ftags')}</div>`);
  h+=C('s3','Motion / shift','',`<div class="chips scroll">${chip('shift','t','Shift',d.shift)}${planL('motions',d.motion).map(x=>chip('motion',x,x,d.motion===x)).join('')}${oth('motions')}</div>`);
- h+=C('s5','Formation','',`<div class="chips">${planL('formations',d.formation).map(x=>chip('formation',x,x,d.formation===x)).join('')}${oth('formations')}</div>`);
- h+=C('s1','Direction','',`<div class="chips">${chip('dir','RT','RT',d.dir==='RT')}${chip('dir','LT','LT',d.dir==='LT')}</div>`);
+ h+=C('s3','Formation','',`<div class="chips scroll">${planL('formations',d.formation).map(x=>chip('formation',x,x,d.formation===x)).join('')}${oth('formations')}</div>`);
+ h+=C('s1','FIB','',`<div class="chips">${chip('fib','Y','Y',d.fib==='Y')}${chip('fib','N','N',d.fib==='N')}</div>`);
  h+=C('s5','Play tag(s)','',`<div class="chips scroll">${tagL.map(x=>chip('tags',x,x,d.tags.includes(x))).join('')}${oth(d.ptype==='run'?'tagsRun':'tagsPass')}${chip('rgs','t','RGS',d.rgs)}${chip('shot','t','Shot',d.shot)}</div>`);
  h+=C('s7','Concept',`<span class="chips">${chip('ptype','run','RUN',d.ptype==='run')}${chip('ptype','pass','PASS',d.ptype==='pass')}</span>`,`<div class="chips scroll">${conceptChips(calls)}${oth(d.ptype==='run'?'runs':'passes')}</div>`);
  if(d.ptype==='pass')h+=C('s12','Target (route)','',`<div class="chips scroll">${(L.targets||[]).map(x=>chip('target',x,x,d.target===x)).join('')}<button class="chip" data-a="tother">Other</button></div>`);
@@ -200,7 +201,7 @@ function renderLog(){const g=G(),s=summary();
   const E=eff(p),X=expl(p),r=RESULTS.find(x=>x[0]===p.result);
   h+=`<div class="play ${edit===i?'sel':''}" data-i="${i}"><div><div class="dd">${p.down}&amp;${p.dist}</div><div class="yl">${ylFmt(p.f)}</div></div>
   <div><div class="call">${p.call||'—'}${p.tag?' · '+p.tag:''}${E==='Y'?'<span class="badge b-e">EFF</span>':''}${X==='Y'?'<span class="badge b-x">EXP</span>':''}</div>
-  <div class="sub">${[p.ftag&&p.ftag,p.motion,p.shift&&'shift',p.formation&&p.formation+(p.dir?' '+p.dir:''),p.target&&'→ '+p.target,p.jumbo&&'jumbo',p.rgs&&'RGS',p.shot&&'shot'].filter(Boolean).join(' · ')}</div></div>
+  <div class="sub">${[p.ftag&&p.ftag,p.motion,p.shift&&'shift',p.hash&&p.hash+' hash',p.formation&&p.formation+(p.dir?' '+p.dir:''),p.fib&&'FIB '+p.fib,p.target&&'→ '+p.target,p.jumbo&&'jumbo',p.rgs&&'RGS',p.shot&&'shot'].filter(Boolean).join(' · ')}</div></div>
   <div><div class="gain ${p.gain>0?'pos':p.gain<0?'neg':''}">${p.gain>0?'+':''}${p.gain}</div><div class="sub" style="text-align:right">${p.td?'TD ':''}${r?r[1]:''}${p.player?' #'+p.player:''}</div></div></div>`});
  const el=document.getElementById('logp');el.innerHTML=h;el.scrollTop=el.scrollHeight}
 function renderHdr(){document.getElementById('gsel').innerHTML=A.games.map(g=>`<option value="${g.id}" ${g.id===A.cur?'selected':''}>${g.opp}</option>`).join('')}
@@ -215,6 +216,7 @@ document.getElementById('entry').addEventListener('click',ev=>{const b=ev.target
   else if(g==='tags'||g==='ftags'){const a=d[g]||(d[g]=[]),i=a.indexOf(v);i<0?a.push(v):a.splice(i,1)}
   else if(g==='result'){d.result=d.result===v?null:v;if(v==='INC')d.gain=0}
   else d[g]=d[g]===v?null:v;
+  if(g==='hash'||g==='fib'){if(d.hash==='M')d.fib=null;if(d.hash&&d.hash!=='M'&&d.fib)d.dir=((d.fib==='Y')===(d.hash==='L'))?'LT':'RT';else d.dir=null}
   renderEntry();return}
  if(a==='dm'){d.dist=Math.max(1,d.dist-1)}else if(a==='dp'){d.dist++}
  else if(a==='ym'||a==='yp'){const s=ylSide(d.f),n=ylNum(d.f)+(a==='yp'?1:-1);const m=Math.max(1,Math.min(50,n));d.f=s==='own'?m:100-m}
