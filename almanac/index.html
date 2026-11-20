@@ -171,7 +171,8 @@ function newGame(name,quiet){const g={id:'g'+Date.now(),opp:name,program:CONFIG.
 const G=()=>A.games.find(g=>g.id===A.cur);
 const esc2=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let d,edit=null;
-function freshDraft(prev){return{down:prev?prev.down:1,dist:prev?prev.dist:10,f:prev?prev.f:25,ptype:'run',formation:null,dir:null,motion:null,shift:false,jumbo:false,call:null,tag:null,ftags:[],tags:[],rgs:false,shot:false,result:null,gain:0,player:null,target:null,hash:null,fib:null,mpos:null,glf:null,passer:null,td:false}}
+function freshDraft(prev){return{down:prev?prev.down:1,dist:prev?prev.dist:10,f:prev?prev.f:25,ptype:'run',formation:null,dir:null,motion:null,shift:false,jumbo:false,call:null,tag:null,ftags:[],tags:[],rgs:false,shot:false,result:null,gain:0,player:null,target:null,hash:null,fib:null,mpos:null,glf:null,passer:lastPasser(),td:false}}
+function lastPasser(){try{const pl=G().plays;for(let i=pl.length-1;i>=0;i--)if(pl[i].k==='p'&&pl[i].passer)return pl[i].passer}catch(e){}return null}
 const ylNum=f=>f<=50?f:100-f, ylSide=f=>f<=50?'own':'opp';
 const ylFmt=f=>f===50?'50':f<50?'-'+f:'+'+(100-f);
 function plays(){return G().plays.filter(p=>p.k==='p')}
@@ -421,8 +422,8 @@ function reportData(){const R=rangePlays(),P=R.filter(p=>p.k==='p'),N=P.filter(p
  const E=N.filter(p=>eff(p)==='Y').length,X=N.filter(p=>expl(p)==='Y').length,yds=N.reduce((t,p)=>t+p.gain,0);
  const t3=N.filter(p=>p.down===3),t3c=t3.filter(p=>p.td||p.gain>=p.dist).length;
  let hit=0;const dr=drivesOf(R);for(const c of dr){let fd=0;for(let i=1;i<c.length;i++)if(c[i].down===1&&c[i-1].down!==1&&c[i-1].result!=='PEN')fd++;if(fd>=2||c.some(p=>p.td))hit++}
- const Q={};for(const p of N){if(!p.passer)continue;const q=Q[p.passer]||(Q[p.passer]={n:0,att:0,cmp:0,y:0,td:0,int:0,sk:0,sky:0,sc:0,scy:0,e:0,x:0});q.n++;if(eff(p)==='Y')q.e++;if(expl(p)==='Y')q.x++;
-  if(p.result==='COMP'){q.att++;q.cmp++;q.y+=p.gain;if(p.td)q.td++}else if(p.result==='INC')q.att++;else if(p.result==='INT'){q.att++;q.int++}else if(p.result==='SACK'){q.sk++;q.sky+=p.gain}else if(p.result==='SCRAM'||p.result==='RUSH'){q.sc++;q.scy+=p.gain}}
+ const Q={};for(const p of N){if(!p.passer)continue;const q=Q[p.passer]||(Q[p.passer]={n:0,att:0,cmp:0,y:0,td:0,int:0,sk:0,sky:0,sc:0,scy:0,e:0,x:0,r:0,re:0,pp:0,pe:0});q.n++;const ef=eff(p)==='Y';if(ef)q.e++;if(expl(p)==='Y')q.x++;if(p.ptype==='run'){q.r++;if(ef)q.re++}else{q.pp++;if(ef)q.pe++};
+  if(p.result==='COMP'){q.att++;q.cmp++;q.y+=p.gain;if(p.td)q.td++}else if(p.result==='INC')q.att++;else if(p.result==='INT'){q.att++;q.int++}else if(p.result==='SACK'){q.sk++;q.sky+=p.gain}else if(p.result==='SCRAM'||(p.result==='RUSH'&&p.player&&p.player===p.passer)){q.sc++;q.scy+=p.gain}}
  const T={};for(const p of N){if(!p.player)continue;const o=T[p.player]||(T[p.player]={c:0,r:0,t:0,y:0,e:0,n:0});o.n++;
   if(p.result==='RUSH'||p.result==='SCRAM'){o.c++;o.y+=p.gain}else if(p.result==='COMP'){o.r++;o.t++;o.y+=p.gain}else if(p.result==='INC'){o.t++}
   if(eff(p)==='Y')o.e++}
@@ -450,7 +451,7 @@ function reportHtml(){const D=reportData(),mx=Math.max(1,...D.T.map(([k,o])=>o.c
  if(!D.T.length)h+='<div class="note">No players logged yet.</div>';
  for(const [k,o] of D.T){const inc=o.t-o.r;h+=`<div class="dist"><b>#${k}</b><div class="bar"><i class="c1" style="width:${100*o.c/mx}%"></i><i class="c2" style="width:${100*o.r/mx}%"></i><i class="c3" style="width:${100*inc/mx}%"></i></div><div class="sub">${o.c} carries · ${o.r} catches · ${o.t} targets · ${o.y} yds${o.c+o.r?' ('+(o.y/(o.c+o.r)).toFixed(1)+'/touch)':''} · ${Math.round(100*o.e/o.n)}% eff</div></div>`}
  h+=`<div class="note">Blue = carries, green = catches, gray = incomplete targets.  ${D.unassigned?D.unassigned+' plays have no player logged.':''}</div>`;
- h+=`<div class="rh">Passers</div>`;if(!D.Q.length)h+='<div class="note">No passer logged yet.</div>';else h+=`<table class="t"><tr><th>QB</th><th>C/A</th><th>Yds</th><th>TD</th><th>INT</th><th>Sacks</th><th>Rush</th><th>Eff</th></tr>${D.Q.map(([k,q])=>`<tr><td>#${k}</td><td>${q.cmp}/${q.att}${q.att?' ('+Math.round(100*q.cmp/q.att)+'%)':''}</td><td>${q.y}${q.att?' ('+(q.y/q.att).toFixed(1)+'/att)':''}</td><td>${q.td}</td><td>${q.int}</td><td>${q.sk} (${q.sky})</td><td>${q.sc} (${q.scy})</td><td>${Math.round(100*q.e/q.n)}%</td></tr>`).join('')}</table>`;
+ h+=`<div class="rh">Passers</div>`;if(!D.Q.length)h+='<div class="note">No passer logged yet.</div>';else h+=`<table class="t"><tr><th>QB</th><th>Plays (R/P)</th><th>Run eff</th><th>Pass eff</th><th>C/A</th><th>Yds</th><th>TD</th><th>INT</th><th>Sacks</th><th>QB rush</th><th>Eff</th></tr>${D.Q.map(([k,q])=>`<tr><td>#${k}</td><td>${q.n} (${q.r}/${q.pp})</td><td>${q.r?Math.round(100*q.re/q.r)+'%':'–'}</td><td>${q.pp?Math.round(100*q.pe/q.pp)+'%':'–'}</td><td>${q.cmp}/${q.att}${q.att?' ('+Math.round(100*q.cmp/q.att)+'%)':''}</td><td>${q.y}${q.att?' ('+(q.y/q.att).toFixed(1)+'/att)':''}</td><td>${q.td}</td><td>${q.int}</td><td>${q.sk} (${q.sky})</td><td>${q.sc} (${q.scy})</td><td>${Math.round(100*q.e/q.n)}%</td></tr>`).join('')}</table>`;
  if(RMODE==='stats'){const N=rangePlays().filter(p=>p.k==='p'&&p.result!=='PEN');const row=(l,a)=>{const e=a.filter(p=>eff(p)==='Y').length,x=a.filter(p=>expl(p)==='Y').length,y=a.reduce((t,p)=>t+p.gain,0);return `<tr><td>${l}</td><td>${a.length}</td><td>${a.length?Math.round(100*e/a.length)+'%':'–'}</td><td>${a.length?(y/a.length).toFixed(1):'–'}</td><td>${x}</td></tr>`};
   h+=`<div class="rh">Splits</div><table class="t"><tr><th></th><th>Plays</th><th>Eff</th><th>Yds/play</th><th>Exp</th></tr>${row('Run',N.filter(p=>p.ptype==='run'))}${row('Pass',N.filter(p=>p.ptype==='pass'))}${[1,2,3,4].map(n=>row(['1st','2nd','3rd','4th'][n-1]+' down',N.filter(p=>p.down===n))).join('')}</table>`;return h}
  const tb=(v)=>D.calls.filter(c=>c.v===v);
