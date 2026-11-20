@@ -389,7 +389,7 @@ function buildDemo(quiet){
   const r=rnd();
   if(run){p.call=wp(['SOONERS','CAROLINA','TEXAS','PITT','G RAIDER','HOUSTON'],[5,4,3,2,2,1]);p.rgs=rnd()<.2;p.player=wp(['4','33','0','9','12'],[10,3,1,2,1]);p.result='RUSH';
    const q=rnd();p.gain=q<.12?-ri(1,3):q<.62?ri(1,5):q<.9?ri(6,10):ri(11,22);if(r<.04){p.result='PEN';p.gain=pick([-5,5]);p.player=null}}
-  else{p.call=wp(['MATCH','AGGIES','CUT CAL','RACE','BT BRONCHOS'],[4,3,3,2,2]);p.shot=rnd()<.12;p.player=wp(['11','2','5','8','13','14','15','48','30'],[4,4,3,2,2,2,2,1,1]);
+  else{p.call=wp(['MATCH','AGGIES','CUT CAL','RACE','BT BRONCHOS'],[4,3,3,2,2]);p.passer=wp(['12','9'],[5,1]);p.shot=rnd()<.12;p.player=wp(['11','2','5','8','13','14','15','48','30'],[4,4,3,2,2,2,2,1,1]);
    if(r<.07){p.result='SACK';p.gain=-ri(4,8);p.player=pick(['9','12'])}
    else if(r<.38){p.result='INC';p.gain=0}
    else if(r<.395){p.result='INT';p.gain=0}
@@ -413,6 +413,8 @@ function reportData(){const R=rangePlays(),P=R.filter(p=>p.k==='p'),N=P.filter(p
  const E=N.filter(p=>eff(p)==='Y').length,X=N.filter(p=>expl(p)==='Y').length,yds=N.reduce((t,p)=>t+p.gain,0);
  const t3=N.filter(p=>p.down===3),t3c=t3.filter(p=>p.td||p.gain>=p.dist).length;
  let hit=0;const dr=drivesOf(R);for(const c of dr){let fd=0;for(let i=1;i<c.length;i++)if(c[i].down===1&&c[i-1].down!==1&&c[i-1].result!=='PEN')fd++;if(fd>=2||c.some(p=>p.td))hit++}
+ const Q={};for(const p of N){if(!p.passer)continue;const q=Q[p.passer]||(Q[p.passer]={n:0,att:0,cmp:0,y:0,td:0,int:0,sk:0,sky:0,sc:0,scy:0,e:0,x:0});q.n++;if(eff(p)==='Y')q.e++;if(expl(p)==='Y')q.x++;
+  if(p.result==='COMP'){q.att++;q.cmp++;q.y+=p.gain;if(p.td)q.td++}else if(p.result==='INC')q.att++;else if(p.result==='INT'){q.att++;q.int++}else if(p.result==='SACK'){q.sk++;q.sky+=p.gain}else if(p.result==='SCRAM'||p.result==='RUSH'){q.sc++;q.scy+=p.gain}}
  const T={};for(const p of N){if(!p.player)continue;const o=T[p.player]||(T[p.player]={c:0,r:0,t:0,y:0,e:0,n:0});o.n++;
   if(p.result==='RUSH'||p.result==='SCRAM'){o.c++;o.y+=p.gain}else if(p.result==='COMP'){o.r++;o.t++;o.y+=p.gain}else if(p.result==='INC'){o.t++}
   if(eff(p)==='Y')o.e++}
@@ -428,7 +430,7 @@ function reportData(){const R=rangePlays(),P=R.filter(p=>p.k==='p'),N=P.filter(p
  const gp=(G().gp&&G().gp.length)?G().gp:[...A.lists.runs,...A.lists.passes,...(A.lists.owcs||[])];
  const called=new Set(G().plays.filter(p=>p.k==='p'&&(p.call||p.owc)).flatMap(p=>[p.call,p.owc]).filter(Boolean).map(x=>x.toUpperCase()));
  return{n:N.length,E,X,ep:pc(E,N.length),xp:pc(X,N.length),yp:N.length?yds/N.length:0,runs:N.filter(p=>p.ptype==='run').length,passes:N.filter(p=>p.ptype==='pass').length,t3:t3.length,t3c,fd:hit,drn:dr.length,
-  fams,ows,GL,T:Object.entries(T).sort((a,b)=>(b[1].c+b[1].r)-(a[1].c+a[1].r)||b[1].t-a[1].t),calls,notCalled:gp.filter(x=>!called.has(x.toUpperCase())),unassigned:N.filter(p=>!p.player&&['RUSH','SCRAM','COMP','INC'].includes(p.result)).length}}
+  Q:Object.entries(Q).sort((a,b)=>b[1].n-a[1].n),fams,ows,GL,T:Object.entries(T).sort((a,b)=>(b[1].c+b[1].r)-(a[1].c+a[1].r)||b[1].t-a[1].t),calls,notCalled:gp.filter(x=>!called.has(x.toUpperCase())),unassigned:N.filter(p=>!p.player&&['RUSH','SCRAM','COMP','INC'].includes(p.result)).length}}
 const pct=v=>v==null?'–':v+'%';
 function reportHtml(){const D=reportData(),mx=Math.max(1,...D.T.map(([k,o])=>o.c+o.r+(o.t-o.r)));
  const F=[['all','All'],['1h','1st half'],['2h','2nd half'],['last','Last drive']];
@@ -439,7 +441,8 @@ function reportHtml(){const D=reportData(),mx=Math.max(1,...D.T.map(([k,o])=>o.c
  <div class="rh">Who touched the ball</div>`;
  if(!D.T.length)h+='<div class="note">No players logged yet.</div>';
  for(const [k,o] of D.T){const inc=o.t-o.r;h+=`<div class="dist"><b>#${k}</b><div class="bar"><i class="c1" style="width:${100*o.c/mx}%"></i><i class="c2" style="width:${100*o.r/mx}%"></i><i class="c3" style="width:${100*inc/mx}%"></i></div><div class="sub">${o.c} carries · ${o.r} catches · ${o.t} targets · ${o.y} yds${o.c+o.r?' ('+(o.y/(o.c+o.r)).toFixed(1)+'/touch)':''} · ${Math.round(100*o.e/o.n)}% eff</div></div>`}
- h+=`<div class="note">Blue = carries, green = catches, gray = incomplete targets. Passer isn't tracked. ${D.unassigned?D.unassigned+' plays have no player logged.':''}</div>`;
+ h+=`<div class="note">Blue = carries, green = catches, gray = incomplete targets.  ${D.unassigned?D.unassigned+' plays have no player logged.':''}</div>`;
+ h+=`<div class="rh">Passers</div>`;if(!D.Q.length)h+='<div class="note">No passer logged yet.</div>';else h+=`<table class="t"><tr><th>QB</th><th>C/A</th><th>Yds</th><th>TD</th><th>INT</th><th>Sacks</th><th>Rush</th><th>Eff</th></tr>${D.Q.map(([k,q])=>`<tr><td>#${k}</td><td>${q.cmp}/${q.att}${q.att?' ('+Math.round(100*q.cmp/q.att)+'%)':''}</td><td>${q.y}${q.att?' ('+(q.y/q.att).toFixed(1)+'/att)':''}</td><td>${q.td}</td><td>${q.int}</td><td>${q.sk} (${q.sky})</td><td>${q.sc} (${q.scy})</td><td>${Math.round(100*q.e/q.n)}%</td></tr>`).join('')}</table>`;
  const tb=(v)=>D.calls.filter(c=>c.v===v);
  h+=`<div class="rh">Green light formations</div>${D.GL.n?`<table class="t"><tr><th>GLF</th><th>Snaps</th><th>Eff</th></tr><tr><td>Stayed in it (bubble / its own play)</td><td>${D.GL.st}</td><td>${D.GL.st?Math.round(100*D.GL.ste/D.GL.st)+"%":"–"}</td></tr><tr><td>Shifted out</td><td>${D.GL.se}</td><td>${D.GL.se?Math.round(100*D.GL.see/D.GL.se)+"%":"–"}</td></tr></table>`:'<div class="note">No green light formations yet.</div>'}
  <div class="rh">Calls: keep, stop, watch</div><table class="t"><tr><th>Call</th><th>Snaps</th><th>Eff</th><th>Avg</th><th>Exp</th><th></th></tr>${D.calls.map(c=>`<tr><td>${c.call}</td><td>${c.n}</td><td>${c.ep}%</td><td>${c.avg>0?'+':''}${c.avg.toFixed(1)}</td><td>${c.x}</td><td class="${c.v==='KEEP'?'keep':c.v==='STOP'?'stop':'mid'}">${c.v}</td></tr>`).join('')||'<tr><td colspan=6 class="note">No calls yet.</td></tr>'}</table>
@@ -449,7 +452,7 @@ function reportHtml(){const D=reportData(),mx=Math.max(1,...D.T.map(([k,o])=>o.c
  <div class="rh">Not called yet (${D.notCalled.length})</div><div class="chips">${D.notCalled.map(x=>`<span class="chip" style="min-height:0;padding:4px 9px;font-weight:500">${x}</span>`).join('')||'<span class="note">Everything on the plan has been called.</span>'}</div>
  <div class="note">${G().gp&&G().gp.length?'From this week\'s gameplan list.':'No gameplan list set (Setup), so this is every run and pass button. Whole game to date.'}</div>`;
  return h}
-function reportText(){const D=reportData();return [G().opp+' — '+RF,`Plays ${D.n} (${D.runs}R/${D.passes}P) | Eff ${pct(D.ep)} | Exp ${pct(D.xp)} | 2FDOS ${D.fd}/${D.drn} | 3rd ${D.t3c}/${D.t3} | ${D.yp.toFixed(1)} yds/play`,'','TOUCHES',...D.T.map(([k,o])=>`#${k}: ${o.c} car, ${o.r} rec, ${o.t} tgt, ${o.y} yds`),'','KEEP: '+(D.calls.filter(c=>c.v==='KEEP').map(c=>c.call).join(', ')||'-'),'STOP: '+(D.calls.filter(c=>c.v==='STOP').map(c=>c.call).join(', ')||'-'),'ONE WORDS: '+(D.ows.map(c=>`${c.ow} ${c.n} (${c.ep}% eff)`).join(', ')||'-'),'BY CONCEPT: '+(D.fams.map(c=>`${c.fam} ${c.n} (${c.ep}% eff)`).join(', ')||'-'),'NOT CALLED: '+(D.notCalled.join(', ')||'-')].join('\n')}
+function reportText(){const D=reportData();return [G().opp+' — '+RF,`Plays ${D.n} (${D.runs}R/${D.passes}P) | Eff ${pct(D.ep)} | Exp ${pct(D.xp)} | 2FDOS ${D.fd}/${D.drn} | 3rd ${D.t3c}/${D.t3} | ${D.yp.toFixed(1)} yds/play`,'','PASSERS',...D.Q.map(([k,q])=>`#${k}: ${q.cmp}/${q.att}, ${q.y} yds, ${q.td} TD, ${q.int} INT, ${q.sk} sacks (${q.sky}), ${q.sc} rush (${q.scy}), ${Math.round(100*q.e/q.n)}% eff`),'','TOUCHES',...D.T.map(([k,o])=>`#${k}: ${o.c} car, ${o.r} rec, ${o.t} tgt, ${o.y} yds`),'','KEEP: '+(D.calls.filter(c=>c.v==='KEEP').map(c=>c.call).join(', ')||'-'),'STOP: '+(D.calls.filter(c=>c.v==='STOP').map(c=>c.call).join(', ')||'-'),'ONE WORDS: '+(D.ows.map(c=>`${c.ow} ${c.n} (${c.ep}% eff)`).join(', ')||'-'),'BY CONCEPT: '+(D.fams.map(c=>`${c.fam} ${c.n} (${c.ep}% eff)`).join(', ')||'-'),'NOT CALLED: '+(D.notCalled.join(', ')||'-')].join('\n')}
 function openReport(){modal(reportHtml());document.getElementById('mbox').classList.add('wide');wireReport()}
 function wireReport(){const b=document.getElementById('mbox');b.querySelectorAll('[data-rf]').forEach(x=>x.onclick=()=>{RF=x.dataset.rf;b.innerHTML=reportHtml();wireReport()});
  document.getElementById('rprint').onclick=()=>window.print();
