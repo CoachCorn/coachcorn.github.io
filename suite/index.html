@@ -58,7 +58,7 @@ button,input{font:inherit;color:var(--tx)}
 #bar{display:none;align-items:center;gap:8px;padding:6px 8px;padding-top:max(6px,env(safe-area-inset-top));background:#070c12;border-bottom:1px solid var(--line);flex:none}
 #bar .home{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:6px 12px;min-height:36px;font-weight:700;text-transform:uppercase;font-size:13px}
 #bar .ttl{font-weight:800;text-transform:uppercase;letter-spacing:.05em;font-size:13px}
-#bar .sp{flex:1}#bar .st{font-size:11px;color:var(--mut)}
+#bar .sp{flex:1}.demob{display:none;background:#f2b632;color:#1a1300;font-weight:800;font-size:11px;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:4px 10px;border:0}body.isdemo .demob{display:inline-block}#pname .demob{margin-left:0}#bar .st{font-size:11px;color:var(--mut)}
 #views{flex:1;position:relative;min-height:0;display:none}
 #views iframe,#views .soonv{position:absolute;inset:0;width:100%;height:100%;border:0;display:none;background:var(--bg)}
 #views .on{display:block}
@@ -78,7 +78,7 @@ details{margin-top:14px}summary{color:var(--mut);font-size:13px}
  <div class="hero"><img class="k" src="icon-192.png" alt=""><div class="brand">KDNCE</div><div><span class="prog" id="pname"></span></div><div class="date" id="psub"></div></div>
  <div class="wrap"><div class="week" id="week"></div><div class="tiles" id="tiles"></div><div id="syncline"></div></div>
 </div>
-<div id="bar"><button class="home" id="homebtn">‹ Home</button><span class="ttl" id="ttl"></span><span class="sp"></span><span class="st" id="st"></span></div>
+<div id="bar"><button class="home" id="homebtn">‹ Home</button><span class="ttl" id="ttl"></span><span class="sp"></span><button class="demob" id="demob1">Demo mode</button><span class="st" id="st"></span></div>
 <div id="views"></div>
 <div class="modal" id="modal"><div class="box" id="mbox"></div></div>
 <script src="../shared/glossary.js"></script>
@@ -137,7 +137,7 @@ function nextGame(){try{const p=(JSON.parse(localStorage.getItem('suite_sync'))|
  const today=new Date(new Date().toDateString()+' 12:00');const r=S.rows.find(r=>r.date&&new Date(r.date+'T12:00')>=today&&!(r.us!==''&&r.us!=null));if(!r)return null;
  const d=Math.round((new Date(r.date+'T12:00')-today)/864e5);return{opp:r.opp,ha:r.ha,date:r.date,logo:r.logo,color:r.color,when:d===0?'Today':d===1?'Tomorrow':'in '+d+' days'}}catch(e){return null}}
 function renderHome(){const s=SUITESYNC.status(),n=reviewCount(),ai=almInfo(),ng=nextGame();
- $('pname').textContent=s.signedIn&&s.name?s.name+' Football':'';
+ document.body.classList.toggle('isdemo',!s.signedIn);$('pname').innerHTML=s.signedIn&&s.name?esc(s.name)+' Football':'<button class="demob" id="demob2">Demo mode</button>';if($('demob2'))$('demob2').onclick=signInModal;
  $('psub').textContent=new Date().toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'});
  const o=seasonO(),dd=ng?theirD(ng.opp):null,ini=n2=>String(n2).split(/\s+/).map(w=>w[0]).join('').slice(0,3).toUpperCase();
  const card=`<div class="gcard"><div class="lab2">Upcoming game</div>${ng?`<div class="gtop"><span class="lg" style="background:${ng.logo?'#fff':(ng.color||'#3b4b5c')}">${ng.logo?`<img src="${ng.logo}" alt="">`:esc(ini(ng.opp))}</span><div><div class="op"><small>${ng.ha==='A'?'at':'vs.'}</small>${esc(ng.opp)}</div><div class="wh">${new Date(ng.date+'T12:00').toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'})} · ${ng.ha==='A'?'Away':ng.ha==='N'?'Neutral':'Home'}</div></div><span class="cd">${ng.when}</span></div>`
@@ -154,9 +154,9 @@ function renderHome(){const s=SUITESYNC.status(),n=reviewCount(),ai=almInfo(),ng
  $('syncbtn').onclick=signInModal;
  document.querySelectorAll('[data-side]').forEach(b=>b.onclick=()=>setSide(b.dataset.side))}
 function setSide(v){SIDE=v;try{localStorage.setItem('suite_side',v)}catch(e){}renderHome()}
-function barStatus(){const s=SUITESYNC.status();$('st').textContent=!navigator.onLine?'Offline':s.busy?'Syncing…':s.error?'Sync problem':s.signedIn?'Synced':''}
+function barStatus(){const s=SUITESYNC.status();document.body.classList.toggle('isdemo',!s.signedIn);$('st').textContent=!navigator.onLine?'Offline':s.busy?'Syncing…':s.error?'Sync problem':s.signedIn?'Synced':''}
 $('tiles').onclick=e=>{const b=e.target.closest('[data-t]');if(b)open(b.dataset.t)};
-$('homebtn').onclick=goHome;
+$('homebtn').onclick=goHome;$('demob1').onclick=()=>signInModal();
 /* A tool can ask the shell to open another tool, e.g. the Almanac's Glossary button. */
 function toFilm(txt){open('film');const f=made.film;let tries=0;const go=()=>{let w=null;try{w=f.contentWindow;if(!w||!w.takeAlmanac)throw 0}catch(e){if(++tries<40)return setTimeout(go,250);return}w.postMessage({almanac:txt},location.origin)};go()}
 addEventListener('message',e=>{if(e.origin!==location.origin||!e.data)return;if(e.data.toFilm){toFilm(e.data.toFilm);return}if(!e.data.open)return;open(e.data.open);
