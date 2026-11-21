@@ -109,7 +109,7 @@ function almInfo(){try{const A=JSON.parse(localStorage.getItem('almanac_v1'));co
 function renderHome(){const s=SUITESYNC.status(),n=reviewCount(),ai=almInfo();
  $('pname').textContent=s.signedIn&&s.name?s.name+' Football':'';
  $('psub').textContent=new Date().toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'});
- const pills=[];if(ai&&!ai.demo){pills.push(`<span class="pill">Game <b>${esc(ai.opp)}</b></span>`,`<span class="pill"><b>${ai.n}</b> play${ai.n===1?'':'s'} logged</span>`);pills.push(`<span class="pill">Scout <b>${ai.scout?esc(ai.scout):'not loaded'}</b></span>`)}
+ const pills=[];if(ai&&!ai.demo){pills.push(`<span class="pill">Game <b>${esc(ai.opp)}</b></span>`);pills.push(`<span class="pill">Scout <b>${ai.scout?esc(ai.scout):'not loaded'}</b></span>`)}
  if(n)pills.push(`<span class="pill"><b style="color:var(--warn)">${n}</b> glossary terms to review</span>`);
  $('week').innerHTML=pills.join('');
  const desc=t=>t.id==='almanac'&&ai&&!ai.demo?`${esc(ai.opp)} · ${ai.n} play${ai.n===1?'':'s'}${ai.scout?' · scout loaded':''}`:t.desc;

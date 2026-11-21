@@ -1,4 +1,4 @@
-const V='suite-v10';
+const V='suite-v11';
 const FILES=['./','index.html','glossary.html','manifest.webmanifest','icon-192.png','icon-512.png','icon-180.png','turf.jpg','../shared/glossary.js','sync.js'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(V).then(c=>c.addAll(FILES)));self.skipWaiting()});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x.indexOf('suite-')===0&&x!==V).map(x=>caches.delete(x)))).then(()=>self.clients.claim()))});
