@@ -158,18 +158,24 @@ const SLOTS=[['ftag','Formation tag',['ftag']],['motion','Motion / Shift',['moti
 function samplePlan(){const cols=[['Jab','Favorite'],['Cross','Motion / formation tag'],['Counter',''],['Knock out!','Gadget / shot']].map(([h,s])=>({id:uid('c'),head:h,sub:s}));
  const rows=['Field run','Bdy run','Pass 1','Pass 2'].map(l=>({id:uid('r'),label:l}));
  const mk=(name,pers,pd,data,lines,tw)=>{const d=baseDraw();if(tw)tw(d.t);d.l=lines||[];const cells={};
-  data.forEach((r,ri)=>r.forEach((v,ci)=>{if(v)cells[rows[ri].id+'|'+cols[ci].id]={s:{concept:v},n:''}}));
+  data.forEach((r,ri)=>r.forEach((v,ci)=>{if(!v)return;const sl=Array.isArray(v)?{ftag:v[0],motion:v[1],concept:v[2],tag:v[3]}:{concept:v};Object.keys(sl).forEach(k=>{if(!sl[k])delete sl[k]});cells[rows[ri].id+'|'+cols[ci].id]={s:sl,n:''}}));
   return{id:uid('b'),name,pers,pd,draw:d,cells}};
  return{id:uid('p'),upd:Date.now(),sample:true,name:'Sample week (edit or delete)',cols,rows,blocks:[
   mk('Crown LT','—',{box:'',front:'',cov:'',blitz:''},[['MASH SNRS','Z OUT','',''],['LA','HOT S','MIRROR SNRS','MAP G VEGAS'],['BROWN LAP','','','CURL'],['AGGIES','','','']],
    [{pts:[[165,150],[300,150]],dot:1,col:'#f2b632',arrow:1},{pts:[[456,112],[456,50]],dot:0,col:'#ffffff',arrow:1}]),
   mk('Zap Joker','—',{box:'',front:'',cov:'Star 53%',blitz:''},[['GANG RAIDER','BEHIND','',''],['MIRROR SNRS','SPRAY','',''],['LANCE CAL','','','WHEEL'],['LASR RCE','','','STANFORD']]),
-  mk('Demo formation 1','11',{box:'',front:'',cov:'',blitz:''},[['MASH','CURL','',''],['LA','','',''],['SPACING','Z OUT','','WHEEL'],['','','','']],
-   [],
-   t=>{t.Y.on=1;t.H.on=0}),
-  mk('Demo formation 2','12',{box:'',front:'',cov:'',blitz:''},[['','HEAVY','',''],['LA','HEAVY','',''],['MASH','','','CURL'],['','','','']],
-   [],
-   t=>{t.RT.x=t.LT.x-30;t.Y.on=1;t.Y.x=330;t.Y.y=112})]}}
+  mk('Demo formation 1','11',{box:'',front:'',cov:'',blitz:''},[
+    ['Inside Zone',['','Jet','Inside Zone',''],['','','Inside Zone','RPO'],['Trips','','Toss Sweep','Bubble']],
+    ['Power',['Tight','','Power',''],['','Orbit','Power','Naked'],'Draw'],
+    ['Mesh',['','Jet','Mesh',''],['','','Mesh','Play-Action'],['','','Four Verts','Fade']],
+    ['Stick',['Bunch','','Stick',''],['','Trade','Stick','Boot'],'Y-Cross']],
+   [],t=>{t.Y.on=1;t.H.on=0}),
+  mk('Demo formation 2','12',{box:'',front:'',cov:'',blitz:''},[
+    ['Outside Zone',['Heavy','','Outside Zone',''],['','Orbit','Outside Zone','RPO'],'Counter'],
+    ['Duo',['Heavy','','Duo','Play-Action'],['','Jet','Duo',''],['Wing','','Iso','Naked']],
+    ['Levels',['','Fly','Levels',''],['Bunch','','Levels','Boot'],['','','Four Verts','']],
+    ['Smash',['Trips','Orbit','Smash',''],['Tight','','Snag',''],'Dagger']],
+   [],t=>{t.RT.x=t.LT.x-30;t.Y.on=1;t.Y.x=330;t.Y.y=112})]}}
 
 /* ---------- main render ---------- */
 function cellHTML(c){if(!c)return`<div class="cc empty">+</div>`;const s=c.s||{},main=s.concept||s.tag||s.formation||'',extra=SLOTS.filter(x=>s[x[0]]&&s[x[0]]!==main).map(x=>s[x[0]]);
