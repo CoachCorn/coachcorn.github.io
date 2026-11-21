@@ -72,6 +72,7 @@ table.t td{padding:6px 4px;border-top:1px solid var(--line)}
 .half{text-align:center;color:var(--warn);font-weight:800;margin:10px 0;padding:6px;border:1px dashed var(--warn);border-radius:8px}
 @media print{:root{--bg:#fff;--card:#fff;--line:#ccc;--tx:#000;--mut:#555}header,main,.noprint{display:none!important}.modal{position:static;background:none;display:block}.box{border:none;max-height:none!important;width:100%!important}body{height:auto}}
 .card .row{margin:0}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}.look{background:#16222f;border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-width:0}.lk1{font-size:15px}.lk2{font-size:12px;color:var(--mut);margin-top:2px}.mut{color:var(--mut);font-size:12px}.note.fb{color:var(--warn)}
 .lab{margin-bottom:3px;align-items:center}
 .chips{gap:4px}
 .chip{padding:5px 9px;min-height:36px;min-width:36px;font-size:14px}
@@ -101,6 +102,7 @@ html,button,.chip,input,select{touch-action:manipulation;-webkit-tap-highlight-c
  <button class="btn pri" id="rep">Report</button>
  <button class="btn" id="send" title="Send this game to Film Room">→ Film Room</button>
  <button class="btn" id="exp">Export</button>
+ <button class="btn" id="scoutbtn">Scout</button>
  <button class="btn" id="gpbtn">Gameplan</button>
  <button class="btn" id="setup">Setup</button>
 </header>
@@ -239,6 +241,7 @@ function renderEntry(){const L=A.lists,e=edit!==null;
  h+=C('s3','Motion / Shift','',`${sbox('msrch','Search…',SQ.motions)}<div class="chips scroll" id="lschips_motions">${lsChips('motions')}</div>`);
  h+=C('s3','Formation','',`${sbox('frmsrch','Search…',SQ.formations)}<div class="chips scroll" id="lschips_formations">${lsChips('formations')}</div>`);
  h+=d.hash==='M'?C('s1','Dir','',`<div class="chips">${chip('dir','LT','LT',d.dir==='LT')}${chip('dir','RT','RT',d.dir==='RT')}</div>`):C('s1','FIB','',`<div class="chips">${chip('fib','Y','Y',d.fib==='Y')}${chip('fib','N','N',d.fib==='N')}</div>`);
+ h+=scoutCard();
  h+=C('s12','Green light formation (GLF)',d.glf?`<span class="note">${d.formation&&d.formation.toUpperCase()!==d.glf?'shifted out to '+d.formation:'stayed in it'}</span>`:'',`${csbox('glf','Search green light formations')}<div class="chips" id="cc_glf">${(L.glfs||[]).map(x=>chip('glf',x,x,d.glf===x)).join('')}</div>`);
  h+=C('s12','Play tag(s)','',`<input id="tsrch" type="search" placeholder="Search all tags — commas for several, Enter adds" autocomplete="off" autocapitalize="characters" value="${TQ.replace(/"/g,'')}" style="width:100%;margin-bottom:6px;padding:8px 10px;font-size:16px;background:transparent;color:var(--tx);border:1px solid var(--line);border-radius:8px"><div class="chips scroll" id="tchips">${tagChipsHtml()}</div>`);
  h+=C('s12','One word','',`${csbox('ow','Search one words')}<div class="owg" id="cc_ow">${owL.map(x=>chip('owc',x,x,d.owc===x)).join('')}</div>`);
@@ -267,7 +270,8 @@ function renderLog(){const g=G(),s=summary();
   <div class="sub">${[p.ftag&&p.ftag,motionFull(p),p.shift&&'shift',p.hash&&p.hash+' hash',p.formation&&p.formation+(p.dir?' '+p.dir:''),p.fib&&'FIB '+p.fib,p.glf&&'GLF '+p.glf+(p.glfOut?' (shifted out)':''),p.target&&'→ '+p.target,p.jumbo&&'jumbo',p.rgs&&'RGS',p.shot&&'shot'].filter(Boolean).join(' · ')}</div></div>
   <div><div class="gain ${p.gain>0?'pos':p.gain<0?'neg':''}">${p.gain>0?'+':''}${p.gain}</div><div class="sub" style="text-align:right">${p.td?'TD ':''}${r?r[1]:''}${p.passer?' QB#'+p.passer+' ':''}${p.player?' #'+p.player:''}</div></div></div>`});
  const el=document.getElementById('logp');el.innerHTML=h;el.scrollTop=el.scrollHeight}
-function renderHdr(){const gb=document.getElementById('gpbtn');if(gb){const on=G()&&G().plan&&Object.values(G().plan).some(a=>a&&a.length);gb.textContent=on?'Gameplan ✓':'Gameplan';gb.classList.toggle('pri',!!on)}
+function renderHdr(){const sb=document.getElementById('scoutbtn');if(sb){const on=!!(G()&&G().scout);sb.textContent=on?'Scout ✓':'Scout';sb.classList.toggle('pri',on)}
+const gb=document.getElementById('gpbtn');if(gb){const on=G()&&G().plan&&Object.values(G().plan).some(a=>a&&a.length);gb.textContent=on?'Gameplan ✓':'Gameplan';gb.classList.toggle('pri',!!on)}
 document.getElementById('gsel').innerHTML=A.games.map(g=>`<option value="${g.id}" ${g.id===A.cur?'selected':''}>${g.opp}</option>`).join('')}
 function renderAll(){renderHdr();renderEntry();renderLog()}
 function nextSB(id){const a=[...document.querySelectorAll('#entry input[type=search]')].map(e=>e.id),i=a.indexOf(id);return i>=0&&i<a.length-1?a[i+1]:null}
@@ -337,6 +341,108 @@ function rows(){const out=[HEAD];for(const p of G().plays){if(p.k==='q'){out.pus
 const csv=()=>rows().map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
 
 const motionFull=p=>p.motion?((p.mpos?p.mpos+' ':'')+p.motion):'';
+/* ===== Opponent scout: import the scout workbook (.xlsx / .csv) and predict the defense ===== */
+const SC_MIN=3; // fewest plays that count as a usable sample
+const ZONES=[['BACKED UP',20],['OWN 20–40',40],['OPEN FIELD',60],['PLUS TERRITORY',80],['OPP 20–10',90],['RED ZONE',99]]; // upper edge = Ball on (1-99, own side first)
+const zoneOf=f=>f==null?null:(ZONES.find(z=>f<=z[1])||ZONES[5])[0];
+const ZN_KEY={'BACKE':'BACKED UP','OWN 2':'OWN 20–40','OPEN ':'OPEN FIELD','PLUS ':'PLUS TERRITORY','OPP 2':'OPP 20–10','RED Z':'RED ZONE'};
+const znNorm=s=>ZN_KEY[String(s||'').toUpperCase().slice(0,5)]||null;
+const dbk=(dn,di)=>(dn===1||dn>=4)?'*':(di<=3?'1-3':di<=6?'4-6':'7+');
+const normFm=s=>String(s||'').toUpperCase().replace(/\s+(LT|RT|LEFT|RIGHT)\.?$/,'').replace(/\s+/g,' ').trim();
+/* Front names -> structural technique codes (locked with Noah). BEAR / OVER / UNDER exist in both an odd and an even version. */
+const TECH={odd:{BASE:'5-0-5',TITE:'4-0-4',HEAVY:'4i-0-4i',BEAR:'3-0-3',MASS:'2-0-2',OVER:'4i-1-5',UNDER:'5-1-4i',WIDE:'9-0-9'},
+ even:{INLAW:'4-2i-2i-4',OUTLAW:'5-3-3-5',VIPER:'4-2-2-4',LOAD:'9-3-1-5',CHOKE:'4-0-4-9',BEAR:'5-3-0-3-5',OVER:'4-2-3-5',UNDER:'5-3-2-4'}};
+function frontCode(name,rush){const t=String(name||'').toUpperCase().split(/\s+/).filter(x=>x&&x!=='DBL'),mods=t.filter(x=>x==='MUG'||x==='BOSS'),base=t.find(x=>x!=='MUG'&&x!=='BOSS');if(!base)return'';
+ const o=TECH.odd[base],e=TECH.even[base];const c=(o&&e)?(+rush===3?o:''):(o||e||'');return c?c+(mods.length?' '+mods.join(' '):''):''}
+/* --- file reading: .xlsx is a zip of XML files; no library needed --- */
+const colIdx=s=>{let n=0;for(const ch of s)n=n*26+ch.charCodeAt(0)-64;return n-1};
+async function inflateRaw(raw){if(typeof DecompressionStream==='undefined')throw new Error('This browser cannot open .xlsx files. On the Raw Data tab use File > Download > CSV and pick that instead.');
+ const ds=new DecompressionStream('deflate-raw'),w=ds.writable.getWriter();w.write(raw);w.close();return new Uint8Array(await new Response(ds.readable).arrayBuffer())}
+async function unzipX(buf){const u=new Uint8Array(buf),dv=new DataView(buf);let e=u.length-22;while(e>=0&&dv.getUint32(e,true)!==0x06054b50)e--;if(e<0)throw new Error('That does not look like an .xlsx file');
+ const n=dv.getUint16(e+10,true);let p=dv.getUint32(e+16,true);const out={};
+ for(let i=0;i<n;i++){if(dv.getUint32(p,true)!==0x02014b50)break;const meth=dv.getUint16(p+10,true),csz=dv.getUint32(p+20,true),nl=dv.getUint16(p+28,true),el=dv.getUint16(p+30,true),cl=dv.getUint16(p+32,true),lo=dv.getUint32(p+42,true);
+  const name=new TextDecoder().decode(u.subarray(p+46,p+46+nl));p+=46+nl+el+cl;
+  if(!/^xl\/(workbook\.xml|_rels\/workbook\.xml\.rels|sharedStrings\.xml|worksheets\/[^\/]+\.xml)$/.test(name))continue;
+  const ln=dv.getUint16(lo+26,true),le=dv.getUint16(lo+28,true),ds=lo+30+ln+le,raw=u.subarray(ds,ds+csz);out[name]=meth===0?raw:await inflateRaw(raw)}
+ return out}
+const xmlDoc=u8=>new DOMParser().parseFromString(new TextDecoder().decode(u8),'application/xml');
+async function readXlsx(buf){const z=await unzipX(buf);if(!z['xl/workbook.xml'])throw new Error('No workbook found in that file');
+ const wb=xmlDoc(z['xl/workbook.xml']),rel=xmlDoc(z['xl/_rels/workbook.xml.rels']),rmap={};
+ for(const r of rel.getElementsByTagName('Relationship'))rmap[r.getAttribute('Id')]=r.getAttribute('Target');
+ const RNS='http://schemas.openxmlformats.org/officeDocument/2006/relationships',ss=[];
+ if(z['xl/sharedStrings.xml'])for(const si of xmlDoc(z['xl/sharedStrings.xml']).getElementsByTagName('si')){const ts=[];for(const c of si.children){if(c.tagName==='t')ts.push(c);else if(c.tagName==='r')ts.push(...c.getElementsByTagName('t'))}ss.push(ts.map(t=>t.textContent).join(''))}
+ const sheets=[...wb.getElementsByTagName('sheet')].map(s=>{const id=s.getAttribute('r:id')||s.getAttributeNS(RNS,'id');return{name:s.getAttribute('name'),path:'xl/'+String(rmap[id]||'').replace(/^\/?(xl\/)?/,'')}});
+ const grid=u8=>{const doc=xmlDoc(u8),rows=[];for(const r of doc.getElementsByTagName('row')){const ri=+r.getAttribute('r')-1,arr=[];
+   for(const c of r.getElementsByTagName('c')){const ci=colIdx((c.getAttribute('r')||'').replace(/\d+/,'')),t=c.getAttribute('t'),ve=c.getElementsByTagName('v')[0];let v='';
+    if(t==='inlineStr')v=[...c.getElementsByTagName('t')].map(x=>x.textContent).join('');else if(ve){v=ve.textContent;if(t==='s')v=ss[+v]==null?'':ss[+v];else if(t==='b')v=v==='1'?'TRUE':'FALSE'}arr[ci]=v}
+   rows[ri]=arr}return rows};
+ const pick=sheets.find(s=>/raw\s*data/i.test(s.name));const order=pick?[pick,...sheets.filter(s=>s!==pick)]:sheets;
+ for(const s of order){if(!z[s.path])continue;const g=grid(z[s.path]);if(findHeader(g)>=0)return{rows:g,sheet:s.name}}
+ throw new Error('Could not find a sheet with a PLAY # column. Pick the Raw Data tab export.')}
+function parseCsv(t){const rows=[];let r=[],c='',q=false;for(let i=0;i<t.length;i++){const ch=t[i];if(q){if(ch==='"'){if(t[i+1]==='"'){c+='"';i++}else q=false}else c+=ch}
+ else if(ch==='"')q=true;else if(ch===','){r.push(c);c=''}else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&t[i+1]==='\n')i++;r.push(c);rows.push(r);r=[];c=''}else c+=ch}
+ if(c!==''||r.length){r.push(c);rows.push(r)}return rows}
+const cellS=v=>String(v==null?'':v).trim();
+function findHeader(g){for(let i=0;i<Math.min(g.length,12);i++){if((g[i]||[]).some(c=>cellS(c).toUpperCase()==='PLAY #'))return i}return -1}
+/* --- turn the sheet rows into defensive plays, split into opponent blocks --- */
+function parseScout(g){const hi=findHeader(g),H={};(g[hi]||[]).forEach((c,i)=>{const k=cellS(c).toUpperCase();if(k&&H[k]==null)H[k]=i});
+ const need=['DN','DIST','OFF FORM','COVERAGE'],miss=need.filter(k=>H[k]==null);if(miss.length)throw new Error('Missing columns: '+miss.join(', '));
+ const pn=H['PLAY #'],get=(r,k)=>H[k]==null?'':cellS(r[H[k]]);
+ const blocks=[];let cur=null,last=-1,skipped=0,zoneMis=0,zoneChk=0;
+ const open=(name,lab)=>{cur={name,labeled:lab,rows:[],first:null,lastPn:null};blocks.push(cur);last=-1};
+ for(let i=hi+1;i<g.length;i++){const r=g[i];if(!r)continue;const cells=r.map(cellS),first=cells[pn],others=cells.filter((x,j)=>j!==pn&&x!=='').length;
+  if(first!==''&&isNaN(+first)&&others===0){open(first,true);continue}
+  if(first===''||isNaN(+first))continue;const pnum=+first;
+  const odk=get(r,'ODK').toUpperCase();if(H['ODK']!=null&&odk&&odk!=='D'){skipped++;continue}
+  if(!cur||pnum<last)open('',false);last=pnum;
+  const dn=+get(r,'DN'),di=+get(r,'DIST');if(!(dn>=1&&dn<=4)||isNaN(di)){skipped++;continue}
+  const f=yardF(get(r,'YARD LN')),zs=znNorm(get(r,'FIELD ZONE')),zc=zoneOf(f);if(zs&&zc){zoneChk++;if(zs!==zc)zoneMis++}
+  const gn=parseFloat(get(r,'GN/LS'));
+  const row={pn:pnum,dn,di,h:get(r,'HASH').toUpperCase(),f,fm:normFm(get(r,'OFF FORM')),ps:get(r,'PERSONNEL'),fr:get(r,'FRONT FAMILY').toUpperCase(),rs:get(r,'PRESSURE BROUGHT'),cv:get(r,'COVERAGE').toUpperCase(),
+   ef:get(r,'EFF').toUpperCase()==='Y'?1:0,ex:/^Y/i.test(get(r,'EXPLOSIVE?'))?1:0,gn:isNaN(gn)?null:gn,pt:get(r,'PLAY TYPE'),cn:get(r,'RUN CONCEPT FAMILY')||get(r,'CONCEPT FAMILY')};
+  if(cur.first==null)cur.first=pnum;cur.lastPn=pnum;cur.rows.push(row)}
+ blocks.forEach((b,i)=>{if(!b.name)b.name='Block '+(i+1)+' (plays '+b.first+'–'+b.lastPn+')'});
+ return{blocks:blocks.filter(b=>b.rows.length),skipped,zoneMis,zoneChk}}
+function yardF(v){const s=cellS(v);if(!s)return null;const n=parseFloat(s.replace('+',''));if(isNaN(n)||n===0)return null;if(n<0)return Math.min(50,-n);return n>=50?50:100-n}
+/* --- predict: formation + down & distance + field zone, falling back until at least SC_MIN plays --- */
+function scoutLookup(rows,dd){const fm=normFm(dd.formation),bk=dbk(dd.down,dd.dist),zn=zoneOf(dd.f);
+ const lv=[['formation · down & distance · field zone',x=>x.fm===fm&&x.dn===dd.down&&dbk(x.dn,x.di)===bk&&zoneOf(x.f)===zn],
+  ['formation · down & distance',x=>x.fm===fm&&x.dn===dd.down&&dbk(x.dn,x.di)===bk],['formation only',x=>x.fm===fm],['down & distance only (too few plays from this formation)',x=>x.dn===dd.down&&dbk(x.dn,x.di)===bk]];
+ for(let i=0;i<lv.length;i++){const s=rows.filter(lv[i][1]).filter(x=>x.cv&&x.fr&&x.rs!=='');if(s.length>=SC_MIN)return scoutBuild(i,lv[i][0],s)}
+ return null}
+function scoutBuild(i,label,s){const tally=(fn)=>{const m={};for(const x of s){const k=fn(x);m[k]=(m[k]||0)+1}return Object.entries(m).sort((a,b)=>b[1]-a[1])};
+ const pct=c=>Math.round(100*c/s.length);
+ const looks=tally(x=>x.fr+'|'+x.rs+'|'+x.cv).slice(0,2).map(([k,c])=>{const[fr,rs,cv]=k.split('|');return{fr,rs,cv,n:c,p:pct(c)}});
+ const top=fn=>{const t=tally(fn)[0];return t?{k:t[0],p:pct(t[1])}:null};
+ return{lvl:i,label,n:s.length,looks,cov:top(x=>x.cv),rush:top(x=>x.rs),front:top(x=>x.fr)}}
+function lookHtml(L,rank){const code=frontCode(L.fr,L.rs);
+ return`<div class="look"><div class="lk1"><b>${esc2(L.cv)}</b> · ${esc2(L.rs)} rush · ${code?esc2(code)+' <span class="mut">'+esc2(L.fr)+'</span>':esc2(L.fr)}</div><div class="lk2">${rank===0?'Most common':'Second'} · <b>${L.p}%</b> · n=${L.n}</div></div>`}
+function scoutCard(){const g=G();if(!g||!g.scout||!d.formation||!d.hash)return'';const r=scoutLookup(g.scout.rows,d);
+ if(!r)return`<div class="s12 card"><div class="lab"><span>Predicted defense</span><span class="note">${esc2(g.scout.name)}</span></div><div class="note">Not enough scout plays (need ${SC_MIN}) for ${esc2(d.formation)} or this down and distance.</div></div>`;
+ const comp=[r.cov&&'Coverage '+esc2(r.cov.k)+' '+r.cov.p+'%',r.rush&&'Rush '+esc2(r.rush.k)+' '+r.rush.p+'%',r.front&&'Front '+esc2(r.front.k)+' '+r.front.p+'%'].filter(Boolean).join(' · ');
+ return`<div class="s12 card"><div class="lab"><span>Predicted defense · ${esc2(g.scout.name)}</span><span class="note ${r.lvl?'fb':''}">${r.lvl?'Fell back to ':'Using '}${esc2(r.label)} · n=${r.n}</span></div>
+ <div class="pgrid">${r.looks.map(lookHtml).join('')}</div><div class="note" style="margin-top:4px">${comp}</div></div>`}
+/* --- the Scout button and import window --- */
+function scoutModal(){const g=G(),s=g.scout;
+ modal(`<h3 style="margin-top:0">Opponent scout</h3><p class="note">${s?`<b>Loaded for ${esc2(g.opp)}:</b> ${esc2(s.name)}, ${s.rows.length} defensive plays (${esc2(s.src||'')}). Pick a file to replace it.`:`Import the opponent scout workbook (the Raw Data tab) as an .xlsx or a .csv. It is stored on this device and works with no signal.`}</p>
+ <input type="file" id="scfile" accept=".xlsx,.xlsm,.csv,text/csv" style="width:100%"><div id="scout2"></div>
+ <p style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">${s?'<button class="btn bad" id="scrm">Remove scout</button>':''}<button class="btn" onclick="modal_close()">Close</button></p>`);
+ const rm=document.getElementById('scrm');if(rm)rm.onclick=()=>{g.scout=null;save();modal_close();renderAll();toast('Scout removed')};
+ document.getElementById('scfile').onchange=async ev=>{const f=ev.target.files[0],box=document.getElementById('scout2');if(!f)return;box.innerHTML='<p class="note">Reading…</p>';
+  try{let rows,sheet='';if(/\.csv$/i.test(f.name)){rows=parseCsv(await f.text());if(findHeader(rows)<0)throw new Error('Could not find a PLAY # column in that CSV');sheet='CSV'}else{const x=await readXlsx(await f.arrayBuffer());rows=x.rows;sheet=x.sheet}
+   const P=parseScout(rows);if(!P.blocks.length)throw new Error('No defensive plays found');
+   const tot=P.blocks.reduce((a,b)=>a+b.rows.length,0);
+   box.innerHTML=`<div class="lab" style="margin-top:10px"><span>Which opponent</span></div><select id="scblk" style="width:100%">${P.blocks.map((b,i)=>`<option value="${i}">${esc2(b.name)} — ${b.rows.length} plays</option>`).join('')}${P.blocks.length>1?`<option value="all">All blocks combined — ${tot} plays</option>`:''}</select>
+   <div class="lab" style="margin-top:8px"><span>Name</span></div><input type="text" id="scname" style="width:100%"><div id="scinfo" class="note" style="margin:8px 0"></div><button class="btn pri" id="scload">Load for ${esc2(g.opp)}</button>`;
+   const sel=document.getElementById('scblk'),nm=document.getElementById('scname'),info=document.getElementById('scinfo');
+   const cur=()=>sel.value==='all'?{name:'All blocks',rows:P.blocks.flatMap(b=>b.rows)}:P.blocks[+sel.value];
+   const upd=()=>{const b=cur();nm.value=b.name.indexOf('Block ')===0?g.opp:b.name;const fc={};for(const r of b.rows)fc[r.fm||'?']=(fc[r.fm||'?']||0)+1;
+    const A0=(A.lists.formations||[]).map(x=>x.toUpperCase());const fl=Object.entries(fc).sort((a,c)=>c[1]-a[1]).map(([k,v])=>`${esc2(k)} ${v}${A0.includes(k)?'':' <span style="color:var(--warn)">(not an Almanac formation)</span>'}`).join(' · ');
+    info.innerHTML=`<b>Formations:</b> ${fl}${P.zoneChk&&P.zoneMis?`<br><span style="color:var(--warn)">${P.zoneMis} of ${P.zoneChk} field zones differ from the sheet's own tags.</span>`:''}${P.skipped?`<br>${P.skipped} rows skipped (offense or incomplete).`:''}`};
+   sel.onchange=upd;upd();
+   document.getElementById('scload').onclick=()=>{const b=cur();g.scout={name:nm.value.trim()||b.name,src:f.name+' · '+sheet,at:Date.now(),rows:b.rows};save();modal_close();renderAll();toast('Scout loaded: '+g.scout.rows.length+' plays')}
+  }catch(err){box.innerHTML=`<p style="color:var(--bad)">${esc2(err.message||err)}</p>`}}}
+document.getElementById('scoutbtn').onclick=scoutModal;
 /* ===== Hudl export: exact column order for the Hudl import ===== */
 const HUDL_HEAD=['PLAY #','ODK','HASH','P & 10','DN','DIST','GN/LS','YARD LN','PERSONNEL','EFF','EXPLOSIVE?','SHOT','PLAY TYPE','RESULT','OFF FORM','FIB?','MOTION','SHIFT','PLAY','TAG','ONE WORD CALL','TARGET','PLAYER','QB NUMBER','RUN CONCEPT FAMILY','RUN R/L','PASS PRO'];
 const HUDL_RES={COMP:'Complete',INC:'Incomplete',RUSH:'Rush',SCRAM:'Scramble',SACK:'Sack',PEN:'Penalty',INT:'Interception',FUM:'Fumble Lost'};
