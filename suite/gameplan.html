@@ -121,7 +121,7 @@ const TC={Q:'#ffffff',X:'#5aa9ff',Z:'#5aa9ff',M:'#f2b632',H:'#2fbf71',Y:'#c58bff
 /* The drawing is the whole field width: 160 ft (high school), 4.4 px per foot. The left hash sits where the center lines up (53'4" from the sideline).
    Noah asked for the hashes drawn farther apart than real: HASHR puts the right hash 66 ft from the left one (real is 53'4"). Change the 66 to change it.
    Numbers are 6 ft tall: top 9 yards (27 ft) from the sideline, bottom 21 ft. */
-const PXFT=4.4,YD=3*PXFT,LOS=110,VW=Math.round(160*PXFT),VH=250,HASHX=Math.round(53.333*PXFT),HASHR=HASHX+Math.round(66*PXFT),NB=Math.round(21*PXFT),NT=Math.round(27*PXFT);
+const PXFT=4.4,YD=3*PXFT,LOS=110,VW=Math.round(160*PXFT),VH=250,HASHX=Math.round(53.333*PXFT),HASHR=HASHX+Math.round(66*PXFT),NSHIFT=4,NB=Math.round((21-NSHIFT)*PXFT),NT=Math.round((27-NSHIFT)*PXFT); // numbers drawn NSHIFT ft closer to the sideline than the NFHS spec, at Noah's request
 function baseDraw(){const t={},put=(k,x,y,on)=>t[k]={x,y,on};
  put('X',30,114,1);put('Z',456,112,1);put('M',165,150,1);put('Q',235,168,1);put('T',210,205,1);put('H',385,128,1);
  put('Y',395,112,0);put('F',430,150,0);put('A',300,190,0);put('B',260,205,0);
