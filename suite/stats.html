@@ -43,6 +43,7 @@ tr.click{cursor:pointer}tr.click:active{background:#223140}
 <header id="hdr"></header>
 <main id="main"></main>
 <div class="modal" id="modal"><div class="box" id="mbox"></div></div>
+<script src="../shared/demoseed.js"></script>
 <script>
 /* Stats + schedule. Reads the Almanac's games from this device (kept in step by sync) and the program schedule.
    Efficiency: 1st down 4+ (or the distance if shorter), 2nd down half the distance (rounded up), 3rd/4th convert, TD always.
@@ -51,6 +52,7 @@ const $=id=>document.getElementById(id);
 const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const ALMK=()=>{try{const s=JSON.parse(localStorage.getItem('suite_sync'));return(s&&s.token&&s.exp>Date.now())?'almanac_v1':'almanac_demo'}catch(e){return'almanac_demo'}};
 const prog=()=>{try{return ALMK()==='almanac_v1'?((JSON.parse(localStorage.getItem('suite_sync'))||{}).program||'deer-creek'):'demo'}catch(e){return'demo'}};
+const PL=j=>(window.DemoSeed&&ALMK()==='almanac_demo')?esc(DemoSeed.label(j)):'#'+esc(j);
 const SKEY=()=>'schedule_v1_'+prog();
 let V={tab:'schedule',game:null,season:null};
 function A(){try{return JSON.parse(localStorage.getItem(ALMK()))||{games:[],lists:{}}}catch(e){return{games:[],lists:{}}}}
@@ -120,11 +122,11 @@ function viewSeason(gs,title){const L=A().lists||{},P=plays(gs),s=summ(P,L);
  const by=(arr,key)=>{const m={};for(const p of arr){const k=key(p);if(!k)continue;(m[k]=m[k]||[]).push(p)}return m};
  const pass=by(P.filter(p=>['COMP','INC','INT','SACK'].includes(p.result)),p=>p.passer||'?');
  h+='<h3>Passing</h3>'+tbl(['QB','Cmp/Att','Yds','TD','INT','Sacks','Yds/att'],Object.entries(pass).map(([q,a])=>{const at=a.filter(p=>p.result!=='SACK'),c=a.filter(p=>p.result==='COMP'),y=c.reduce((s,p)=>s+(+p.gain||0),0);
-  return['#'+esc(q),c.length+'/'+at.length,y,c.filter(p=>p.td).length,a.filter(p=>p.result==='INT').length,a.filter(p=>p.result==='SACK').length,at.length?f1(y/at.length):'–']}));
+  return[PL(q),c.length+'/'+at.length,y,c.filter(p=>p.td).length,a.filter(p=>p.result==='INT').length,a.filter(p=>p.result==='SACK').length,at.length?f1(y/at.length):'–']}));
  const rush=by(P.filter(p=>p.result==='RUSH'||p.result==='SCRAM'),p=>p.player||p.passer||'?');
- h+='<h3>Rushing</h3>'+tbl(['Player','Car','Yds','Avg','TD','Long'],Object.entries(rush).sort((a,b)=>b[1].length-a[1].length).map(([k,a])=>{const y=a.reduce((s,p)=>s+(+p.gain||0),0);return['#'+esc(k),a.length,y,f1(y/a.length),a.filter(p=>p.td).length,Math.max(...a.map(p=>+p.gain||0))]}));
+ h+='<h3>Rushing</h3>'+tbl(['Player','Car','Yds','Avg','TD','Long'],Object.entries(rush).sort((a,b)=>b[1].length-a[1].length).map(([k,a])=>{const y=a.reduce((s,p)=>s+(+p.gain||0),0);return[PL(k),a.length,y,f1(y/a.length),a.filter(p=>p.td).length,Math.max(...a.map(p=>+p.gain||0))]}));
  const rec=by(P.filter(p=>p.result==='COMP'),p=>p.player||'?');
- h+='<h3>Receiving</h3>'+tbl(['Player','Rec','Yds','Avg','TD','Long'],Object.entries(rec).sort((a,b)=>b[1].length-a[1].length).map(([k,a])=>{const y=a.reduce((s,p)=>s+(+p.gain||0),0);return['#'+esc(k),a.length,y,f1(y/a.length),a.filter(p=>p.td).length,Math.max(...a.map(p=>+p.gain||0))]}));
+ h+='<h3>Receiving</h3>'+tbl(['Player','Rec','Yds','Avg','TD','Long'],Object.entries(rec).sort((a,b)=>b[1].length-a[1].length).map(([k,a])=>{const y=a.reduce((s,p)=>s+(+p.gain||0),0);return[PL(k),a.length,y,f1(y/a.length),a.filter(p=>p.td).length,Math.max(...a.map(p=>+p.gain||0))]}));
  return h}
 function tbl(head,rows,click){if(!rows.length)return'<p class="note">None yet.</p>';return`<table><thead><tr>${head.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${rows.map((r,i)=>`<tr ${click?`class="click" data-g="${click[i]}"`:''}>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`}
 function viewGames(){const gs=gamesInSeason(),S=sched(),L=A().lists||{};if(!gs.length)return`<div class="empty">No logged games in ${V.season} yet.</div>`;
@@ -152,5 +154,6 @@ function render(){hdr();let h;
  const bk=$('back');if(bk)bk.onclick=()=>{V.game=null;render()}}
 addEventListener('storage',e=>{if(e.key==='almanac_v1'||e.key==='almanac_demo'||(e.key&&e.key.indexOf('schedule_v1_')===0))render()});
 addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.schedule)render()});
+try{window.DemoSeed&&DemoSeed.ensure()}catch(e){}
 render();
 </script></body></html>

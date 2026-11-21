@@ -5,6 +5,7 @@
 <script>(function(){var p=location.pathname;if(!/\/$/.test(p)&&!/\.html?$/.test(p)){var b=document.createElement("base");b.href=p+"/";document.head.appendChild(b);}})();</script>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Film Room - Staff View</title>
+<script src="../shared/demoseed.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;600;700&display=swap">
@@ -176,9 +177,9 @@ const CFG=()=>({kind:KIND(),offTeam:(($('#offTeam')||{}).value||'').trim(),game:
   goalEff:+$('#goalEff').value||50,goalExp:+$('#goalExp').value||12,expRun:+$('#expRun').value||15,expPass:+$('#expPass').value||15});
 const nums=s=>s.split(/[^0-9]+/).filter(Boolean);
 function rosterMap(){const m={};$('#roster').value.split('\n').forEach(l=>{const x=l.trim().match(/^#?(\d+)\s+(.+)$/);if(x)m[x[1]]=x[2].trim()});return m}
-const SIGNED=(()=>{try{const s=JSON.parse(localStorage.getItem('suite_sync'));return !!(s&&s.token&&s.exp>Date.now())}catch(e){return false}})();const FP=SIGNED?'fr:':'frd:';const TEAM=SIGNED?'Deer Creek':'Your team';
+const SIGNED=(()=>{try{const s=JSON.parse(localStorage.getItem('suite_sync'));return !!(s&&s.token&&s.exp>Date.now())}catch(e){return false}})();const FP=SIGNED?'fr:':'frd:';const TEAM=SIGNED?'Deer Creek':'Your team';const ABBR=SIGNED?'DC':'Us';
 const LS=()=>FP+'game:'+CUR;
-if(!SIGNED)document.title=document.title.replace(/Deer Creek/g,TEAM);addEventListener('storage',e=>{if(e.key==='suite_sync'){const s=(()=>{try{const x=JSON.parse(e.newValue);return !!(x&&x.token&&x.exp>Date.now())}catch(_){return false}})();if(s!==SIGNED)location.reload()}});
+if(!SIGNED)$('#game').placeholder='Us v. Union';if(!SIGNED)document.title=document.title.replace(/Deer Creek/g,TEAM);addEventListener('storage',e=>{if(e.key==='suite_sync'){const s=(()=>{try{const x=JSON.parse(e.newValue);return !!(x&&x.token&&x.exp>Date.now())}catch(_){return false}})();if(s!==SIGNED)location.reload()}});
 if(!SIGNED){const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);const ns=[];while(w.nextNode())ns.push(w.currentNode);ns.forEach(n=>{if(n.nodeValue.includes('Deer Creek'))n.nodeValue=n.nodeValue.replace(/Deer Creek/g,TEAM)})}
 
 /* ================= loading clips ================= */
@@ -211,7 +212,7 @@ dropper($('#dropClips'),fs=>{const z=fs.find(f=>/\.zip$/i.test(f.name));z?loadZi
 /* ================= almanac ================= */
 $('#pickAlm').onclick=()=>$('#fAlm').click();
 function loadAlmText(txt){try{const rows=txt.replace(/\r/g,'').split('\n').map(l=>l.split('\t'));let name='';if(rows[0]&&String(rows[0][0]).trim().toUpperCase()==='ALMANAC'){name=(rows[0][1]||'').trim();rows.shift()}
-  S.alm=parseAlm(rows);if(name){if(!$('#opp').value)$('#opp').value=name;if(!$('#game').value)$('#game').value='DC v. '+name}
+  S.alm=parseAlm(rows);if(name){if(!$('#opp').value)$('#opp').value=name;if(!$('#game').value)$('#game').value=ABBR+' v. '+name}
   $('#almStatus').textContent=`${S.alm.length} plays read from the Almanac app (${S.alm.filter(a=>a.nd).length} drives)`;save();refresh();toast('Almanac loaded');return true}catch(e){toast("Couldn't read that: "+e.message);return false}}
 $('#pasteAlm').onclick=async()=>{let t='';try{t=await navigator.clipboard.readText()}catch(e){}
   if(t&&/(^|\n)(ALMANAC\t[^\n]*\n)?\s*(DOWN|DN)\t/i.test(t)&&loadAlmText(t))return;
@@ -708,7 +709,7 @@ function openLocal(id,fresh,kind){CUR=id;S.kind=kind||(SAVED().find(g=>g.id===id
   const c=(s&&s.cfg)||{};const set=(k,v)=>{$('#'+k).value=v??''};
   set('game',c.game);set('opp',c.opp);set('offTeam',c.offTeam);set('ourJersey',c.our);set('oppJersey',c.their);set('scoreUs',c.us);set('scoreThem',c.them);
   if(c.qbs)set('qbs',c.qbs.join(', '));if(c.rbs)set('rbs',c.rbs.join(', '));['goalEff','goalExp','expRun','expPass'].forEach(k=>{if(c[k])set(k,c[k])});
-  if(s&&s.roster)$('#roster').value=s.roster;
+  if(s&&s.roster)$('#roster').value=s.roster;else if(!SIGNED&&window.DemoSeed){$('#roster').value=DemoSeed.rosterText();if(!c.qbs)set('qbs','7, 10');if(!c.rbs)set('rbs','22, 28, 34')}
   if(s){if(s.kind)S.kind=s.kind;S.alm=s.alm||[];S.drv=s.drv||{};S.summary=s.summary||'';S.tideOff=s.tideOff||[];
     S.plays=(s.plays||[]).map(t=>{const p=newPlay(t.n);TAGK.forEach(k=>{if(t[k]!==undefined)p[k]=t[k]});return p});
     if(S.alm.length)$('#almStatus').textContent=`${S.alm.length} almanac plays saved`;
@@ -842,7 +843,7 @@ function renderResult(){
   return `<section style="display:flex;flex-direction:column;gap:20px">
   <div class="panel"><div class="score"><span class="big">${f.result||''} ${f.us}-${f.them}</span><h2>${esc(G.title)}</h2></div><p class="sub">${esc(G.summary)}</p>
   ${G.local?`<div class="bar"><button id="aiWhy" ${S.sample?'':'disabled'}>${S.summary?'Rewrite':'Write'} the summary with Claude</button>${S.summary?'<span class="meta">Written by Claude from the tags</span>':''}</div>`:''}
-  <div class="bar">${G.scoreTimeline.map(t=>`<span class="badge">${esc(t.when)}: DC ${t.us}, ${esc(G.opponent)} ${t.them}</span>`).join('')}</div></div>
+  <div class="bar">${G.scoreTimeline.map(t=>`<span class="badge">${esc(t.when)}: ${ABBR} ${t.us}, ${esc(G.opponent)} ${t.them}</span>`).join('')}</div></div>
   <div class="tiles">${tile('Efficiency',pct(s.effN,s.effD)+'%','Goal '+G.goals.eff+'%',pct(s.effN,s.effD)>=G.goals.eff?'hit':'miss')}${tile('Explosive',pct(s.explN,s.explD)+'%','Goal '+G.goals.expl+'%',pct(s.explN,s.explD)>=G.goals.expl?'hit':'miss')}${tile('3rd down',s.third)}${tile('Yards / play',s.ypp)}${tile('Sacks',s.passing.sacks,s.passing.sackYds+' yds')}${tile('TD drives',G.drives.filter(d=>d.result==='TD').length+' / '+G.drives.length)}</div>
   <h2>Why</h2><div class="why">${G.why.map(w=>`<div class="panel"><h3>${esc(w.head)}</h3><div class="num">${esc(w.num)}</div><p>${esc(w.body)}</p></div>`).join('')}</div>
   <h2>Plays that turned the tide</h2><div class="clips">${G.turningPoints.map(t=>`<div class="clip ${t.tone}">${vid(t)}<div class="cap"><strong>${esc(t.title)}</strong><span class="meta">Clip ${t.clip} · ${esc(t.when)}</span>${G.local?`<button data-tideoff="${t.clip}" style="align-self:flex-start;font-size:13px;padding:4px 10px;margin-top:4px">Remove</button>`:''}</div></div>`).join('')}</div>
@@ -874,7 +875,7 @@ function renderStats(){
   const sk=s.sackList.map(x=>`<tr><td>Clip ${x.clip}</td><td>#${x.qb} ${esc(x.name)}</td><td class="n">${x.yds}</td></tr>`).join('');
   const e=pct(s.effN,s.effD), x=pct(s.explN,s.explD);
   return `<section style="display:flex;flex-direction:column;gap:20px"><div class="seg">${seg}</div>
-  <div class="tiles">${tile('Efficiency',e+'%',`${s.effN}/${s.effD} · goal ${G.goals.eff}%`,e>=G.goals.eff?'hit':'miss')}${tile('Explosive',x+'%',`${s.explN}/${s.explD} · goal ${G.goals.expl}%`,x>=G.goals.expl?'hit':'miss')}${tile('Snaps',s.snaps)}${tile('Yards',s.yards,s.ypp+' per play')}${tile('Run',s.runs,s.runYds+' yds')}${tile('Pass calls',s.passCalls,s.passCallYds+' yds')}${tile('3rd down',s.third)}${tile('4th down',s.fourth)}${tile('Penalties',s.penalties,`DC ${s.penYdsAgainst} · opp +${s.penYdsFor}`)}</div>
+  <div class="tiles">${tile('Efficiency',e+'%',`${s.effN}/${s.effD} · goal ${G.goals.eff}%`,e>=G.goals.eff?'hit':'miss')}${tile('Explosive',x+'%',`${s.explN}/${s.explD} · goal ${G.goals.expl}%`,x>=G.goals.expl?'hit':'miss')}${tile('Snaps',s.snaps)}${tile('Yards',s.yards,s.ypp+' per play')}${tile('Run',s.runs,s.runYds+' yds')}${tile('Pass calls',s.passCalls,s.passCallYds+' yds')}${tile('3rd down',s.third)}${tile('4th down',s.fourth)}${tile('Penalties',s.penalties,`${ABBR} ${s.penYdsAgainst} · opp +${s.penYdsFor}`)}</div>
   <div class="grid2">
    <div class="panel"><h3>Passing (team)</h3><p style="font-family:var(--display);font-size:30px;font-weight:700">${p.cmp}/${p.att}, ${p.yds} yds, ${p.td} TD</p><p class="sub">Sacked ${p.sacks} time${p.sacks===1?"":"s"} for ${p.sackYds} yds. Passer per throw isn't recorded in the almanac.</p>${sk?`<div class="tablewrap"><table><thead><tr><th>Sack</th><th>QB</th><th class="n">Yds</th></tr></thead><tbody>${sk}</tbody></table></div>`:''}</div>
    <div class="panel"><h3>Rushing</h3><div class="tablewrap"><table><thead><tr><th>Player</th><th class="n">Car</th><th class="n">Yds</th><th class="n">Avg</th><th class="n">Long</th></tr></thead><tbody>${rush}</tbody></table></div><p class="sub">Includes QB keeps and scrambles.</p></div>

@@ -1,5 +1,5 @@
-const V='almanac-v52';
-const FILES=['./','index.html','manifest.webmanifest','icon-192.png','icon-512.png','../shared/glossary.js'];
+const V='almanac-v53';
+const FILES=['./','index.html','manifest.webmanifest','icon-192.png','icon-512.png','../shared/glossary.js','../shared/demoseed.js'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(V).then(c=>c.addAll(FILES)));self.skipWaiting()});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==V).map(x=>caches.delete(x)))).then(()=>self.clients.claim()))});
 // network first so updates show up when online; cached copy when there is no signal
