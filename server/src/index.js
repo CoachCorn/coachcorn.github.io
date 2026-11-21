@@ -48,6 +48,17 @@ const clipRoutes={
   if(!/^[A-Za-z0-9_.-]{1,80}$/.test(game))return J(env,req,{error:'Bad game'},400);
   const pre=p.p+'/'+game+'/';let cur,n=0;do{const r=await env.CLIPS.list({prefix:pre,cursor:cur});if(r.objects.length){await env.CLIPS.delete(r.objects.map(o=>o.key));n+=r.objects.length}cur=r.truncated?r.cursor:null}while(cur);
   return J(env,req,{ok:true,deleted:n})},
+ /* Pull one clip straight from the coach's Google Drive into clip storage. The Google token stays in this request only. */
+ 'POST /clipfromdrive':async(env,req)=>{const nb=needBucket(env,req);if(nb)return nb;const p=await auth(env,req),b=await readJson(req);
+  const key=String(b.key||''),fid=String(b.fileId||''),gt=String(b.gtoken||'');
+  if(!CLIPKEY.test(key)||key.includes('..'))return J(env,req,{error:'Bad clip name'},400);
+  if(!/^[A-Za-z0-9_-]{10,200}$/.test(fid)||!gt)return J(env,req,{error:'Bad Drive file'},400);
+  let r;try{r=await fetch('https://www.googleapis.com/drive/v3/files/'+fid+'?alt=media&supportsAllDrives=true',{headers:{Authorization:'Bearer '+gt}})}catch(e){return J(env,req,{error:"Couldn't reach Google Drive"},502)}
+  if(!r.ok)return J(env,req,{error:r.status===401||r.status===403?'Google sign-in expired or no access to that file':'Drive said '+r.status},502);
+  const len=+(r.headers.get('Content-Length')||0);if(len>CLIP_MAX)return J(env,req,{error:'Clip is over 60 MB'},413);
+  let body=r.body;if(len){const f=new FixedLengthStream(len);r.body.pipeTo(f.writable);body=f.readable}else{body=await r.arrayBuffer()}
+  const o=await env.CLIPS.put(p.p+'/'+key,body,{httpMetadata:{contentType:r.headers.get('Content-Type')||'video/mp4'}});
+  return J(env,req,{ok:true,key,size:o&&o.size})},
  'GET /clip':async(env,req,url)=>{const nb=needBucket(env,req);if(nb)return nb;const p=await clipPass(env,url),key=url.searchParams.get('key')||'';
   if(!CLIPKEY.test(key)||key.includes('..'))return J(env,req,{error:'Bad clip name'},400);
   const rg=req.headers.get('Range');let range;const m=rg&&rg.match(/bytes=(\d*)-(\d*)/);
