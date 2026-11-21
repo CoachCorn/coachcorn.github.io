@@ -282,7 +282,7 @@ function mrCards(p,o){const out=[],names=[...new Set(p.blocks.map(b=>b.name).fil
   out.push({pos:'ALL',q:'What formation is this?',a:b.name,wrong:some(names.filter(n=>n!==b.name),3),expl:digits(b.pers)?'Personnel '+digits(b.pers):'',img})});
  if(o.calls)calls.forEach(k=>{const img=svgImg(k.b.draw);out.push({pos:'ALL',q:`${k.b.name} · ${k.r.label} · ${k.c.head||'column'}: what is the call?`,a:k.t,wrong:some(texts.filter(t=>t!==k.t),3),expl:'',img:img.length>45000?'':img})});
  return out}
-function mrEndpoint(){let e='';try{e=localStorage.getItem('cs.ep')||''}catch(x){}return e||'https://script.google.com/macros/s/AKfycbz3v0FhCJlqYPOpa-c8mGyUJoKNXeG4aVbUXluvV7H4i0o5zaB0gvcZfAbClj4gcH4_/exec'}
+function mrEndpoint(){let e='';try{e=localStorage.getItem('gp.mrurl')||''}catch(x){}return e||'https://script.google.com/macros/s/AKfycbyeNCmURP7bIelclh1GqoAqswhVThJL77XvsgsepuOQfiXSIKqOveFCdhTe1weY4js/exec'}
 $('mr').onclick=()=>{const p=plan();if(!p)return toast('Start a plan first');let code='';try{code=localStorage.getItem('cs.code')||''}catch(e){}
  $('mbox').innerHTML=`<h3>Send to Mental Reps</h3><div class="note">Makes one deck tab in the Mental Reps sheet from this plan. Players see it as soon as they refresh.</div>
  <div class="lab">Deck name (cannot start with _)</div><input type="text" id="mr_n" value="${esc(p.name.replace(/^_+/,'').slice(0,60))}">
