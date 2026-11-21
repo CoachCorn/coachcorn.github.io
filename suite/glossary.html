@@ -48,7 +48,8 @@ const TYPES=[['formation','Formations'],['ftag','Formation tags'],['motion','Mot
 const DEF_SIDE=t=>['front','frontmod','coverage','shell'].includes(t)?'D':'O';
 const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const $=id=>document.getElementById(id);
-let G=null,S={q:'',type:'',review:false};
+let G=null,S={q:'',type:'',review:false,nodef:false};
+const noDef=t=>t.status==='active'&&!String((t.meaning&&t.meaning.text)||'').trim();
 function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',2200)}
 function load(){G=window.GL?GL.load(PROGRAM):null}
 function commit(t){if(t)GL.touch(t);GL.save(G);render()}
@@ -56,13 +57,14 @@ function render(){
  if(!window.GL){$('list').innerHTML='<p class="note">The glossary code did not load. Open this once with signal.</p>';return}
  if(!G){$('list').innerHTML='<p class="note">No glossary on this device yet for '+esc(PROGRAM)+'. Open the Almanac once; it builds the glossary from its lists.</p>';$('meta').textContent='';return}
  $('ttl').textContent='Glossary · '+G.name;$('meta').textContent='rev '+G.rev+' · '+G.terms.length+' terms';
- const rv=GL.reviewList(G).length,q=GL.U(S.q);
- $('types').innerHTML=`<button class="chip ${S.review?'on':''}" data-rv="1" style="${rv?'border-color:var(--warn)':''}">Review (${rv})</button><button class="chip ${!S.type&&!S.review?'on':''}" data-t="">All</button>`+TYPES.map(([k,l])=>`<button class="chip ${S.type===k?'on':''}" data-t="${k}">${l}</button>`).join('');
- const list=G.terms.filter(t=>(!S.type||t.type===S.type)&&(!S.review||t.needsReview)&&(!q||[t.name,...t.aliases,t.meaning.text||'',t.code||''].some(x=>GL.U(x).includes(q))))
+ const rv=GL.reviewList(G).length,nd=G.terms.filter(noDef).length,q=GL.U(S.q);
+ $('types').innerHTML=`<button class="chip ${S.review?'on':''}" data-rv="1" style="${rv?'border-color:var(--warn)':''}">Review (${rv})</button><button class="chip ${S.nodef?'on':''}" data-nd="1">No definitions yet (${nd})</button><button class="chip ${!S.type&&!S.review&&!S.nodef?'on':''}" data-t="">All</button>`+TYPES.map(([k,l])=>`<button class="chip ${S.type===k?'on':''}" data-t="${k}">${l}</button>`).join('');
+ const list=G.terms.filter(t=>(!S.type||t.type===S.type)&&(!S.review||t.needsReview)&&(!S.nodef||noDef(t))&&(!q||[t.name,...t.aliases,t.meaning.text||'',t.code||''].some(x=>GL.U(x).includes(q))))
   .sort((a,b)=>(a.status===b.status?0:a.status==='active'?-1:1)||a.type.localeCompare(b.type)||a.name.localeCompare(b.name));
  const tl=t=>(TYPES.find(x=>x[0]===t)||[t,t])[1];
  $('list').innerHTML=`<table><thead><tr><th>Term</th><th>Type</th><th>Meaning</th></tr></thead><tbody>${list.map(t=>`<tr class="r" data-id="${esc(t.id)}" style="${t.status==='retired'?'opacity:.45':''}"><td><b>${esc(t.name)}</b>${t.code?' <span class="mut">'+esc(t.code)+(t.package?' '+t.package:'')+'</span>':''}${t.needsReview?'<span class="badge">REVIEW</span>':''}${t.status==='retired'?' <span class="mut">retired</span>':''}${t.aliases.length?'<div class="mut">also '+esc(t.aliases.join(', '))+'</div>':''}</td><td class="mut">${esc(tl(t.type))}${t.uses.length?' · '+t.uses.join('/'):''}</td><td>${esc(t.meaning.text||'')||'<span class="mut">no meaning yet</span>'}</td></tr>`).join('')||'<tr><td colspan="3" class="mut">Nothing matches.</td></tr>'}</tbody></table>`;
- document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{S.type=b.dataset.t;S.review=false;render()});
+ document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{S.type=b.dataset.t;S.review=false;if(!b.dataset.t)S.nodef=false;render()});
+ document.querySelector('[data-nd]').onclick=()=>{S.nodef=!S.nodef;if(S.nodef)S.review=false;render()};
  document.querySelector('[data-rv]').onclick=()=>{S.review=!S.review;render()};
  document.querySelectorAll('tr.r').forEach(r=>r.onclick=()=>edit(r.dataset.id))}
 function modal(h){$('mbox').innerHTML=h;$('modal').classList.add('show')}
