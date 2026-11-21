@@ -614,7 +614,9 @@ const cloudFile=(gid,clip)=>{const h=CLOUD.have[gid];return h&&h.has('clip'+pad3
 const CB=()=>G.clipBase||cloudBase(G.id)||`clips/${G.id}/`;
 const vsrc=t=>t.url?t.url:(t.file?`${CB()}${t.file}#t=0.1`:'');
 const vposter=t=>t.poster&&!t.url?`poster="${CB()}${t.poster}"`:'';
-const vid=t=>t.url?`<video controls preload="metadata" playsinline src="${t.url}"></video>`:t.file?`<div class="vwrap" data-file="${CB()}${t.file}" data-poster="${t.poster?CB()+t.poster:''}"><img alt=""><button class="vplay">▶ Play</button></div>`:`<div class="novid">Load this game's clips in Film Tagger › Game setup to watch</div>`;
+function cfile(t){const h=G&&CLOUD.have[G.id];if(!h||!t||t.url)return t;const want=t.file,alt=t.clip!=null?'clip'+pad3(t.clip)+'.mp4':'';
+  const f=want&&h.has(want)?want:(alt&&h.has(alt)?alt:want);const ps=t.poster&&h.has(t.poster)?t.poster:'';return Object.assign({},t,{file:f,poster:ps})}
+const vid=t0=>{const t=cfile(t0);return t.url?`<video controls preload="metadata" playsinline src="${t.url}"></video>`:t.file?`<div class="vwrap" data-file="${CB()}${t.file}" data-poster="${t.poster?CB()+t.poster:''}"><img alt=""><button class="vplay">▶ Play</button></div>`:`<div class="novid">Load this game's clips in Film Tagger › Game setup to watch</div>`};
 // The artifact only lets video play from blob: URLs, so published clips are fetched from the page's own files and played as blobs.
 const BLOBS={};async function blobUrl(u){if(!BLOBS[u]){const r=await fetch(u);if(!r.ok)throw new Error(r.status);BLOBS[u]=URL.createObjectURL(await r.blob())}return BLOBS[u]}
 function wireVids(){$$('.vwrap').forEach(w=>{const pst=w.dataset.poster;if(pst)blobUrl(pst).then(u=>{w.querySelector('img').src=u}).catch(()=>{});
@@ -627,12 +629,27 @@ function fillPicker(){const sv=SAVED();
 $('#gamePick').onchange=()=>{if($('#gamePick').value)pick($('#gamePick').value)};
 /* ---- manage games: delete saved test games (published games like Union stay) ---- */
 $('#mgBtn').onclick=()=>{const P=$('#mgPanel');if(!P.hidden){P.hidden=true;return}renderMg();P.hidden=false};
+/* Which clip numbers a game's reports show (turning points, explosives, opponent explosives). null = unknown, take everything. */
+function clipsNeeded(gid){const pub=EMB.games[gid];if(pub){const n=new Set();[...(pub.turningPoints||[]),...(pub.explosives||[])].forEach(t=>{if(t.clip!=null)n.add(+t.clip)});return n}
+  if(gid===CUR&&G&&G.local){const g=buildG(),n=new Set([...g.turningPoints,...g.explosives].map(t=>+t.clip));if(OPP())oppPlays().filter(x=>x.exp).forEach(x=>n.add(+x.p.n));return n}return null}
+function clipPlan(gid,files){const need=clipsNeeded(gid),by=new Map(),up=[];let skipped=0;
+  for(const f of files){if(/\.(jpe?g|png)$/i.test(f.name)){const nm=f.name.replace(/[^A-Za-z0-9_. -]/g,'_');up.push({f,key:nm});continue}
+    if(!/\.(mp4|mov|m4v)$/i.test(f.name)){skipped++;continue}
+    const m=f.name.match(/^(.*?)[\s_-]*clip[\s_-]*(\d+)/i)||f.name.match(/^(exp)(\d+)/i);if(!m){up.push({f,key:f.name.replace(/[^A-Za-z0-9_. -]/g,'_')});continue}
+    const n=+m[2],ang=/^exp$/i.test(m[1])?'Wide':angleOf(m[1]);if(need&&!need.has(n)){skipped++;continue}
+    const rank={Wide:0,Tight:1,'End Zone':2}[ang]??3,cur=by.get(n);if(!cur||rank<cur.rank)by.set(n,{f,rank});else skipped++}
+  for(const [n,o] of by)up.push({f:o.f,key:'clip'+pad3(n)+'.mp4'});
+  return{up,skipped,need}}
 function renderMg(){const sv=SAVED(),P=$('#mgPanel');
-  const clipBtns=gid=>CLOUD.ready?` <span class="sub" style="font-size:12px" data-csz="${esc(gid)}">${CLOUD.have[gid]?CLOUD.have[gid].size+' clips':''}</span> <label style="font-size:12px;padding:2px 8px;border:1.5px solid var(--line);border-radius:6px;cursor:pointer">Upload clips<input type="file" multiple accept="video/*,image/*,.mp4,.mov,.m4v,.jpg,.png" data-cup="${esc(gid)}" hidden></label> <button data-cdel="${esc(gid)}" style="font-size:12px;padding:2px 8px">Delete clips</button>`:'';
+  const clipBtns=gid=>CLOUD.ready?` <span class="sub" style="font-size:12px">${(n=>n?'needs clips '+[...n].sort((a,b)=>a-b).join(', ')+' · ':'')(clipsNeeded(gid))}</span><span class="sub" style="font-size:12px" data-csz="${esc(gid)}">${CLOUD.have[gid]?CLOUD.have[gid].size+' clips':''}</span> <label style="font-size:12px;padding:2px 8px;border:1.5px solid var(--line);border-radius:6px;cursor:pointer">Upload clips<input type="file" multiple accept="video/*,image/*,.mp4,.mov,.m4v,.jpg,.png" data-cup="${esc(gid)}" hidden></label> <button data-cdel="${esc(gid)}" style="font-size:12px;padding:2px 8px">Delete clips</button>`:'';
   P.innerHTML=`<h3>Games on this device</h3>${CLOUD.ready?'':'<div class="sub">Sign in on the KDNCE home screen (and connect clip storage) to upload or delete clips.</div>'}${EMB.index.length?`<div class="sub">Finished games:</div>${EMB.index.map(g=>`<div class="bar" style="border-bottom:1px solid var(--line);padding:6px 0"><span style="flex:1">${esc(g.label)}</span>${clipBtns(g.id)}<button data-pubdel="${esc(g.id)}" style="font-size:12px;padding:2px 8px">Remove</button></div>`).join('')}`:''}`+
     (sv.length?sv.map(g=>`<div class="bar" style="border-bottom:1px solid var(--line);padding:6px 0"><span style="flex:1">${esc(g.label)}</span>${clipBtns(g.id)}<button data-mgdel="${esc(g.id)}">Delete</button></div>`).join('')+`<div class="bar"><button id="mgAll">Delete all ${sv.length} saved game${sv.length>1?'s':''} (keep published games)</button></div>`:'<div class="sub">No saved test games.</div>');
   if(CLOUD.ready)[...EMB.index.map(g=>g.id),...sv.map(g=>g.id)].forEach(async id=>{if(!CLOUD.have[id])await cloudList(id);const el=P.querySelector(`[data-csz="${CSS.escape(id)}"]`);if(el)el.textContent=CLOUD.have[id].size+' clips'+(CLOUD.size[id]?' · '+(CLOUD.size[id]/1048576).toFixed(0)+' MB':'')});
-  P.querySelectorAll('[data-cup]').forEach(inp=>inp.onchange=async()=>{const gid=inp.dataset.cup,fs=[...inp.files];let k=0;for(const f of fs){toast(`Uploading ${++k}/${fs.length}: ${f.name}`);try{await cloudPut(gid,f.name.replace(/[^A-Za-z0-9_. -]/g,'_'),f)}catch(e){toast(f.name+': '+e.message);break}}await cloudList(gid);toast('Uploaded '+k+' file'+(k>1?'s':''));renderMg();if(G&&G.id===gid)render()});
+  P.querySelectorAll('[data-cup]').forEach(inp=>inp.onchange=async()=>{const gid=inp.dataset.cup,plan=clipPlan(gid,[...inp.files]);inp.value='';
+    if(!plan.up.length){toast(plan.skipped?'None of those clips are used in this game\'s reports':'No video files picked');return}
+    let k=0;for(const u of plan.up){toast(`Uploading ${++k}/${plan.up.length}: ${u.f.name}`);try{await cloudPut(gid,u.key,u.f)}catch(e){toast(u.f.name+': '+e.message);k--;break}}
+    await cloudList(gid);const miss=plan.need?[...plan.need].filter(n=>!CLOUD.have[gid].has('clip'+pad3(n)+'.mp4')&&![...CLOUD.have[gid]].some(x=>x==='exp'+pad3(n)+'.mp4')):[];
+    toast(`Uploaded ${k} clip${k===1?'':'s'}${plan.skipped?`, skipped ${plan.skipped} not used`:''}${miss.length?`. Still missing: clip ${miss.sort((a,b)=>a-b).join(', ')}`:''}`);renderMg();if(G&&G.id===gid)render()});
     (sv.length?sv.map(g=>`<div class="bar" style="justify-content:space-between;border-bottom:1px solid var(--line);padding:6px 0"><span>${esc(g.label)}</span><button data-mgdel="${esc(g.id)}">Delete</button></div>`).join('')+`<div class="bar"><button id="mgAll">Delete all ${sv.length} saved game${sv.length>1?'s':''} (keep published games)</button></div>`:'<div class="sub">No saved test games.</div>');
   P.onclick=e=>{const cd=e.target.closest('[data-cdel]');if(cd){if(!cd.dataset.arm){cd.dataset.arm=1;cd.textContent='Tap again to delete clips';return}cloudDel(cd.dataset.cdel).then(n=>{toast('Deleted '+n+' clip files');renderMg();render()}).catch(err=>toast(err.message));return}
     const pd=e.target.closest('[data-pubdel]');if(pd){if(!pd.dataset.arm){pd.dataset.arm=1;pd.textContent='Tap again';return}const id=pd.dataset.pubdel;EMB.index=EMB.index.filter(g=>g.id!==id);delete EMB.games[id];tombstone(['pub-'+id]);savePub();fillPicker();renderMg();if(G&&G.id===id){G=null;startPick()}return}
