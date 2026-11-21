@@ -50,7 +50,7 @@ body.tool #home{display:none}body.tool #bar{display:flex}body.tool #views{displa
 details{margin-top:14px}summary{color:var(--mut);font-size:13px}
 </style></head><body>
 <div id="home">
- <div class="brand">KDNCE</div><h1 id="pname">Deer Creek</h1><div class="sub" id="psub">Football staff</div>
+ <div class="brand">KDNCE</div><h1 id="pname"></h1><div class="sub" id="psub"></div>
  <div class="tiles" id="tiles"></div>
  <div id="syncline"></div>
 </div>
@@ -83,7 +83,7 @@ function goHome(){document.body.classList.remove('tool');try{localStorage.setIte
 function reviewCount(){if(!window.GL)return 0;const g=GL.load(PROGRAM);return g?GL.reviewList(g).length:0}
 function curGame(){try{const A=JSON.parse(localStorage.getItem('almanac_v1'));const g=A&&A.games.find(x=>x.id===A.cur);if(!g)return'';const n=g.plays.filter(p=>p.k==='p').length;return esc(g.opp)+' · '+n+' play'+(n===1?'':'s')+(g.scout?' · scout loaded':'')}catch(e){return''}}
 function renderHome(){const s=SUITESYNC.status(),n=reviewCount();
- $('pname').textContent=s.name||'Deer Creek';
+ $('pname').textContent=s.signedIn&&s.name?s.name+' Football':'';$('psub').textContent=s.signedIn?'':'Sign in to see your program';
  $('tiles').innerHTML=TOOLS.map(t=>`<button class="tile ${t.soon?'soon':''}" data-t="${t.id}"><b>${t.name}</b><span>${t.id==='almanac'&&curGame()?curGame():t.desc}</span>${t.id==='glossary'&&n?`<span class="dot">${n} to review</span>`:''}</button>`).join('');
  const ago=s.last?Math.round((Date.now()-s.last)/60000):null;
  $('syncline').innerHTML=s.signedIn?`${s.busy?'Syncing…':s.error?'<span style="color:var(--bad)">'+esc(s.error)+'</span>':'Synced '+(ago===0?'just now':ago+' min ago')}${navigator.onLine?'':' · offline'}<button id="syncbtn">Sync</button>`
