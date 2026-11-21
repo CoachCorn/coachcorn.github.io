@@ -133,7 +133,7 @@ body.opp .selfonly{display:none!important} body:not(.opp) .opponly{display:none!
       <div class="bar"><button id="clearGame">Delete this game</button><button id="dlJson" class="selfonly">Download game file for the public site</button></div>
     </details>
     <div class="bar">
-      <button id="saveHl" title="Upload the turning-point and explosive clips so every iPad can watch them">Save highlight clips to KDNCE</button><button class="pri" id="aiAll" disabled>AI tag untagged plays</button><button id="aiStop" hidden>Stop</button>
+      <button id="saveHl" title="Upload the turning-point and explosive clips so every device can watch them">Save highlight clips to KDNCE</button><button class="pri" id="aiAll" disabled>AI tag untagged plays</button><button id="aiStop" hidden>Stop</button>
       <label class="c">Model <select id="tier"><option value="complex">Most capable</option><option value="default">Balanced</option></select></label>
       <span id="aiStatus" class="sub" style="font-size:14px"></span><span style="flex:1"></span>
       <span class="meta">Plays <b id="sPlays">0</b> · Need review <b id="sReview">0</b> · Almanac <b id="sAlm">none</b> · <span id="aiAvail"></span></span>
@@ -943,14 +943,14 @@ function wireHudl(){
   $('#hCopy').onclick=async()=>{const cols=hudlCols();const t=hudlRows().map(r=>cols.map(c=>r[c]??'').join('\t')).join('\n');try{await navigator.clipboard.writeText(t);toast('Copied rows (no header)')}catch(e){toast('Copy not allowed here; use CSV')}};
 }
 
-/* ---------- save highlight clips from the film loaded on this iPad ---------- */
+/* ---------- save highlight clips from the film loaded on this device ---------- */
 $('#saveHl').onclick=async()=>{if(!CLOUD.ready){toast('Sign in on the KDNCE home screen first (and connect clip storage)');return}if(!CUR){toast('Open a tagged game first');return}
   const g=buildG(),want=new Set([...g.turningPoints,...g.explosives].map(t=>t.clip));if(OPP())oppPlays().filter(x=>x.exp).forEach(x=>want.add(x.p.n));
   const list=[...want].map(n=>S.plays.find(p=>p.n===n)).filter(p=>p&&Object.keys(p.angles).length);if(!list.length){toast('Load this game\'s clips first (Game setup › Clips)');return}
   const b=$('#saveHl');b.disabled=true;let k=0;
   for(const p of list){const a=p.angles.Wide||p.angles.Tight||Object.values(p.angles)[0];b.textContent=`Uploading ${++k}/${list.length}…`;
     try{const blob=await a.get();await cloudPut(CUR,'clip'+pad3(p.n)+'.mp4',blob instanceof Blob?blob:new Blob([blob],{type:'video/mp4'}))}catch(e){toast('Clip '+p.n+': '+e.message);break}}
-  b.disabled=false;b.textContent='Save highlight clips to KDNCE';await cloudList(CUR);toast(`Saved ${k} highlight clip${k>1?'s':''}. Other iPads can watch them now.`);refresh()};
+  b.disabled=false;b.textContent='Save highlight clips to KDNCE';await cloudList(CUR);toast(`Saved ${k} highlight clip${k>1?'s':''}. Other devices can watch them now.`);refresh()};
 /* ---------- start ---------- */
 function tombstone(ids){try{const t=JSON.parse(localStorage.getItem('fr:deleted')||'[]');ids.forEach(i=>{if(i&&!t.includes(i))t.push(i)});localStorage.setItem('fr:deleted',JSON.stringify(t))}catch(e){}}
 function startPick(){const v=$('#gamePick').value;if(v&&!v.startsWith('new:')){pick(v);return}G=null;render();$('#out').innerHTML='<div class="panel empty">No games yet. Pick <b>+ New self scout</b> in the Game menu, send a game from the Almanac, or <b>Import game file</b> for a finished game.</div>'}
