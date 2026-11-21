@@ -503,6 +503,10 @@ function glCapture(){if(!glOn())return false;let ch=false;const L=A.lists;
 function glRemoved(k,before,after){if(!glOn()||!GLX_MAP[k])return;const m=GLX_MAP[k],keep=new Set(after.map(GL.U));let ch=false;
  for(const x of before)if(!keep.has(GL.U(x))){const t=GL.find(GLO,m.type,x);if(t)ch=(m.use&&t.uses.length?GL.dropUse(t,m.use):GL.retire(t))||ch}
  if(ch)GL.save(GLO)}
+/* Sync (from the suite shell): add or replace games that came from another device. */
+window.syncBusy=()=>edit!==null;
+window.syncUpsert=games=>{for(const g of games){const i=A.games.findIndex(x=>x.id===g.id);if(i>=0)A.games[i]=g;else A.games.push(g)}
+ if(!A.games.find(g=>g.id===A.cur))A.cur=A.games[0].id;d=freshDraft(lastNext());save();renderAll();toast(games.length+' game'+(games.length===1?'':'s')+' synced from another iPad')};
 addEventListener('storage',e=>{if(window.GL&&e.key===GL.key(CONFIG.program)){GLO=GL.load(CONFIG.program)||GLO;glApply();try{localStorage.setItem(KEY,JSON.stringify(A))}catch(x){}renderAll()}});
 function glInit(){if(!window.GL){GLO=null;return}GLO=GL.load(CONFIG.program);if(!GLO){GLO=glSeed();GL.save(GLO)}glApply();glCapture()}
 /* Front codes from the glossary (falls back to the built-in TECH table when there is no glossary). */

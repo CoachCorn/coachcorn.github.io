@@ -9,52 +9,119 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <style>
-:root{--bg:#0f1720;--card:#18232f;--line:#2a3948;--tx:#e8eef4;--mut:#8ea0b2;--acc:#3b9cff;--warn:#f2b632}
+:root{--bg:#0f1720;--card:#18232f;--line:#2a3948;--tx:#e8eef4;--mut:#8ea0b2;--acc:#3b9cff;--ok:#2fbf71;--warn:#f2b632;--bad:#ef5b5b}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:15px -apple-system,system-ui,sans-serif;overflow:hidden}
 body{display:flex;flex-direction:column;height:100vh;height:100dvh}
-nav{display:flex;gap:4px;padding:6px 8px;padding-top:max(6px,env(safe-area-inset-top));background:#070c12;border-bottom:1px solid var(--line);overflow-x:auto;flex:none}
-nav button{font:inherit;color:var(--mut);background:transparent;border:1px solid transparent;border-radius:9px;padding:7px 14px;min-height:38px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;font-size:13px;white-space:nowrap;position:relative}
-nav button.on{color:#fff;background:var(--card);border-color:var(--line)}
-nav .dot{position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:var(--warn)}
-nav .sp{flex:1}
-nav .net{font-size:11px;color:var(--mut);align-self:center;padding:0 6px}
-#views{flex:1;position:relative;min-height:0}
-#views iframe,#views .soon{position:absolute;inset:0;width:100%;height:100%;border:0;display:none;background:var(--bg)}
+button,input{font:inherit;color:var(--tx)}
+/* home */
+#home{flex:1;overflow:auto;display:flex;flex-direction:column;align-items:center;padding:max(40px,env(safe-area-inset-top)) 20px 30px}
+#home h1{font-size:30px;margin:10px 0 6px;letter-spacing:.02em;text-align:center}
+#home .sub{color:var(--mut);font-size:13px;margin-bottom:28px;text-align:center}
+.tiles{display:flex;flex-direction:column;gap:14px;width:min(440px,100%)}
+.tile{position:relative;display:block;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;min-height:76px}
+.tile b{display:block;font-size:20px;letter-spacing:.06em;text-transform:uppercase}
+.tile span{display:block;color:var(--mut);font-size:13px;margin-top:3px}
+.tile:active{background:#223140}.tile::before{content:'';position:absolute;left:0;top:12px;bottom:12px;width:4px;border-radius:0 4px 4px 0;background:var(--acc)}.tile[data-t=film]::before{background:var(--ok)}.tile[data-t=gameplan]::before{background:#9b7bff}.tile[data-t=glossary]::before{background:var(--warn)}
+#home .mark{width:58px;height:58px;border-radius:14px}
+.tile .dot{position:absolute;top:14px;right:14px;background:var(--warn);color:#2a1e00;font-size:11px;font-weight:800;border-radius:9px;padding:2px 8px}
+.tile.soon{opacity:.55}
+#syncline{margin-top:26px;color:var(--mut);font-size:13px;text-align:center}
+#syncline button{background:transparent;border:1px solid var(--line);border-radius:8px;padding:6px 12px;margin-left:6px;text-transform:uppercase;font-size:12px}
+/* tool view */
+#bar{display:none;align-items:center;gap:8px;padding:6px 8px;padding-top:max(6px,env(safe-area-inset-top));background:#070c12;border-bottom:1px solid var(--line);flex:none}
+#bar .home{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:6px 12px;min-height:36px;font-weight:700;text-transform:uppercase;font-size:13px}
+#bar .ttl{font-weight:800;text-transform:uppercase;letter-spacing:.05em;font-size:13px}
+#bar .sp{flex:1}#bar .st{font-size:11px;color:var(--mut)}
+#views{flex:1;position:relative;min-height:0;display:none}
+#views iframe,#views .soonv{position:absolute;inset:0;width:100%;height:100%;border:0;display:none;background:var(--bg)}
 #views .on{display:block}
-.soon{padding:30px;color:var(--mut)}.soon h2{color:var(--tx);margin-top:0}
+.soonv{padding:30px;color:var(--mut)}.soonv h2{color:var(--tx);margin-top:0}
+body.tool #home{display:none}body.tool #bar{display:flex}body.tool #views{display:block}
+/* modal */
+.modal{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:9}
+.modal.show{display:flex}.box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;width:min(460px,94vw);max-height:90vh;overflow:auto}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:10px 0 4px}
+.box input{width:100%;background:#102030;border:1px solid var(--line);border-radius:8px;padding:9px;font-size:16px}
+.btn{background:#223140;border:1px solid var(--line);border-radius:8px;padding:9px 14px;min-height:40px;text-transform:uppercase;font-weight:700}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+.err{color:var(--bad);font-size:13px;margin-top:8px}.note{color:var(--mut);font-size:12px}
+details{margin-top:14px}summary{color:var(--mut);font-size:13px}
 </style></head><body>
-<nav id="nav"></nav>
+<div id="home">
+ <img class="mark" src="icon-192.png" alt=""><h1 id="pname">Deer Creek</h1><div class="sub" id="psub">Football staff</div>
+ <div class="tiles" id="tiles"></div>
+ <div id="syncline"></div>
+</div>
+<div id="bar"><button class="home" id="homebtn">‹ Home</button><span class="ttl" id="ttl"></span><span class="sp"></span><span class="st" id="st"></span></div>
 <div id="views"></div>
+<div class="modal" id="modal"><div class="box" id="mbox"></div></div>
 <script src="../shared/glossary.js"></script>
+<script src="sync.js"></script>
 <script>
-/* One installed app for the staff tools. Every tool runs in its own frame from the same site, so they all
-   share one storage area on the device (one glossary, one set of games). Frames stay loaded when you switch. */
+/* One installed app for the staff tools. Every tool runs in its own frame from the same site, so they all share
+   one storage area on the device (one glossary, one set of games). Frames stay loaded after you leave them. */
+const PROGRAM='deer-creek';
+const DEFAULT_SERVER=''; // filled in once the Cloudflare Worker is deployed
 const TOOLS=[
- {id:'almanac',name:'Almanac',src:'../almanac/'},
- {id:'film',name:'Film Room',src:'../film-room/'},
- {id:'gameplan',name:'Gameplan',soon:'The gameplan grid is still a mockup. When it is built it opens here and sends its gameplan and best calls to the Almanac.'},
- {id:'glossary',name:'Glossary',src:'glossary.html'}];
-const nav=document.getElementById('nav'),views=document.getElementById('views'),made={};
-let cur=null;
+ {id:'almanac',name:'Almanac',desc:'Sideline log, stats, predicted call',src:'../almanac/'},
+ {id:'film',name:'Film Room',desc:'Game reports and tagging',src:'../film-room/'},
+ {id:'gameplan',name:'Gameplan',desc:'Weekly grid and best calls',soon:'The gameplan grid is still a mockup. When it is built it opens here and sends its gameplan and best calls to the Almanac.'},
+ {id:'glossary',name:'Glossary',desc:'Every term every tool uses',src:'glossary.html'}
+];
+const $=id=>document.getElementById(id),made={};
+const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function frame(t){if(made[t.id])return made[t.id];let el;
- if(t.soon){el=document.createElement('div');el.className='soon';el.innerHTML='<h2>'+t.name+'</h2><p>'+t.soon+'</p>'}
+ if(t.soon){el=document.createElement('div');el.className='soonv';el.innerHTML='<h2>'+t.name+'</h2><p>'+t.soon+'</p>'}
  else{el=document.createElement('iframe');el.src=t.src;el.title=t.name;el.setAttribute('allow','clipboard-write')}
- views.appendChild(el);return made[t.id]=el}
-function show(id){const t=TOOLS.find(x=>x.id===id)||TOOLS[0];cur=t.id;
+ $('views').appendChild(el);return made[t.id]=el}
+function open(id){const t=TOOLS.find(x=>x.id===id);if(!t)return goHome();
  for(const k in made)made[k].classList.toggle('on',k===t.id);frame(t).classList.add('on');
- nav.querySelectorAll('[data-t]').forEach(b=>b.classList.toggle('on',b.dataset.t===t.id));
- try{localStorage.setItem('suite_tab',t.id)}catch(e){}}
-function badge(){const b=nav.querySelector('[data-t=glossary]');if(!b||!window.GL)return;const g=GL.load('deer-creek'),n=g?GL.reviewList(g).length:0;
- let d=b.querySelector('.dot');if(n&&!d){d=document.createElement('span');d.className='dot';b.appendChild(d)}else if(!n&&d)d.remove();b.title=n?n+' terms to review':''}
-nav.innerHTML=TOOLS.map(t=>`<button data-t="${t.id}">${t.name}</button>`).join('')+'<span class="sp"></span><span class="net" id="net"></span>';
-nav.onclick=e=>{const b=e.target.closest('[data-t]');if(b)show(b.dataset.t)};
+ $('ttl').textContent=t.name;document.body.classList.add('tool');try{localStorage.setItem('suite_tab',t.id)}catch(e){}}
+function goHome(){document.body.classList.remove('tool');try{localStorage.setItem('suite_tab','')}catch(e){}renderHome()}
+function reviewCount(){if(!window.GL)return 0;const g=GL.load(PROGRAM);return g?GL.reviewList(g).length:0}
+function curGame(){try{const A=JSON.parse(localStorage.getItem('almanac_v1'));const g=A&&A.games.find(x=>x.id===A.cur);if(!g)return'';const n=g.plays.filter(p=>p.k==='p').length;return esc(g.opp)+' · '+n+' play'+(n===1?'':'s')+(g.scout?' · scout loaded':'')}catch(e){return''}}
+function renderHome(){const s=SUITESYNC.status(),n=reviewCount();
+ $('pname').textContent=s.name||'Deer Creek';
+ $('tiles').innerHTML=TOOLS.map(t=>`<button class="tile ${t.soon?'soon':''}" data-t="${t.id}"><b>${t.name}</b><span>${t.id==='almanac'&&curGame()?curGame():t.desc}</span>${t.id==='glossary'&&n?`<span class="dot">${n} to review</span>`:''}</button>`).join('');
+ const ago=s.last?Math.round((Date.now()-s.last)/60000):null;
+ $('syncline').innerHTML=s.signedIn?`${s.busy?'Syncing…':s.error?'<span style="color:var(--bad)">'+esc(s.error)+'</span>':'Synced '+(ago===0?'just now':ago+' min ago')}${navigator.onLine?'':' · offline'}<button id="syncbtn">Sync</button>`
+  :`${s.error?'<span style="color:var(--bad)">'+esc(s.error)+'</span> · ':''}This iPad only (not syncing)<button id="syncbtn">Sign in</button>`;
+ $('syncbtn').onclick=signInModal}
+function barStatus(){const s=SUITESYNC.status();$('st').textContent=!navigator.onLine?'Offline':s.busy?'Syncing…':s.error?'Sync problem':s.signedIn?'Synced':''}
+$('tiles').onclick=e=>{const b=e.target.closest('[data-t]');if(b)open(b.dataset.t)};
+$('homebtn').onclick=goHome;
 /* A tool can ask the shell to open another tool, e.g. the Almanac's Glossary button. */
-addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||!e.data.open)return;show(e.data.open);
+addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||!e.data.open)return;open(e.data.open);
  if(e.data.open==='glossary'&&made.glossary&&made.glossary.contentWindow)made.glossary.contentWindow.postMessage({glossary:'review'},location.origin)});
-addEventListener('storage',e=>{if(e.key&&e.key.indexOf('glossary_v1_')===0)badge()});
-const net=()=>{document.getElementById('net').textContent=navigator.onLine?'':'Offline'};addEventListener('online',net);addEventListener('offline',net);net();
-let start='almanac';try{start=localStorage.getItem('suite_tab')||'almanac'}catch(e){}
-show(start);frame(TOOLS[0]);badge();setInterval(badge,5000);
+addEventListener('storage',e=>{if(e.key&&e.key.indexOf('glossary_v1_')===0&&!document.body.classList.contains('tool'))renderHome()});
+addEventListener('online',()=>{renderHome();barStatus()});addEventListener('offline',()=>{renderHome();barStatus()});
+/* sign in */
+function modal(h){$('mbox').innerHTML=h;$('modal').classList.add('show')}
+function closeM(){$('modal').classList.remove('show')}
+$('modal').onclick=e=>{if(e.target.id==='modal')closeM()};
+function signInModal(){const s=SUITESYNC.status();
+ if(s.signedIn){modal(`<h3 style="margin-top:0">Sync · ${esc(s.name||s.program)}</h3><p class="note">Server ${esc(s.url)}</p>
+  <p style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn pri" id="sn">Sync now</button><button class="btn" id="so">Sign out this iPad</button><button class="btn" id="sx">Close</button></p>`);
+  $('sn').onclick=()=>{SUITESYNC.syncNow();closeM()};$('so').onclick=()=>{SUITESYNC.signOut();closeM();renderHome()};$('sx').onclick=closeM;return}
+ modal(`<h3 style="margin-top:0">Sign in to sync</h3><p class="note">Signing in keeps this iPad's glossary and games in step with the rest of the staff. Everything still works offline.</p>
+ <div class="lab">Server address</div><input id="su" value="${esc(s.url||DEFAULT_SERVER)}" placeholder="https://coach-suite.….workers.dev" autocapitalize="off" autocorrect="off">
+ <div class="lab">Program</div><input id="sp" value="${esc(s.program||PROGRAM)}" autocapitalize="off">
+ <div class="lab">Staff passcode</div><input id="sc" type="password">
+ <div id="se" class="err"></div>
+ <p style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px"><button class="btn pri" id="sg">Sign in</button><button class="btn" id="sx">Cancel</button></p>
+ <details><summary>First-time setup (creates the program or changes its passcode)</summary>
+  <div class="lab">Admin key</div><input id="sa" type="password" autocapitalize="off">
+  <div class="lab">Program name</div><input id="sn2" value="Deer Creek">
+  <p class="note">Uses the program and passcode above. The passcode needs 8+ characters. Changing it signs every iPad out.</p>
+  <button class="btn" id="ss">Create / set passcode</button></details>`);
+ $('sx').onclick=closeM;
+ $('sg').onclick=async()=>{$('se').textContent='';try{await SUITESYNC.login($('su').value,$('sp').value,$('sc').value);closeM();renderHome();SUITESYNC.syncNow()}catch(e){$('se').textContent=e.message}};
+ $('ss').onclick=async()=>{$('se').textContent='';try{await SUITESYNC.setup($('su').value,$('sp').value.trim().toLowerCase(),$('sn2').value,$('sc').value,$('sa').value);$('se').style.color='var(--ok)';$('se').textContent='Program set. Now tap Sign in.'}catch(e){$('se').style.color='';$('se').textContent=e.message}}}
+SUITESYNC.onChange(()=>{renderHome();barStatus()});
+frame(TOOLS[0]); // load the Almanac in the background so it is ready (and so sync can reach it)
+let start='';try{start=localStorage.getItem('suite_tab')||''}catch(e){}
+start?open(start):renderHome();renderHome();barStatus();setInterval(()=>{if(!document.body.classList.contains('tool'))renderHome()},30000);
+SUITESYNC.start();
 if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script></body></html>

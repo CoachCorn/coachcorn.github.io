@@ -1,0 +1,15 @@
+name = "coach-suite"
+main = "src/index.js"
+compatibility_date = "2026-11-01"
+
+# Pages allowed to call the server (comma-separated)
+[vars]
+ALLOWED_ORIGINS = "https://coachcorn.github.io,http://localhost:8765"
+
+# Paste the D1 database id from the Cloudflare dashboard here (Storage & databases > D1 > coach-suite).
+[[d1_databases]]
+binding = "DB"
+database_name = "coach-suite"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+# Secrets (set in the dashboard, never in this file): SIGNING_KEY, ADMIN_KEY
