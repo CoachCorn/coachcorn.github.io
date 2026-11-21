@@ -98,7 +98,8 @@ td .cc.empty{color:#3e5163;font-size:20px}
    each formation block holds a drawing, a predicted-defense strip and a grid of calls.
    Stored on the device under gameplan_v1_<program> and synced by suite/sync.js as the 'gameplan' document
    (whole plan, newest edit wins). Standalone: nothing here feeds the Almanac until Noah says so. */
-const PROGRAM=new URLSearchParams(location.search).get('program')||(()=>{try{return(JSON.parse(localStorage.getItem('suite_sync'))||{}).program||'deer-creek'}catch(e){return'deer-creek'}})();
+const PROGRAM=!signedIn()?'demo':(new URLSearchParams(location.search).get('program')||(()=>{try{return(JSON.parse(localStorage.getItem('suite_sync'))||{}).program||'deer-creek'}catch(e){return'deer-creek'}})());
+addEventListener('storage',e=>{if(e.key==='suite_sync'){let n=false;try{const x=JSON.parse(e.newValue);n=!!(x&&x.token&&x.exp>Date.now())}catch(_){}if(n!==signedIn())location.reload()}});
 const KEY='gameplan_v1_'+PROGRAM;
 const $=id=>document.getElementById(id);
 const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -228,7 +229,7 @@ $('plan').onchange=e=>{cur=e.target.value;render()};
 $('pmore').onclick=()=>{const p=plan();if(!p)return newPlanDialog();dialog({title:'Plans',fields:[{label:'Name of this plan',val:p.name}],buttons:[
  {t:'Save name',cls:'pri',fn:v=>{p.name=v[0].trim()||p.name;touch(p);render()}},
  {t:'+ New plan',fn:()=>setTimeout(newPlanDialog,0)},
- ...(signedIn()?[]:[{t:'+ Sample week',fn:()=>{const c=samplePlan();ST.rows.push(c);cur=c.id;writeStore();render();toast('Added a sample week')}}]),
+ ...(signedIn()?[]:[{t:'Reset demo plans',cls:'bad',fn:()=>dialog({title:'Reset the demo plans?',text:'Removes every plan on this device in demo mode and puts back the sample week.',buttons:[{t:'Cancel'},{t:'Reset',cls:'bad',fn:()=>{Object.keys(localStorage).filter(k=>k.indexOf(SKEY)===0).forEach(k=>localStorage.removeItem(k));const c=samplePlan();ST={rows:[c],deleted:[]};cur=c.id;writeStore();render();toast('Demo reset')}}]})},{t:'+ Sample week',fn:()=>{const c=samplePlan();ST.rows.push(c);cur=c.id;writeStore();render();toast('Added a sample week')}}]),
  {t:'Duplicate plan',fn:()=>{const c=clone(p);c.id=uid('p');c.name=p.name+' copy';c.sample=false;c.upd=Date.now();ST.rows.push(c);cur=c.id;writeStore();render()}},
  {t:'Delete plan',cls:'bad',fn:()=>dialog({title:'Delete '+p.name+'?',text:'Every formation and call in it goes away.',buttons:[{t:'Cancel'},{t:'Delete',cls:'bad',fn:()=>{ST.rows=ST.rows.filter(x=>x.id!==p.id);ST.deleted=(ST.deleted||[]).concat(p.id);cur=null;writeStore();render()}}]})},
  {t:'Cancel'}]})};
@@ -255,7 +256,21 @@ function almData(){try{return JSON.parse(localStorage.getItem(ALMK()))}catch(e){
 function almGames(){const A=almData();return(A&&A.games||[]).filter(g=>g.scout&&g.scout.rows&&g.scout.rows.length&&!g.demo)}
 function ownScout(p){try{return JSON.parse(localStorage.getItem(SKEY+p.id))}catch(e){return null}}
 /* Which scout feeds this plan: its own choice, else the Almanac game for the plan's opponent, else the Almanac's current game. */
+/* Demo scout: a made-up opponent so predicted defense shows numbers when signed out. Fixed seed, so it is the same every time. */
+let DEMOSC=null;
+function demoScout(){if(DEMOSC)return DEMOSC;let sd=20270128;const rnd=()=>{sd|=0;sd=sd+0x6D2B79F5|0;let t=Math.imul(sd^sd>>>15,1|sd);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+ const wp=(a)=>{let r=rnd()*a.reduce((x,y)=>x+y[1],0);for(const y of a){r-=y[1];if(r<0)return y[0]}return a[a.length-1][0]};
+ const prof={'DEMO FORMATION 1':{ps:'11',n:38,lk:[['COVER 3','BASE','4',46],['QUARTERS','OVER','4',24],['MAN FREE','BASE','5',18],['COVER 3','TITE','4',12]],cv:[['COVER 3',50],['QUARTERS',30],['MAN FREE',20]],fr:[['BASE',45],['OVER',35],['TITE',20]],rs:[['4',70],['5',20],['3',10]]},
+  'DEMO FORMATION 2':{ps:'12',n:34,lk:[['QUARTERS','HEAVY','4',42],['COVER 3','UNDER','4',28],['COVER 2','BASE','5',20],['COVER 2','HEAVY','3',10]],cv:[['QUARTERS',45],['COVER 3',30],['COVER 2',25]],fr:[['HEAVY',40],['UNDER',35],['BASE',25]],rs:[['4',60],['5',30],['3',10]]},
+  'TRIPS':{ps:'11',n:20,cv:[['COVER 3',55],['QUARTERS',45]],fr:[['BASE',60],['OVER',40]],rs:[['4',80],['5',20]]},
+  'BUNCH':{ps:'11',n:20,cv:[['MAN FREE',60],['COVER 3',40]],fr:[['TITE',50],['BASE',50]],rs:[['4',60],['5',40]]},
+  'TWINS':{ps:'12',n:20,cv:[['COVER 2',50],['QUARTERS',50]],fr:[['UNDER',60],['BASE',40]],rs:[['4',90],['3',10]]},
+  'ACE':{ps:'12',n:20,cv:[['COVER 3',60],['MAN FREE',40]],fr:[['HEAVY',50],['BASE',50]],rs:[['4',75],['5',25]]},
+  'EMPTY':{ps:'10',n:16,cv:[['QUARTERS',50],['MAN FREE',50]],fr:[['TITE',60],['OVER',40]],rs:[['4',50],['5',50]]}};
+ const rows=[];let pn=1;for(const fm in prof){const q=prof[fm];for(let i=0;i<q.n;i++){const L=q.lk?wp(q.lk.map(x=>[x,x[3]])):null;rows.push({pn:pn++,dn:1+Math.floor(rnd()*3),di:1+Math.floor(rnd()*10),h:'',f:null,fm,ps:q.ps,fr:L?L[1]:wp(q.fr),rs:L?L[2]:wp(q.rs),cv:L?L[0]:wp(q.cv),ef:0,ex:0,gn:null,pt:'',cn:''})}}
+ return DEMOSC={name:'Demo opponent (made up)',rows,from:'Demo scout (made up)'}}
 function scoutFor(p){if(!p||!window.SCOUT)return null;const src=p.scoutSrc||'auto';if(src==='none')return null;
+ if(!signedIn()&&src==='auto'){const G0=almGames();if(!G0.length&&!ownScout(p))return demoScout()}
  if(src==='own'){const o=ownScout(p);return o?{name:o.name,rows:o.rows,from:'Loaded in Gameplan'}:null}
  const G=almGames();let g=null;
  if(src.indexOf('alm:')===0)g=G.find(x=>x.id===src.slice(4));
