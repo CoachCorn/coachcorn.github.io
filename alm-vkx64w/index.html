@@ -104,6 +104,7 @@ html,button,.chip,input,select{touch-action:manipulation;-webkit-tap-highlight-c
  <button class="btn" id="exp">Export</button>
  <button class="btn" id="scoutbtn">Scout</button>
  <button class="btn" id="gpbtn">Gameplan</button>
+ <button class="btn" id="glbtn">Glossary</button>
  <button class="btn" id="setup">Setup</button>
 </header>
 <main>
@@ -111,6 +112,7 @@ html,button,.chip,input,select{touch-action:manipulation;-webkit-tap-highlight-c
  <section class="panel" id="logp"></section>
 </main>
 <div class="modal" id="modal"><div class="box" id="mbox"></div></div>
+<script src="../shared/glossary.js"></script>
 <script>
 /* ===== PROGRAM SETTINGS: change this block (and the lists below) to set the app up for another program ===== */
 const CONFIG={program:'deer-creek',name:'Deer Creek',filmRoom:'https://claude.ai/artifact/83Jt11X8MfVHj1xD2UB6CA',storageKey:'almanac_v1',blankUntilPlan:true};
@@ -166,9 +168,10 @@ function load(){try{A=JSON.parse(localStorage.getItem(KEY))}catch(e){A=null}
  if(A.v<11){const T=A.lists.targets=A.lists.targets||[];if(!T.some(x=>String(x).toUpperCase()==='BUBBLE'))T.push('BUBBLE');A.v=11}
  if(A.v<12){if(!A.lists.passers)A.lists.passers=['9','12'];A.v=12}
  if(A.v<13){const L=A.lists,add=(k,a)=>{L[k]=L[k]||[];for(const x of a)if(!L[k].some(y=>String(y).toUpperCase()===x))L[k].push(x)};const T=['BOOT', 'SWEEP', 'READ', 'LOOK', 'S', 'LASER', 'ROCKET', 'DRIP', 'LEAK', 'ARROW', 'BULL', 'YELL', 'GREY', 'YELLOW'];add('tagsRun',T);add('tagsPass',T);add('motions',['AIRPLANE','BUMP']);add('ftags',['LITE','HEAVY']);A.v=13}
+ try{glInit()}catch(e){GLO=null}
  if(!A.games.length)buildDemo(true);
  if(!A.cur||!A.games.find(g=>g.id===A.cur))A.cur=A.games[0].id;save()}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(A))}catch(e){}}
+function save(){try{glCapture()}catch(e){}try{localStorage.setItem(KEY,JSON.stringify(A))}catch(e){}}
 function newGame(name,quiet){const g={id:'g'+Date.now(),opp:name,program:CONFIG.program,plays:[]};A.games.push(g);A.cur=g.id;d=freshDraft(null);if(!quiet){save();renderAll()}}
 const G=()=>A.games.find(g=>g.id===A.cur);
 const esc2=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -352,7 +355,7 @@ const normFm=s=>String(s||'').toUpperCase().replace(/\s+(LT|RT|LEFT|RIGHT)\.?$/,
 /* Front names -> structural technique codes (locked with Noah). BEAR / OVER / UNDER exist in both an odd and an even version. */
 const TECH={odd:{BASE:'5-0-5',TITE:'4-0-4',HEAVY:'4i-0-4i',BEAR:'3-0-3',MASS:'2-0-2',OVER:'4i-1-5',UNDER:'5-1-4i',WIDE:'9-0-9'},
  even:{INLAW:'4-2i-2i-4',OUTLAW:'5-3-3-5',VIPER:'4-2-2-4',LOAD:'9-3-1-5',CHOKE:'4-0-4-9',BEAR:'5-3-0-3-5',OVER:'4-2-3-5',UNDER:'5-3-2-4'}};
-function frontCode(name,rush){const t=String(name||'').toUpperCase().split(/\s+/).filter(x=>x&&x!=='DBL'),mods=t.filter(x=>x==='MUG'||x==='BOSS'),base=t.find(x=>x!=='MUG'&&x!=='BOSS');if(!base)return'';
+function frontCode(name,rush){{const gc=glFrontCode(name,rush);if(gc!=null)return gc}const t=String(name||'').toUpperCase().split(/\s+/).filter(x=>x&&x!=='DBL'),mods=t.filter(x=>x==='MUG'||x==='BOSS'),base=t.find(x=>x!=='MUG'&&x!=='BOSS');if(!base)return'';
  const o=TECH.odd[base],e=TECH.even[base];const c=(o&&e)?(+rush===3?o:''):(o||e||'');return c?c+(mods.length?' '+mods.join(' '):''):''}
 /* --- file reading: .xlsx is a zip of XML files; no library needed --- */
 const colIdx=s=>{let n=0;for(const ch of s)n=n*26+ch.charCodeAt(0)-64;return n-1};
@@ -447,6 +450,112 @@ function scoutModal(){const g=G(),s=g.scout;
    document.getElementById('scload').onclick=()=>{const b=cur();g.scout={name:nm.value.trim()||b.name,src:f.name+' · '+sheet,at:Date.now(),rows:b.rows};save();modal_close();renderAll();toast('Scout loaded: '+g.scout.rows.length+' plays')}
   }catch(err){box.innerHTML=`<p style="color:var(--bad)">${esc2(err.message||err)}</p>`}}}
 document.getElementById('scoutbtn').onclick=scoutModal;
+/* ===== Glossary link: the Almanac's button lists and the shared program glossary stay in step both ways ===== */
+const GLX_MAP={formations:{type:'formation'},ftags:{type:'ftag'},motions:{type:'motion'},runs:{type:'run'},passes:{type:'pass'},owcs:{type:'oneword'},glfs:{type:'glf'},tagsRun:{type:'tag',use:'run'},tagsPass:{type:'tag',use:'pass'},targets:{type:'route'}};
+let GLO=null;const glOn=()=>!!(window.GL&&GLO);
+const DC_MEAN={ /* meanings Noah has taught; key = type|NAME */
+ 'ftag|OUTSIDE':'Boundary X/Z moves to the field hash, on the ball (X just inside Z).','ftag|HEAVY':'Right tackle moves to the left side, tackle over.','ftag|LITE':'Left tackle moves to the right side, tackle over (mirror of Heavy).','ftag|STOOGE':'H in the backfield, beside Q.',
+ 'motion|MAP':'M starts opposite, in the box, then fast motion to where he needs to be; QB snaps while he is moving. Landing spot comes from the call.','motion|ZAP':'H fast motion into a route.',
+ 'tag|MIRROR':'Flips a one-word run to the field side. Play tag only.','tag|SHORT':'Play tag only (no flip of the long form).','tag|CHIEF':'Double pass.','tag|PITCH':'Speed option.',
+ 'formation|Joker':'3x1 with a nub TE.','formation|Shoot':'No L/R mirror.','formation|Army':'TEs shift from behind the center.','formation|Ace':'2 TEs (A left, M right) and 2 outside WRs.','formation|Money':'Green light formation.',
+ 'run|CAROLINA':'GY Counter left.','run|PANTHER':'GY Counter right.','run|VEGAS':'Buck Sweep left.','run|RAIDER':'Buck Sweep right.','run|LA':'Power left.','run|CHARGER':'Power right.','run|PITT':'GT Counter left.','run|STEELER':'GT Counter right.',
+ 'pass|LAP':'Cross, left.','pass|RACE':'Cross, right.','pass|FLASH':'Flash / Strike pair (2 and 3 switch routes).','pass|STRIKE':'Flash / Strike pair (2 and 3 switch routes).',
+ 'glf|SHUFFLE':'Green light formation.','glf|DIAMOND':'Green light formation.','glf|QUAD':'Green light formation.','glf|SCRAMBLE':'Green light formation.','glf|MONEY':'Green light formation.','glf|MATCH':'Green light formation.'};
+const OW_NAME={BRONCHOS:'Sail',CAL:'Cross',MINERS:'Verticals',AGGIES:'Shock',STANFORD:'Post Spike',TULSA:'Post Spike'};
+function owText(n){const w=OW[n];if(!w)return'';const fam={Kong:'Kong (Oklahoma)',Crown:'Crown (California)',Trips:'Trips (Texas)'}[w.fam]||w.fam;
+ let s=(w.t==='run'?'Run':'Pass')+' one word. Formation '+fam+' to the field.';
+ if(w.byHash)s+=' Left hash '+w.byHash.L+', right hash '+w.byHash.R+'.';else if(w.pair)s+=' Left hash '+w.pair[0]+', right hash '+w.pair[1]+'.';
+ if(w.t==='run')s+=' Run goes to the boundary.';if(w.pp)s+=' Black/Brown protection to the boundary.';if(w.tg)s+=' Adds the '+w.tg+' tag.';
+ if(OW_NAME[n])s+=' Analysis name: '+OW_NAME[n]+'.';return s}
+function glSeed(){const g=GL.blank(CONFIG.program,CONFIG.name);const L=A.lists;
+ const isDef=(k,x)=>(DEF[k]||[]).some(y=>GL.U(y)===GL.U(x));
+ for(const k in GLX_MAP){const m=GLX_MAP[k];for(const x of [...(DEF[k]||[]),...(L[k]||[])]){if(!String(x).trim())continue;
+  const mean=DC_MEAN[m.type+'|'+x]||DC_MEAN[m.type+'|'+GL.U(x)]||(m.type==='oneword'?owText(GL.U(x)):'');
+  GL.add(g,{type:m.type,name:x,side:'O',source:'seed',needsReview:!isDef(k,x),uses:m.use?[m.use]:[],meaning:{text:mean}})}}
+ for(const pr of PAIRS){const a=GL.find(g,'run',pr[0])||GL.find(g,'pass',pr[0]),b=GL.find(g,'run',pr[1])||GL.find(g,'pass',pr[1]);if(a&&b){a.links.pair=b.id;b.links.pair=a.id}}
+ for(const t of g.terms)if((t.type==='run'||t.type==='pass'||t.type==='oneword')&&FAM[GL.U(t.name)])t.links.family=FAM[GL.U(t.name)];
+ for(const pk of['odd','even'])for(const nm in TECH[pk]){const both=TECH.odd[nm]&&TECH.even[nm];
+  GL.add(g,{id:'front.'+GL.slug(nm)+(both?'.'+pk:''),type:'front',name:nm,side:'D',source:'seed',code:TECH[pk][nm],package:pk,meaning:{text:(pk==='odd'?'Odd':'Even')+' front, '+TECH[pk][nm]+'.'}})}
+ // BEAR / OVER / UNDER share a display name across odd and even, so add the even ones by id
+ for(const nm of Object.keys(TECH.even))if(TECH.odd[nm]&&!GL.byId(g,'front.'+GL.slug(nm)+'.even'))g.terms.push(Object.assign(GL.add(GL.blank('tmp'),{id:'front.'+GL.slug(nm)+'.even',type:'front',name:nm,side:'D',source:'seed',code:TECH.even[nm],package:'even',meaning:{text:'Even front, '+TECH.even[nm]+'.'}}).term));
+ GL.add(g,{id:'frontmod.mug',type:'frontmod',name:'MUG',side:'D',source:'seed',meaning:{text:'LBs walked up. Added after the front code (505 MUG).'}});
+ GL.add(g,{id:'frontmod.boss',type:'frontmod',name:'BOSS',side:'D',source:'seed',meaning:{text:'Both DTs aligned to the same side. Added after the front code.'}});
+ for(const s of['MFC','MFO','1-HIGH','2-HIGH','3-HIGH','MAN','ZONE'])GL.add(g,{type:'shell',name:s,side:'D',source:'seed',meaning:{text:{MFC:'Middle of the field closed.',MFO:'Middle of the field open.',MAN:'Man coverage.',ZONE:'Zone coverage.'}[s]||s.toLowerCase()+' safety shell.'}});
+ for(const c of['BLACK','STAR','CLAMP','CLEO','SINK','READ']){const star=c==='STAR';
+  GL.add(g,{type:'coverage',name:c,side:'D',source:'seed',needsReview:!star,links:{maps_to:star?['shell.mfc','shell.3-high','shell.zone']:[]},meaning:{text:star?'Cover 3, cloud to the field.':'Map to coarse tags (MFC/MFO, high safeties, man/zone).'}})}
+ for(const t of g.terms)t.updated='0';
+ return g}
+/* Glossary -> Almanac lists: add active names, swap old names for renamed ones, drop retired ones. */
+function glApply(){if(!glOn())return;const L=A.lists;
+ for(const k in GLX_MAP){const m=GLX_MAP[k],arr=L[k]=L[k]||[],out=[];
+  for(const x of arr){const t=GL.find(GLO,m.type,x);if(!t){out.push(x);continue}
+   if(t.status!=='active'||(m.use&&t.uses.length&&!t.uses.includes(m.use)))continue;if(!out.some(y=>GL.U(y)===GL.U(t.name)))out.push(t.name)}
+  for(const t of GL.active(GLO,m.type,m.use))if(!out.some(y=>GL.U(y)===GL.U(t.name)))out.push(t.name);
+  L[k]=out}}
+/* Almanac lists -> glossary: any word the Almanac has that the glossary lacks goes in, flagged for review. */
+function glCapture(){if(!glOn())return false;let ch=false;const L=A.lists;
+ for(const k in GLX_MAP){const m=GLX_MAP[k];for(const x of L[k]||[]){if(!String(x).trim())continue;
+  const t=GL.find(GLO,m.type,x);
+  if(!t){GL.add(GLO,{type:m.type,name:x,side:'O',source:'game',needsReview:true,uses:m.use?[m.use]:[]});ch=true}
+  else if(m.use&&t.status==='active'&&!t.uses.includes(m.use)){t.uses.push(m.use);ch=true}}}
+ if(ch)GL.save(GLO);return ch}
+/* Setup: a word deleted from a list is retired in the glossary (or loses that use for tags). */
+function glRemoved(k,before,after){if(!glOn()||!GLX_MAP[k])return;const m=GLX_MAP[k],keep=new Set(after.map(GL.U));let ch=false;
+ for(const x of before)if(!keep.has(GL.U(x))){const t=GL.find(GLO,m.type,x);if(t)ch=(m.use&&t.uses.length?GL.dropUse(t,m.use):GL.retire(t))||ch}
+ if(ch)GL.save(GLO)}
+function glInit(){if(!window.GL){GLO=null;return}GLO=GL.load(CONFIG.program);if(!GLO){GLO=glSeed();GL.save(GLO)}glApply();glCapture()}
+/* Front codes from the glossary (falls back to the built-in TECH table when there is no glossary). */
+function glFrontCode(name,rush){if(!glOn())return null;const t=String(name||'').toUpperCase().split(/\s+/).filter(x=>x&&x!=='DBL');
+ const mods=t.filter(x=>GL.find(GLO,'frontmod',x)),base=t.find(x=>!GL.find(GLO,'frontmod',x));if(!base)return'';
+ const hits=GLO.terms.filter(x=>x.type==='front'&&x.status==='active'&&[x.name,...x.aliases].map(GL.U).includes(base));if(!hits.length)return null;
+ const pick=hits.length===1?hits[0]:(+rush===3?hits.find(x=>x.package==='odd'):null);if(!pick||!pick.code)return'';
+ return pick.code+(mods.length?' '+mods.map(x=>GL.find(GLO,'frontmod',x).name).join(' '):'')}
+/* ----- Glossary screen ----- */
+const GL_TYPES=[['formation','Formations'],['ftag','Formation tags'],['motion','Motion / Shift'],['tag','Play tags'],['run','Run concepts'],['pass','Pass concepts'],['oneword','One words'],['glf','Green light'],['route','Routes'],['front','Fronts'],['frontmod','Front tags'],['coverage','Coverages'],['shell','Shells']];
+let glState={q:'',type:'',review:false};
+function glModal(){if(!glOn()){modal(`<h3 style="margin-top:0">Glossary</h3><p class="note">The glossary file did not load (no signal on first open?). The Almanac works as before; open it again with signal.</p><button class="btn" onclick="modal_close()">Close</button>`);return}
+ const s=glState,rv=GL.reviewList(GLO).length,q=GL.U(s.q);
+ let list=GLO.terms.filter(t=>(!s.type||t.type===s.type)&&(!s.review||t.needsReview)&&(!q||[t.name,...t.aliases,t.meaning.text||''].some(x=>GL.U(x).includes(q))));
+ list.sort((a,b)=>(a.status===b.status?0:a.status==='active'?-1:1)||a.type.localeCompare(b.type)||a.name.localeCompare(b.name));
+ const tl=t=>(GL_TYPES.find(x=>x[0]===t)||[t,t])[1];
+ const row=t=>`<tr class="glr" data-id="${esc2(t.id)}" style="cursor:pointer;${t.status==='retired'?'opacity:.45':''}"><td><b>${esc2(t.name)}</b>${t.code?' <span class="mut">'+esc2(t.code)+'</span>':''}${t.needsReview?' <span class="badge" style="background:var(--warn);color:#2a1e00">REVIEW</span>':''}${t.aliases.length?'<div class="mut">also '+esc2(t.aliases.join(', '))+'</div>':''}</td><td class="mut">${esc2(tl(t.type))}${t.uses.length?' · '+t.uses.join('/'):''}</td><td style="font-size:13px">${esc2(t.meaning.text||'')||'<span class="mut">no meaning yet</span>'}</td></tr>`;
+ modal(`<h3 style="margin-top:0">Glossary · ${esc2(GLO.name)} <span class="mut">rev ${GLO.rev} · ${GLO.terms.length} terms</span></h3>
+ <input id="glq" type="search" placeholder="Search names, aliases, meanings" value="${esc2(s.q)}" style="width:100%;padding:8px 10px;font-size:16px;background:transparent;border:1px solid var(--line);border-radius:8px">
+ <div class="chips" style="margin:8px 0"><button class="chip ${s.review?'on':''}" data-gl="review" style="${rv?'border-color:var(--warn)':''}">Review (${rv})</button><button class="chip ${!s.type?'on':''}" data-gt="">All</button>${GL_TYPES.map(([k,l])=>`<button class="chip ${s.type===k?'on':''}" data-gt="${k}">${l}</button>`).join('')}</div>
+ <table class="t"><thead><tr><th>Term</th><th>Type</th><th>Meaning</th></tr></thead><tbody>${list.slice(0,300).map(row).join('')||'<tr><td colspan="3" class="mut">Nothing matches.</td></tr>'}</tbody></table>${list.length>300?'<p class="note">Showing 300 of '+list.length+'. Search to narrow.</p>':''}
+ <p style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px"><button class="btn pri" id="gladd">+ Add term</button><button class="btn" id="glexp">Export</button><label class="btn" style="display:inline-flex;align-items:center">Import<input type="file" id="glimp" accept=".json,application/json" style="display:none"></label><button class="btn" onclick="modal_close()">Close</button></p>`);
+ document.getElementById('mbox').classList.add('wide');
+ const qi=document.getElementById('glq');qi.oninput=()=>{glState.q=qi.value;const p=qi.selectionStart;glModal();const n=document.getElementById('glq');n.focus();try{n.setSelectionRange(p,p)}catch(e){}};
+ document.querySelectorAll('[data-gt]').forEach(b=>b.onclick=()=>{glState.type=b.dataset.gt;glModal()});
+ document.querySelector('[data-gl=review]').onclick=()=>{glState.review=!glState.review;glModal()};
+ document.querySelectorAll('.glr').forEach(r=>r.onclick=()=>glEdit(r.dataset.id));
+ document.getElementById('gladd').onclick=()=>glEdit(null);
+ document.getElementById('glexp').onclick=()=>{const b=new Blob([JSON.stringify(GLO,null,1)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='glossary-'+GLO.program+'-rev'+GLO.rev+'.json';document.body.appendChild(a);a.click();a.remove()};
+ document.getElementById('glimp').onchange=async ev=>{const f=ev.target.files[0];if(!f)return;try{const r=GL.merge(GLO,JSON.parse(await f.text()));GL.save(GLO);glApply();save();renderAll();glModal();toast(`Imported: ${r.added} new, ${r.updated} updated${r.clashes.length?', '+r.clashes.length+' name clashes skipped':''}`)}catch(e){toast(e.message||'Import failed')}}}
+function glEdit(id){const t=id?GL.byId(GLO,id):null;const tv=t?t.type:(glState.type||'tag');
+ modal(`<h3 style="margin-top:0">${t?'Edit '+esc2(t.name):'New term'}</h3>
+ <div class="lab"><span>Name</span></div><input type="text" id="ge_n" style="width:100%" value="${t?esc2(t.name):''}">
+ <div class="lab" style="margin-top:8px"><span>Type</span></div><select id="ge_t" style="width:100%" ${t?'disabled':''}>${GL_TYPES.map(([k,l])=>`<option value="${k}" ${k===tv?'selected':''}>${l}</option>`).join('')}</select>
+ ${(!t&&true)||(t&&t.type==='tag')?`<div class="lab" style="margin-top:8px"><span>Used on (tags)</span></div><div class="chips"><label class="chip"><input type="checkbox" id="ge_ur" ${!t||t.uses.includes('run')?'checked':''}> Run</label><label class="chip"><input type="checkbox" id="ge_up" ${!t||t.uses.includes('pass')?'checked':''}> Pass</label></div>`:''}
+ <div class="lab" style="margin-top:8px"><span>Also called (aliases, commas)</span></div><input type="text" id="ge_a" style="width:100%" value="${t?esc2(t.aliases.join(', ')):''}">
+ <div class="lab" style="margin-top:8px"><span>Meaning</span></div><textarea id="ge_m">${t?esc2(t.meaning.text||''):''}</textarea>
+ ${t&&t.code!=null?`<div class="lab" style="margin-top:8px"><span>Technique code</span></div><input type="text" id="ge_c" style="width:100%" value="${esc2(t.code)}">`:''}
+ ${t?`<p class="note">id ${esc2(t.id)} · added ${esc2(t.added||'')} by ${esc2(t.source||'')}${t.history.length>1?' · '+t.history.length+' versions':''}</p>`:''}
+ <p style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px"><button class="btn pri" id="ge_s">${t&&t.needsReview?'Approve and save':'Save'}</button>${t?`<button class="btn ${t.status==='active'?'bad':''}" id="ge_r">${t.status==='active'?'Retire':'Bring back'}</button>`:''}<button class="btn" id="ge_x">Back</button></p>`);
+ document.getElementById('ge_x').onclick=glModal;
+ const ur=()=>{const r=document.getElementById('ge_ur'),p=document.getElementById('ge_up');return r?[r.checked&&'run',p.checked&&'pass'].filter(Boolean):null};
+ document.getElementById('ge_s').onclick=()=>{const n=document.getElementById('ge_n').value.trim();if(!n){toast('Give it a name');return}
+  const al=document.getElementById('ge_a').value.split(',').map(x=>x.trim()).filter(Boolean),mt=document.getElementById('ge_m').value;
+  let term=t;const old=t?t.name:null;
+  if(!t){const ty=document.getElementById('ge_t').value;const ex=GL.find(GLO,ty,n);if(ex){toast(n+' is already in the glossary');glEdit(ex.id);return}
+   const isD=['front','frontmod','coverage','shell'].includes(ty);term=GL.add(GLO,{type:ty,name:ty==='formation'?n.toLowerCase().replace(/\b\w/g,m=>m.toUpperCase()):n.toUpperCase(),side:isD?'D':'O',source:'coach',uses:ty==='tag'?(ur()||['run','pass']):[],meaning:{text:''}}).term}
+  else GL.rename(GLO,t,n);
+  term.aliases=[...new Set([...al,...(old&&GL.U(old)!==GL.U(n)?[old]:[])])].filter(x=>GL.U(x)!==GL.U(term.name));GL.setMeaning(term,mt);term.needsReview=false;
+  const c=document.getElementById('ge_c');if(c)term.code=c.value.trim();
+  const u=ur();if(u&&term.type==='tag'){term.uses=u;if(!u.length)term.status='retired'}
+  GL.touch(term);GL.save(GLO);glApply();save();renderAll();toast('Saved '+term.name);glModal()};
+ const rb=document.getElementById('ge_r');if(rb)rb.onclick=()=>{t.status==='active'?GL.retire(t):GL.activate(t);t.needsReview=false;GL.touch(t);GL.save(GLO);glApply();save();renderAll();toast((t.status==='active'?'Brought back ':'Retired ')+t.name);glModal()}}
+document.getElementById('glbtn').onclick=()=>{glState={q:'',type:'',review:glOn()&&GL.reviewList(GLO).length>0};glModal()};
 /* ===== Hudl export: exact column order for the Hudl import ===== */
 const HUDL_HEAD=['PLAY #','ODK','HASH','P & 10','DN','DIST','GN/LS','YARD LN','PERSONNEL','EFF','EXPLOSIVE?','SHOT','PLAY TYPE','RESULT','OFF FORM','FIB?','MOTION','SHIFT','PLAY','TAG','ONE WORD CALL','TARGET','PLAYER','QB NUMBER','RUN CONCEPT FAMILY','RUN R/L','PASS PRO'];
 const HUDL_RES={COMP:'Complete',INC:'Incomplete',RUSH:'Rush',SCRAM:'Scramble',SACK:'Sack',PEN:'Penalty',INT:'Interception',FUM:'Fumble Lost'};
@@ -532,7 +641,7 @@ document.getElementById('setup').onclick=()=>{const L=A.lists;const f=(k,t)=>`<d
  const afterDel=()=>{if(!A.games.length)newGame('Game 1',true);if(!A.games.find(g=>g.id===A.cur))A.cur=A.games[0].id;edit=null;d=freshDraft(lastNext());save();modal_close();renderAll()};
  document.getElementById('gmlist').onclick=e=>{const b=e.target.closest('[data-delg]');if(!b)return;const g=A.games.find(x=>x.id===b.dataset.delg);if(g)arm(b,'Tap again to delete',()=>{A.games=A.games.filter(x=>x.id!==g.id);afterDel()})};
  document.getElementById('skeep').onclick=()=>{const n=A.games.length-1;if(n<1){toast('This is the only game');return}arm(document.getElementById('skeep'),'Tap again: delete '+n+' other game'+(n>1?'s':''),()=>{A.games=A.games.filter(g=>g.id===A.cur);afterDel()})};
- ssave.onclick=()=>{for(const k of['ftags','motions','formations','runs','passes','owcs','glfs','tagsRun','tagsPass','targets','passers','players'])L[k]=document.getElementById('s_'+k).value.split(',').map(s=>s.trim()).filter(Boolean);G().gp=document.getElementById('s_gp').value.split(',').map(s=>s.trim()).filter(Boolean);A.fr=document.getElementById('s_fr').value.trim()||FR;L.expRun=+s_er.value||12;L.expPass=+s_ep.value||16;save();modal_close();renderAll()};
+ ssave.onclick=()=>{const before={};for(const k in GLX_MAP)before[k]=[...(L[k]||[])];for(const k of['ftags','motions','formations','runs','passes','owcs','glfs','tagsRun','tagsPass','targets','passers','players'])L[k]=document.getElementById('s_'+k).value.split(',').map(s=>s.trim()).filter(Boolean);G().gp=document.getElementById('s_gp').value.split(',').map(s=>s.trim()).filter(Boolean);A.fr=document.getElementById('s_fr').value.trim()||FR;L.expRun=+s_er.value||12;L.expPass=+s_ep.value||16;for(const k in before)glRemoved(k,before[k],L[k]||[]);save();modal_close();renderAll()};
  sdemo.onclick=()=>{modal_close();buildDemo(false)};
 };
 function buildDemo(quiet){
