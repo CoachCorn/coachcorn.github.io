@@ -72,7 +72,7 @@ table.t td{padding:6px 4px;border-top:1px solid var(--line)}
 .half{text-align:center;color:var(--warn);font-weight:800;margin:10px 0;padding:6px;border:1px dashed var(--warn);border-radius:8px}
 @media print{:root{--bg:#fff;--card:#fff;--line:#ccc;--tx:#000;--mut:#555}header,main,.noprint{display:none!important}.modal{position:static;background:none;display:block}.box{border:none;max-height:none!important;width:100%!important}body{height:auto}}
 .card .row{margin:0}
-.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}.look{background:#16222f;border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-width:0}.lk1{font-size:15px}.lk2{font-size:12px;color:var(--mut);margin-top:2px}.mut{color:var(--mut);font-size:12px}.note.fb{color:var(--warn)}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}.look{background:#16222f;border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-width:0}.lk1{font-size:15px}.lk2{font-size:12px;color:var(--mut);margin-top:2px}.mut{color:var(--mut);font-size:12px}.note.fb{color:var(--warn)}.pgrid+.pgrid{margin-top:6px}.look.best{border-color:var(--ok)}.look.best.empty{border-style:dashed;border-color:var(--line)}
 .lab{margin-bottom:3px;align-items:center}
 .chips{gap:4px}
 .chip{padding:5px 9px;min-height:36px;min-width:36px;font-size:14px}
@@ -417,11 +417,15 @@ function scoutBuild(i,label,s){const tally=(fn)=>{const m={};for(const x of s){c
  return{lvl:i,label,n:s.length,looks,cov:top(x=>x.cv),rush:top(x=>x.rs),front:top(x=>x.fr)}}
 function lookHtml(L,rank){const code=frontCode(L.fr,L.rs);
  return`<div class="look"><div class="lk1"><b>${esc2(L.cv)}</b> · ${esc2(L.rs)} rush · ${code?esc2(code)+' <span class="mut">'+esc2(L.fr)+'</span>':esc2(L.fr)}</div><div class="lk2">${rank===0?'Most common':'Second'} · <b>${L.p}%</b> · n=${L.n}</div></div>`}
+/* Best calls are typed midweek in the gameplan grid and arrive in G().best, keyed "FRONT|RUSH|COVERAGE" (exact look) or just "COVERAGE": { "BASE|4|STAR": "CAL LAP" } */
+function bestFor(L){const B=(G()&&G().best)||{};const v=B[L.fr+'|'+L.rs+'|'+L.cv]||B[L.cv];return Array.isArray(v)?v[0]:v}
+function bestHtml(L,rank){const c=L&&bestFor(L);return`<div class="look best ${c?'':'empty'}"><div class="lk1">${c?'<b>'+esc2(c)+'</b>':'<span class="mut">not set</span>'}</div><div class="lk2">Best call${rank?' 2':''}</div></div>`}
 function scoutCard(){const g=G();if(!g||!g.scout||!d.formation||!d.hash)return'';const r=scoutLookup(g.scout.rows,d);
  if(!r)return`<div class="s12 card"><div class="lab"><span>Predicted defense</span><span class="note">${esc2(g.scout.name)}</span></div><div class="note">Not enough scout plays (need ${SC_MIN}) for ${esc2(d.formation)} or this down and distance.</div></div>`;
  const comp=[r.cov&&'Coverage '+esc2(r.cov.k)+' '+r.cov.p+'%',r.rush&&'Rush '+esc2(r.rush.k)+' '+r.rush.p+'%',r.front&&'Front '+esc2(r.front.k)+' '+r.front.p+'%'].filter(Boolean).join(' · ');
- return`<div class="s12 card"><div class="lab"><span>Predicted defense · ${esc2(g.scout.name)}</span><span class="note ${r.lvl?'fb':''}">${r.lvl?'Fell back to ':'Using '}${esc2(r.label)} · n=${r.n}</span></div>
- <div class="pgrid">${r.looks.map(lookHtml).join('')}</div><div class="note" style="margin-top:4px">${comp}</div></div>`}
+ const rows=r.looks.map((L,i)=>`<div class="pgrid">${lookHtml(L,i)}${bestHtml(L,i)}</div>`).join('');
+ return`<div class="s12 card"><div class="lab"><span>Predicted call · ${esc2(g.scout.name)}</span><span class="note ${r.lvl?'fb':''}">${r.lvl?'Fell back to ':'Using '}${esc2(r.label)} · n=${r.n}</span></div>
+ ${rows}<div class="note" style="margin-top:4px">${comp}</div></div>`}
 /* --- the Scout button and import window --- */
 function scoutModal(){const g=G(),s=g.scout;
  modal(`<h3 style="margin-top:0">Opponent scout</h3><p class="note">${s?`<b>Loaded for ${esc2(g.opp)}:</b> ${esc2(s.name)}, ${s.rows.length} defensive plays (${esc2(s.src||'')}). Pick a file to replace it.`:`Import the opponent scout workbook (the Raw Data tab) as an .xlsx or a .csv. It is stored on this device and works with no signal.`}</p>
