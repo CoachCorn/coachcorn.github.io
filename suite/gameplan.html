@@ -107,6 +107,7 @@ const clone=o=>JSON.parse(JSON.stringify(o));
 function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',2600)}
 
 /* ---------- storage ---------- */
+function signedIn(){try{const x=JSON.parse(localStorage.getItem('suite_sync'))||{};return!!(x.token&&x.exp>Date.now())}catch(e){return false}}
 let ST=readStore();
 function readStore(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&Array.isArray(s.rows))return s}catch(e){}return{rows:[],deleted:[]}}
 function writeStore(){try{localStorage.setItem(KEY,JSON.stringify(ST))}catch(e){toast('Could not save on this device')}}
@@ -159,15 +160,15 @@ function samplePlan(){const cols=[['Jab','Favorite'],['Cross','Motion / formatio
  const mk=(name,pers,pd,data,lines,tw)=>{const d=baseDraw();if(tw)tw(d.t);d.l=lines||[];const cells={};
   data.forEach((r,ri)=>r.forEach((v,ci)=>{if(v)cells[rows[ri].id+'|'+cols[ci].id]={s:{concept:v},n:''}}));
   return{id:uid('b'),name,pers,pd,draw:d,cells}};
- return{id:uid('p'),upd:Date.now(),name:'Sample week (edit or delete)',cols,rows,blocks:[
+ return{id:uid('p'),upd:Date.now(),sample:true,name:'Sample week (edit or delete)',cols,rows,blocks:[
   mk('Crown LT','—',{box:'',front:'',cov:'',blitz:''},[['MASH SNRS','Z OUT','',''],['LA','HOT S','MIRROR SNRS','MAP G VEGAS'],['BROWN LAP','','','CURL'],['AGGIES','','','']],
    [{pts:[[165,150],[300,150]],dot:1,col:'#f2b632',arrow:1},{pts:[[456,112],[456,50]],dot:0,col:'#ffffff',arrow:1}]),
   mk('Zap Joker','—',{box:'',front:'',cov:'Star 53%',blitz:''},[['GANG RAIDER','BEHIND','',''],['MIRROR SNRS','SPRAY','',''],['LANCE CAL','','','WHEEL'],['LASR RCE','','','STANFORD']]),
   mk('Demo formation 1','11',{box:'',front:'',cov:'',blitz:''},[['MASH','CURL','',''],['LA','','',''],['SPACING','Z OUT','','WHEEL'],['','','','']],
-   [{pts:[[456,112],[456,40]],dot:0,col:'#ffffff',arrow:1},{pts:[[165,150],[300,150]],dot:1,col:'#f2b632',arrow:1},{pts:[[395,112],[395,70],[330,60]],dot:0,col:'#2fbf71',arrow:1}],
+   [],
    t=>{t.Y.on=1;t.H.on=0}),
   mk('Demo formation 2','12',{box:'',front:'',cov:'',blitz:''},[['','HEAVY','',''],['LA','HEAVY','',''],['MASH','','','CURL'],['','','','']],
-   [{pts:[[30,114],[60,60],[110,30]],dot:0,col:'#5aa9ff',arrow:1},{pts:[[385,128],[385,80]],dot:0,col:'#ef5b5b',arrow:1}],
+   [],
    t=>{t.RT.x=t.LT.x-30;t.Y.on=1;t.Y.x=330;t.Y.y=112})]}}
 
 /* ---------- main render ---------- */
@@ -176,11 +177,11 @@ function cellHTML(c){if(!c)return`<div class="cc empty">+</div>`;const s=c.s||{}
  return`<div class="cc"><b>${esc(main||extra.shift()||'')}</b>${extra.length?`<span>${esc(extra.join(' · '))}</span>`:''}${c.n?`<span style="text-transform:none">${esc(c.n)}</span>`:''}</div>`}
 function render(){const p=plan();
  $('plan').innerHTML=ST.rows.map(x=>`<option value="${x.id}" ${p&&x.id===p.id?'selected':''}>${esc(x.name)}</option>`).join('');
- if(!p){$('main').innerHTML='<div class="empty">No gameplan yet.<br><br><button class="btn pri" id="mk0">Start a plan</button> <button class="btn" id="mk1">Start with the sample</button></div>';
-  $('mk0').onclick=()=>newPlan(false);$('mk1').onclick=()=>newPlan(true);return}
+ if(!p){$('main').innerHTML='<div class="empty">No gameplan yet.<br><br><button class="btn pri" id="mk0">Start a plan</button> '+(signedIn()?'':'<button class="btn" id="mk1">Start with the sample</button>')+'</div>';
+  $('mk0').onclick=()=>newPlan(false);if($('mk1'))$('mk1').onclick=()=>newPlan(true);return}
  cur=p.id;try{localStorage.setItem('gp_cur',cur)}catch(e){}
  const fm=terms(['formation']),sc=scoutFor(p);
- $('main').innerHTML=`<datalist id="fm">${fm.map(n=>`<option value="${esc(n)}">`).join('')}</datalist>`+
+ $('main').innerHTML=(p.sample?'<div class="note" style="margin-bottom:10px;padding:8px 10px;border:1px dashed var(--line);border-radius:10px">This is a sample plan. It goes away when you sign in. To keep a copy, use <b>Plans</b> then <b>Duplicate plan</b>.</div>':'')+`<datalist id="fm">${fm.map(n=>`<option value="${esc(n)}">`).join('')}</datalist>`+
  (p.blocks.length?p.blocks.map((b,bi)=>`<div class="block" data-b="${bi}">
   <div class="bh"><input class="nm" data-f="name" value="${esc(b.name)}" list="fm" placeholder="Formation name"><input class="ps" data-f="pers" value="${esc(b.pers)}" placeholder="Personnel"><span class="sp"></span>
    <span class="act"><button class="btn sm" data-a="up">↑</button> <button class="btn sm" data-a="dn">↓</button> <button class="btn sm" data-a="dup">Copy</button> <button class="btn sm bad" data-a="del">Delete</button></span></div>
@@ -224,8 +225,8 @@ $('plan').onchange=e=>{cur=e.target.value;render()};
 $('pmore').onclick=()=>{const p=plan();if(!p)return newPlanDialog();dialog({title:'Plans',fields:[{label:'Name of this plan',val:p.name}],buttons:[
  {t:'Save name',cls:'pri',fn:v=>{p.name=v[0].trim()||p.name;touch(p);render()}},
  {t:'+ New plan',fn:()=>setTimeout(newPlanDialog,0)},
- {t:'+ Sample week',fn:()=>{const c=samplePlan();ST.rows.push(c);cur=c.id;writeStore();render();toast('Added a sample week')}},
- {t:'Duplicate plan',fn:()=>{const c=clone(p);c.id=uid('p');c.name=p.name+' copy';c.upd=Date.now();ST.rows.push(c);cur=c.id;writeStore();render()}},
+ ...(signedIn()?[]:[{t:'+ Sample week',fn:()=>{const c=samplePlan();ST.rows.push(c);cur=c.id;writeStore();render();toast('Added a sample week')}}]),
+ {t:'Duplicate plan',fn:()=>{const c=clone(p);c.id=uid('p');c.name=p.name+' copy';c.sample=false;c.upd=Date.now();ST.rows.push(c);cur=c.id;writeStore();render()}},
  {t:'Delete plan',cls:'bad',fn:()=>dialog({title:'Delete '+p.name+'?',text:'Every formation and call in it goes away.',buttons:[{t:'Cancel'},{t:'Delete',cls:'bad',fn:()=>{ST.rows=ST.rows.filter(x=>x.id!==p.id);ST.deleted=(ST.deleted||[]).concat(p.id);cur=null;writeStore();render()}}]})},
  {t:'Cancel'}]})};
 $('addb').onclick=()=>{const p=plan();if(!p)return newPlan(false);p.blocks.push({id:uid('b'),name:'New formation',pers:'',pd:{box:'',front:'',cov:'',blitz:''},draw:baseDraw(),cells:{}});touch(p);render();setTimeout(()=>{const n=document.querySelectorAll('.block .nm');if(n.length)n[n.length-1].scrollIntoView({behavior:'smooth',block:'center'})},50)};
@@ -402,7 +403,10 @@ $('ed').addEventListener('click',e=>{const b=e.target.closest('[data-e]');if(!b|
  edRender()});
 
 /* ---------- boot ---------- */
-function boot(){ST=readStore();try{cur=localStorage.getItem('gp_cur')||null}catch(e){}if(!ST.rows.length&&!(ST.deleted||[]).length){ST.rows.push(samplePlan());writeStore()}render()}
+function boot(){ST=readStore();try{cur=localStorage.getItem('gp_cur')||null}catch(e){}
+ if(signedIn()&&ST.rows.some(p=>p.sample)){ST.rows=ST.rows.filter(p=>!p.sample);writeStore()}   // signed in: the demo plan goes away, the coaches' plans load from sync
+ if(!signedIn()&&!ST.rows.length&&!(ST.deleted||[]).length){ST.rows.push(samplePlan());writeStore()}
+ render()}
 addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.gameplan==='changed'&&!E&&!$('modal').classList.contains('show')){ST=readStore();render()}});
 addEventListener('storage',e=>{if(!E&&!$('modal').classList.contains('show')){if(e.key===KEY){ST=readStore();render()}else if(e.key==='almanac_v1')render()}});
 boot();

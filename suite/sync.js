@@ -101,13 +101,16 @@
  function mergePlans(a,b){const del=new Set([...(a.deleted||[]),...(b.deleted||[])]),by=new Map();
   for(const r of [...(b.rows||[]),...(a.rows||[])]){const q=by.get(r.id);if(!q||(r.upd||0)>=(q.upd||0))by.set(r.id,r)}
   return{rows:[...by.values()].filter(r=>!del.has(r.id)),deleted:[...del]}}
+ function gpNotify(){document.querySelectorAll('iframe').forEach(f=>{try{f.contentWindow.postMessage({gameplan:'changed'},location.origin)}catch(e){}})}
  async function syncGameplan(s,list){let local=null;try{local=JSON.parse(localStorage.getItem(GPK()))}catch(e){}
+  /* the demo (sample) plan is only for a device that is not signed in: signing in removes it and loads the coaches' plans */
+  if(local&&(local.rows||[]).some(r=>r.sample)){local={rows:local.rows.filter(r=>!r.sample),deleted:local.deleted||[]};try{localStorage.setItem(GPK(),JSON.stringify(local))}catch(e){}gpNotify()}
   const sv=list.find(d=>d.key==='gameplan');const lh=local?hash(JSON.stringify(local)):'';
   if(!sv){if(local&&(local.rows.length||(local.deleted||[]).length)){const r=await call('PUT','/doc',{key:'gameplan',baseRev:0,body:local,device:device()});if(r.status===200){s.gpRev=r.data.rev;s.gpH=lh}}return}
   if(sv.rev===s.gpRev&&lh===s.gpH)return;
   for(let t=0;t<3;t++){const r=await call('GET','/doc?key=gameplan');if(r.status!==200)return;const srv=r.data.body||{rows:[],deleted:[]};
    const m=local?mergePlans(local,srv):srv,mh=hash(JSON.stringify(m));
-   if(mh!==lh){localStorage.setItem(GPK(),JSON.stringify(m));local=m;document.querySelectorAll('iframe').forEach(f=>{try{f.contentWindow.postMessage({gameplan:'changed'},location.origin)}catch(e){}})}
+   if(mh!==lh){localStorage.setItem(GPK(),JSON.stringify(m));local=m;gpNotify()}
    if(mh===hash(JSON.stringify(srv))){s.gpRev=r.data.rev;s.gpH=mh;return}
    const p=await call('PUT','/doc',{key:'gameplan',baseRev:r.data.rev,body:m,device:device()});if(p.status===200){s.gpRev=p.data.rev;s.gpH=mh;return}if(p.status!==409)return}}
 
