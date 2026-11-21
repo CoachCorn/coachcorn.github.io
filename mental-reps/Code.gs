@@ -326,8 +326,37 @@ function handlePost_(o) {
       l.appendRow([new Date(), String(o.name), String(o.pos).toUpperCase(), String(o.card), o.ok ? 1 : 0, String(o.day), eid, +o.t || Date.now()]);
       return 'ok';
     }
+    if (o.type === 'deck') return deckFromApp_(o);
     return 'skip';
   } finally { lock.releaseLock(); }
+}
+
+
+/* Gameplan grid > Send to Mental Reps. Writes one deck tab from the grid. Needs the coach code.
+   Only creates a new tab or replaces a tab this feature made (every row's Source says gameplan); it never touches your other tabs. */
+function deckFromApp_(o) {
+  var code = String(settings_()['Coach code'] || '');
+  if (!code || code === 'CHANGE-ME' || String(o.code) !== code) return 'bad code';
+  var name = String(o.name || '').trim().slice(0, 90);
+  if (!name || !isDeckName_(name)) return 'bad name';
+  var cards = o.cards || [];
+  if (!cards.length || cards.length > 400) return 'bad cards';
+  var t = ss_().getSheetByName(name);
+  if (t) {
+    var c = cols_(t), ok = 'source' in c;
+    if (ok && t.getLastRow() > 1) t.getRange(2, c.source + 1, t.getLastRow() - 1, 1).getValues().forEach(function (r) { if (String(r[0]) !== 'gameplan') ok = false; });
+    if (!ok) return 'exists';
+    if (t.getLastRow() > 1) t.getRange(2, 1, t.getLastRow() - 1, t.getLastColumn()).clearContent();
+  } else {
+    t = makeDeckTab_(name);
+    t.getRange(1, DECK_HEAD.length + 1).setValue('Source').setFontWeight('bold');
+  }
+  var rows = cards.map(function (x) {
+    var w = x.wrong || [];
+    return ['', String(x.pos || 'ALL'), String(x.q || ''), String(x.a || ''), String(w[0] || ''), String(w[1] || ''), String(w[2] || ''), String(x.expl || ''), String(x.img || ''), 'yes', 'gameplan'];
+  });
+  t.getRange(2, 1, rows.length, DECK_HEAD.length + 1).setValues(rows);
+  return 'ok:' + rows.length;
 }
 
 function json_(x) { return ContentService.createTextOutput(JSON.stringify(x)).setMimeType(ContentService.MimeType.JSON); }

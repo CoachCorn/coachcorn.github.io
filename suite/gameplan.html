@@ -71,6 +71,8 @@ td .cc.empty{color:#3e5163;font-size:20px}
 .sw{width:34px;height:34px;border-radius:50%;border:3px solid transparent;display:inline-block;margin:4px 6px 0 0}.sw.on{border-color:var(--acc2)}
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#000d;padding:10px 16px;border-radius:10px;z-index:60;display:none;max-width:90vw;text-align:center}
 .empty{padding:30px;color:var(--mut);text-align:center}
+.look{display:flex;justify-content:space-between;gap:8px;align-items:baseline;border-top:1px solid var(--line);padding:5px 0;font-size:14px}.look:first-of-type{border-top:0}
+.look b{text-transform:uppercase}.look .p{color:var(--mut);font-size:12px;white-space:nowrap}.fb2{color:var(--warn);font-size:12px}
 @media print{
  :root{--bg:#fff;--card:#fff;--line:#999;--tx:#000;--mut:#444}
  body,html{background:#fff;color:#000}header,.addrow,.bh .btn,.act,.full,.modal,#toast,.noprint{display:none!important}
@@ -80,16 +82,17 @@ td .cc.empty{color:#3e5163;font-size:20px}
 </style></head><body>
 <header><h1>Gameplan</h1>
  <select id="plan" style="max-width:220px"></select>
- <button class="btn" id="pnew">+ Plan</button><button class="btn" id="pmore">Plan…</button>
+ <button class="btn" id="pmore">Plans</button>
  <span class="sp"></span>
  <button class="btn pri" id="addb">+ Formation</button><button class="btn" id="addc">+ Column</button><button class="btn" id="addr">+ Row</button>
- <button class="btn" id="looks">Draw all looks</button><button class="btn" id="mr">Send to Mental Reps</button><button class="btn" id="alm">Add to almanac</button><button class="btn" id="prn">Print / PDF</button>
+ <button class="btn" id="scout">Scout</button><button class="btn" id="looks">Draw all looks</button><button class="btn" id="mr">Send to Mental Reps</button><button class="btn" id="alm">Add to almanac</button><button class="btn" id="prn">Print / PDF</button>
 </header>
 <main id="main"></main>
 <div class="modal" id="modal"><div class="box" id="mbox"></div></div>
 <div class="full" id="ed"></div>
 <div id="toast"></div>
 <script src="../shared/glossary.js"></script>
+<script src="../shared/scout.js"></script>
 <script>
 /* Gameplan grid (Staff Meeting). Coach-defined plan: columns and rows are whatever the coach types,
    each formation block holds a drawing, a predicted-defense strip and a grid of calls.
@@ -159,14 +162,13 @@ function render(){const p=plan();
  if(!p){$('main').innerHTML='<div class="empty">No gameplan yet.<br><br><button class="btn pri" id="mk0">Start a plan</button> <button class="btn" id="mk1">Start with the sample</button></div>';
   $('mk0').onclick=()=>newPlan(false);$('mk1').onclick=()=>newPlan(true);return}
  cur=p.id;try{localStorage.setItem('gp_cur',cur)}catch(e){}
- const fm=terms(['formation']);
+ const fm=terms(['formation']),sc=scoutFor(p);
  $('main').innerHTML=`<datalist id="fm">${fm.map(n=>`<option value="${esc(n)}">`).join('')}</datalist>`+
  (p.blocks.length?p.blocks.map((b,bi)=>`<div class="block" data-b="${bi}">
   <div class="bh"><input class="nm" data-f="name" value="${esc(b.name)}" list="fm" placeholder="Formation name"><input class="ps" data-f="pers" value="${esc(b.pers)}" placeholder="Personnel"><span class="sp"></span>
    <span class="act"><button class="btn sm" data-a="up">↑</button> <button class="btn sm" data-a="dn">↓</button> <button class="btn sm" data-a="dup">Copy</button> <button class="btn sm bad" data-a="del">Delete</button></span></div>
   <div class="bm"><div class="thumb" data-a="draw">${svgOf(b.draw)}<span class="tag">Edit drawing</span></div>
-   <div class="pd"><div class="k">Predicted defense</div><div class="pdg">${[['box','Box'],['front','Front'],['cov','Coverage'],['blitz','Blitz']].map(([k,l])=>`<div><label>${l}</label><input data-pd="${k}" value="${esc((b.pd||{})[k])}"></div>`).join('')}</div>
-    <div class="note" style="margin-top:6px">Typed by hand for now. It will fill itself from the opponent scout (by formation, with % and n) once that is connected.</div></div></div>
+   <div class="pd"><div class="k">Predicted defense</div>${pdHTML(b,sc)}<div style="margin-top:6px"><label class="note">Note</label><input data-pd="box" value="${esc((b.pd||{}).box)}" placeholder="Anything you want to remember (box count, a tell)" style="width:100%;padding:6px"></div></div></div>
   <div class="tw"><table><colgroup><col style="width:92px">${p.cols.map(()=>'<col>').join('')}</colgroup>
    <tr><th class="rl"></th>${p.cols.map((c,ci)=>`<th><div class="h" data-ch="${ci}">${esc(c.head)||'&nbsp;'}<span class="s">${esc(c.sub)}</span></div></th>`).join('')}</tr>
    ${p.rows.map((r,ri)=>`<tr><td class="rl" data-rh="${ri}">${esc(r.label)}</td>${p.cols.map(c=>`<td class="c" data-cell="${r.id}|${c.id}">${cellHTML(b.cells[r.id+'|'+c.id])}</td>`).join('')}</tr>`).join('')}
@@ -200,10 +202,11 @@ $('modal').addEventListener('click',e=>{if(e.target.id==='modal')$('modal').clas
 /* ---------- plans, columns, rows ---------- */
 function newPlan(sample){let p;if(sample)p=samplePlan();else{const cols=['Jab','Cross','Counter','Knock out!'].map(h=>({id:uid('c'),head:h,sub:''})),rows=['Field run','Bdy run','Pass 1','Pass 2'].map(l=>({id:uid('r'),label:l}));p={id:uid('p'),upd:Date.now(),name:'New gameplan',cols,rows,blocks:[]}}
  ST.rows.push(p);cur=p.id;writeStore();render()}
-$('pnew').onclick=()=>dialog({title:'New gameplan',fields:[{label:'Name (week or opponent)',val:''}],buttons:[{t:'Cancel'},{t:'Create',cls:'pri',fn:v=>{newPlan(false);const p=plan();p.name=v[0].trim()||'New gameplan';touch(p);render()}}]});
+function newPlanDialog(){dialog({title:'New gameplan',fields:[{label:'Name (week or opponent)',val:''}],buttons:[{t:'Cancel'},{t:'Create',cls:'pri',fn:v=>{newPlan(false);const p=plan();p.name=v[0].trim()||'New gameplan';touch(p);render()}}]})}
 $('plan').onchange=e=>{cur=e.target.value;render()};
-$('pmore').onclick=()=>{const p=plan();if(!p)return;dialog({title:p.name,fields:[{label:'Rename',val:p.name}],buttons:[
+$('pmore').onclick=()=>{const p=plan();if(!p)return newPlanDialog();dialog({title:'Plans',fields:[{label:'Name of this plan',val:p.name}],buttons:[
  {t:'Save name',cls:'pri',fn:v=>{p.name=v[0].trim()||p.name;touch(p);render()}},
+ {t:'+ New plan',fn:()=>setTimeout(newPlanDialog,0)},
  {t:'Duplicate plan',fn:()=>{const c=clone(p);c.id=uid('p');c.name=p.name+' copy';c.upd=Date.now();ST.rows.push(c);cur=c.id;writeStore();render()}},
  {t:'Delete plan',cls:'bad',fn:()=>dialog({title:'Delete '+p.name+'?',text:'Every formation and call in it goes away.',buttons:[{t:'Cancel'},{t:'Delete',cls:'bad',fn:()=>{ST.rows=ST.rows.filter(x=>x.id!==p.id);ST.deleted=(ST.deleted||[]).concat(p.id);cur=null;writeStore();render()}}]})},
  {t:'Cancel'}]})};
@@ -218,8 +221,86 @@ function editRow(i){const p=plan(),r=p.rows[i];dialog({title:'Row',fields:[{labe
  {t:'Save',cls:'pri',fn:v=>{r.label=v[0].trim();touch(p);render()}},
  {t:'↑ Move',fn:()=>{if(i>0){[p.rows[i-1],p.rows[i]]=[p.rows[i],p.rows[i-1]];touch(p);render()}}},{t:'Move ↓',fn:()=>{if(i<p.rows.length-1){[p.rows[i+1],p.rows[i]]=[p.rows[i],p.rows[i+1]];touch(p);render()}}},
  {t:'Delete row',cls:'bad',fn:()=>{p.rows.splice(i,1);touch(p);render()}},{t:'Cancel'}]})}
-for(const [id,msg] of [['looks','Draw all looks needs the tag rules (Outside, Heavy, Lite, Stooge, Map) filled into the glossary first. Coming next.'],['mr','Sending to Mental Reps is not connected yet.'],['alm','Adding to the almanac is not connected. Waiting for your go.']])$(id).onclick=()=>toast(msg);
+for(const [id,msg] of [['looks','Draw all looks needs the tag rules (Outside, Heavy, Lite, Stooge, Map) filled into the glossary first. Coming next.'],['alm','Adding to the almanac is not connected. Waiting for your go.']])$(id).onclick=()=>toast(msg);
 $('prn').onclick=()=>{try{window.print()}catch(e){toast('Print is not available here')}};
+
+
+/* ---------- scout: predicted defense ---------- */
+const SKEY='gpscout_v1_'+PROGRAM+'_';
+const U=x=>String(x==null?'':x).trim().toUpperCase();
+function almData(){try{return JSON.parse(localStorage.getItem('almanac_v1'))}catch(e){return null}}
+function almGames(){const A=almData();return(A&&A.games||[]).filter(g=>g.scout&&g.scout.rows&&g.scout.rows.length&&!g.demo)}
+function ownScout(p){try{return JSON.parse(localStorage.getItem(SKEY+p.id))}catch(e){return null}}
+/* Which scout feeds this plan: its own choice, else the Almanac game for the plan's opponent, else the Almanac's current game. */
+function scoutFor(p){if(!p||!window.SCOUT)return null;const src=p.scoutSrc||'auto';if(src==='none')return null;
+ if(src==='own'){const o=ownScout(p);return o?{name:o.name,rows:o.rows,from:'Loaded in Gameplan'}:null}
+ const G=almGames();let g=null;
+ if(src.indexOf('alm:')===0)g=G.find(x=>x.id===src.slice(4));
+ else{if(p.opp)g=G.find(x=>U(x.opp)===U(p.opp)||U(x.scout.name).includes(U(p.opp)));
+  if(!g){const A=almData();g=G.find(x=>A&&x.id===A.cur)||null}
+  if(!g){const o=ownScout(p);if(o)return{name:o.name,rows:o.rows,from:'Loaded in Gameplan'}}}
+ return g?{name:g.scout.name,rows:g.scout.rows,from:'Almanac · '+g.opp}:null}
+const digits=x=>String(x==null?'':x).replace(/\D/g,'');
+function predict(b,sc){if(!sc||!b.name)return null;const fm=SCOUT.normFm(b.name),rows=sc.rows.filter(x=>x.cv&&x.fr&&x.rs!==''),N=5;
+ const lv=[['formation',x=>x.fm===fm]];if(digits(b.pers))lv.push(['personnel '+digits(b.pers),x=>digits(x.ps)===digits(b.pers)]);lv.push(['all plays in the scout',()=>true]);
+ const nF=rows.filter(lv[0][1]).length;
+ for(let i=0;i<lv.length;i++){const s=rows.filter(lv[i][1]);if(s.length>=N||(i===lv.length-1&&s.length)){const r=SCOUT.scoutBuild(i,lv[i][0],s);r.nF=nF;return r}}
+ return null}
+function pdHTML(b,sc){if(!sc)return'<div class="note">No scout for this plan yet. Tap <b>Scout</b> at the top to load one, or pick one that is already in the Almanac.</div>';
+ const r=predict(b,sc);if(!r)return'<div class="note">'+esc(b.name?'Nothing in this scout to go on yet.':'Name the formation to see the prediction.')+'</div>';
+ const looks=r.looks.map(L=>{const code=SCOUT.frontCode(L.fr,L.rs);return`<div class="look"><span><b>${esc(L.cv)}</b> · ${esc(L.rs)} rush · ${code?esc(code)+' <span class="mut">'+esc(L.fr)+'</span>':esc(L.fr)}</span><span class="p">${L.p}% · n=${L.n}</span></div>`}).join('');
+ return looks+`<div class="${r.lvl?'fb2':'note'}" style="margin-top:4px">${r.lvl?'Formation has only n='+r.nF+' in this scout. Fell back to '+esc(r.label)+' (n='+r.n+').':'By formation · n='+r.n+'.'} ${esc(sc.from)}</div>`}
+$('scout').onclick=()=>{const p=plan();if(!p)return toast('Start a plan first');const G=almGames(),own=ownScout(p),src=p.scoutSrc||'auto',cur=scoutFor(p);
+ $('mbox').innerHTML=`<h3>Opponent scout</h3><div class="note">${cur?'<b>In use:</b> '+esc(cur.name)+' · '+cur.rows.length+' plays · '+esc(cur.from):'No scout is feeding this plan yet.'}</div>
+ <div class="lab">Opponent for this plan</div><input type="text" id="sc_opp" value="${esc(p.opp||'')}" placeholder="Used to find the matching scout in the Almanac">
+ <div class="lab">Use this scout</div><select id="sc_src" style="width:100%"><option value="auto" ${src==='auto'?'selected':''}>Automatic (opponent match, then the Almanac's current game)</option>
+  ${G.map(g=>`<option value="alm:${esc(g.id)}" ${src==='alm:'+g.id?'selected':''}>Almanac · ${esc(g.opp)} · ${esc(g.scout.name)} (${g.scout.rows.length} plays)</option>`).join('')}
+  ${own?`<option value="own" ${src==='own'?'selected':''}>Loaded here · ${esc(own.name)} (${own.rows.length} plays)</option>`:''}<option value="none" ${src==='none'?'selected':''}>None</option></select>
+ <div class="lab">Load a scout file here</div><input type="file" id="sc_file" accept=".xlsx,.xlsm,.csv,text/csv" style="width:100%;font-size:14px"><div id="sc_load"></div>
+ <div class="note" style="margin-top:6px">A scout loaded here stays on this iPad. A scout loaded in the Almanac syncs with the game.</div>
+ <div class="row"><button class="btn pri" id="sc_ok">Save</button><button class="btn" id="sc_x">Close</button></div>`;
+ $('modal').classList.add('show');$('mbox').onclick=null;$('mbox').onkeydown=null;
+ $('sc_x').onclick=()=>$('modal').classList.remove('show');
+ $('sc_ok').onclick=()=>{p.opp=$('sc_opp').value.trim();p.scoutSrc=$('sc_src').value;touch(p);$('modal').classList.remove('show');render()};
+ $('sc_file').onchange=async ev=>{const f=ev.target.files[0],box=$('sc_load');if(!f)return;box.innerHTML='<p class="note">Reading…</p>';
+  try{const P=await SCOUT.readFile(f),tot=P.blocks.reduce((a,b)=>a+b.rows.length,0);
+   box.innerHTML=`<div class="lab">Which opponent</div><select id="sc_blk" style="width:100%">${P.blocks.map((b,i)=>`<option value="${i}">${esc(b.name)} — ${b.rows.length} plays</option>`).join('')}${P.blocks.length>1?`<option value="all">All blocks combined — ${tot} plays</option>`:''}</select>
+    <div class="lab">Name</div><input type="text" id="sc_nm"><div class="row"><button class="btn pri" id="sc_go">Load for this plan</button></div>`;
+   const sel=$('sc_blk'),nm=$('sc_nm'),pick=()=>sel.value==='all'?{name:'All blocks',rows:P.blocks.flatMap(b=>b.rows)}:P.blocks[+sel.value];
+   const upd=()=>{const b=pick();nm.value=b.name.indexOf('Block ')===0?(p.opp||b.name):b.name};sel.onchange=upd;upd();
+   $('sc_go').onclick=()=>{const b=pick();try{localStorage.setItem(SKEY+p.id,JSON.stringify({name:nm.value.trim()||b.name,src:f.name+' · '+P.sheet,at:Date.now(),rows:b.rows}))}catch(e){return toast('Not enough room on this device for that scout')}
+    p.scoutSrc='own';if(!p.opp)p.opp=nm.value.trim();touch(p);$('modal').classList.remove('show');render();toast('Scout loaded: '+b.rows.length+' plays')}
+  }catch(err){box.innerHTML='<p style="color:var(--bad)">'+esc(err.message||err)+'</p>'}}};
+
+/* ---------- send to Mental Reps ---------- */
+const callText=c=>{if(!c)return'';const s=c.s||{};return SLOTS.map(x=>s[x[0]]).filter(Boolean).join(' ')};
+function svgImg(d){const m=svgOf(d).replace('<svg viewBox','<svg width="'+VW+'" height="'+VH+'" viewBox');return'data:image/svg+xml;base64,'+btoa(unescape(encodeURIComponent(m)))}
+function mrCards(p,o){const out=[],names=[...new Set(p.blocks.map(b=>b.name).filter(Boolean))],calls=[];
+ p.blocks.forEach(b=>p.rows.forEach(r=>p.cols.forEach(c=>{const t=callText(b.cells[r.id+'|'+c.id]);if(t)calls.push({b,r,c,t})})));
+ const texts=[...new Set(calls.map(k=>k.t))],some=(a,n)=>a.slice().sort(()=>Math.random()-.5).slice(0,n);
+ if(o.forms)p.blocks.forEach(b=>{if(!b.name)return;const img=svgImg(b.draw);if(img.length>45000)return;
+  out.push({pos:'ALL',q:'What formation is this?',a:b.name,wrong:some(names.filter(n=>n!==b.name),3),expl:digits(b.pers)?'Personnel '+digits(b.pers):'',img})});
+ if(o.calls)calls.forEach(k=>{const img=svgImg(k.b.draw);out.push({pos:'ALL',q:`${k.b.name} · ${k.r.label} · ${k.c.head||'column'}: what is the call?`,a:k.t,wrong:some(texts.filter(t=>t!==k.t),3),expl:'',img:img.length>45000?'':img})});
+ return out}
+function mrEndpoint(){let e='';try{e=localStorage.getItem('cs.ep')||''}catch(x){}return e||'https://script.google.com/macros/s/AKfycbz3v0FhCJlqYPOpa-c8mGyUJoKNXeG4aVbUXluvV7H4i0o5zaB0gvcZfAbClj4gcH4_/exec'}
+$('mr').onclick=()=>{const p=plan();if(!p)return toast('Start a plan first');let code='';try{code=localStorage.getItem('cs.code')||''}catch(e){}
+ $('mbox').innerHTML=`<h3>Send to Mental Reps</h3><div class="note">Makes one deck tab in the Mental Reps sheet from this plan. Players see it as soon as they refresh.</div>
+ <div class="lab">Deck name (cannot start with _)</div><input type="text" id="mr_n" value="${esc(p.name.replace(/^_+/,'').slice(0,60))}">
+ <div class="chips"><button class="chip on" id="mr_f">Formation cards</button><button class="chip on" id="mr_c">Call cards</button></div>
+ <div class="note" style="margin-top:4px">Formation cards: the drawing, “What formation is this?”. Call cards: “Crown LT · Field run · Jab: what is the call?” with the drawing, answers taken from your other calls.</div>
+ ${code?'':`<div class="lab">Coach code</div><input type="password" id="mr_k" autocapitalize="off" autocorrect="off">`}
+ <div id="mr_s" class="note" style="margin-top:8px"></div><div class="row"><button class="btn pri" id="mr_go">Send</button><button class="btn" id="mr_x">Close</button></div>`;
+ $('modal').classList.add('show');$('mbox').onclick=null;$('mbox').onkeydown=null;
+ $('mr_f').onclick=e=>e.target.classList.toggle('on');$('mr_c').onclick=e=>e.target.classList.toggle('on');$('mr_x').onclick=()=>$('modal').classList.remove('show');
+ $('mr_go').onclick=async()=>{const st=$('mr_s'),name=$('mr_n').value.trim(),cd=code||($('mr_k')?$('mr_k').value:'');
+  const cards=mrCards(p,{forms:$('mr_f').classList.contains('on'),calls:$('mr_c').classList.contains('on')});
+  if(!name)return st.textContent='Give the deck a name.';if(!cd)return st.textContent='Enter the coach code.';if(!cards.length)return st.textContent='Nothing to send yet: add formations or calls first.';
+  st.textContent='Sending '+cards.length+' cards…';$('mr_go').disabled=true;
+  try{const r=await fetch(mrEndpoint(),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({type:'deck',code:cd,name,cards})}),t=(await r.text()).trim();
+   if(/^ok:/.test(t)){st.style.color='var(--ok)';st.textContent='Sent '+t.slice(3)+' cards to the deck “'+name+'”.'}
+   else{st.style.color='var(--bad)';st.textContent=t==='bad code'?'That coach code was not accepted.':t==='exists'?'A tab called “'+name+'” already exists and was not made by Gameplan. Pick another name.':t==='bad name'?'That deck name is not allowed.':t==='skip'?'The Mental Reps script has not been updated yet (it needs the new Code.gs).':'The sheet said: '+t}}
+  catch(e){st.style.color='var(--bad)';st.textContent='Could not reach the Mental Reps sheet. Check the signal and try again.'}
+  $('mr_go').disabled=false}};
 
 /* ---------- cell editor ---------- */
 function openCell(bi,key){const p=plan(),b=p.blocks[bi],r=p.rows.find(x=>x.id===key.split('|')[0]),c=p.cols.find(x=>x.id===key.split('|')[1]);
@@ -297,6 +378,6 @@ $('ed').addEventListener('click',e=>{const b=e.target.closest('[data-e]');if(!b|
 /* ---------- boot ---------- */
 function boot(){ST=readStore();try{cur=localStorage.getItem('gp_cur')||null}catch(e){}if(!ST.rows.length&&!(ST.deleted||[]).length){ST.rows.push(samplePlan());writeStore()}render()}
 addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.gameplan==='changed'&&!E&&!$('modal').classList.contains('show')){ST=readStore();render()}});
-addEventListener('storage',e=>{if(e.key===KEY&&!E&&!$('modal').classList.contains('show')){ST=readStore();render()}});
+addEventListener('storage',e=>{if(!E&&!$('modal').classList.contains('show')){if(e.key===KEY){ST=readStore();render()}else if(e.key==='almanac_v1')render()}});
 boot();
 </script></body></html>
