@@ -167,13 +167,13 @@ function samplePlan(){const cols=[['Jab','Favorite'],['Cross','Motion / formatio
     ['Power',['Tight','','Power',''],['','Orbit','Power','Naked'],'Draw'],
     ['Mesh',['','Jet','Mesh',''],['','','Mesh','Play-Action'],['','','Four Verts','Fade']],
     ['Stick',['Bunch','','Stick',''],['','Trade','Stick','Boot'],'Y-Cross']],
-   [],t=>{t.Y.on=1;t.H.on=0}),
-  mk('Demo formation 2','12',{box:'',front:'',cov:'',blitz:''},[
+   [],t=>{t.Y.on=1;t.Y.x=112;t.Y.y=137;t.H.on=1;t.M.on=0}),
+  mk('Demo formation 2','11',{box:'',front:'',cov:'',blitz:''},[
     ['Outside Zone',['Heavy','','Outside Zone',''],['','Orbit','Outside Zone','RPO'],'Counter'],
     ['Duo',['Heavy','','Duo','Play-Action'],['','Jet','Duo',''],['Wing','','Iso','Naked']],
     ['Levels',['','Fly','Levels',''],['Bunch','','Levels','Boot'],['','','Four Verts','']],
     ['Smash',['Trips','Orbit','Smash',''],['Tight','','Snag',''],'Dagger']],
-   [],t=>{t.RT.x=t.LT.x-30;t.Y.on=1;t.Y.x=330;t.Y.y=112})]}}
+   [],t=>{t.RT.x=t.LT.x-30;t.RT.y=LOS;t.Y.on=0;t.M.on=1;t.H.on=1})]}}
 
 /* ---------- main render ---------- */
 function cellHTML(c){if(!c)return`<div class="cc empty">+</div>`;const s=c.s||{},main=s.concept||s.tag||s.formation||'',extra=SLOTS.filter(x=>s[x[0]]&&s[x[0]]!==main).map(x=>s[x[0]]);
