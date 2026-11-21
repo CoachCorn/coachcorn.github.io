@@ -95,6 +95,22 @@
    const p=await call('PUT','/doc',{key:'schedule',baseRev:r.data.rev,body:m,device:device()});if(p.status===200){s.schRev=p.data.rev;s.schH=mh;return}if(p.status!==409)return}}
  function dispatchSch(){document.querySelectorAll('iframe').forEach(f=>{try{f.contentWindow.postMessage({schedule:'changed'},location.origin)}catch(e){}})}
 
+
+ /* --- gameplan: whole plans merged by id, newest edit wins, deletions stick --- */
+ const GPK=()=>'gameplan_v1_'+(st().program||'deer-creek');
+ function mergePlans(a,b){const del=new Set([...(a.deleted||[]),...(b.deleted||[])]),by=new Map();
+  for(const r of [...(b.rows||[]),...(a.rows||[])]){const q=by.get(r.id);if(!q||(r.upd||0)>=(q.upd||0))by.set(r.id,r)}
+  return{rows:[...by.values()].filter(r=>!del.has(r.id)),deleted:[...del]}}
+ async function syncGameplan(s,list){let local=null;try{local=JSON.parse(localStorage.getItem(GPK()))}catch(e){}
+  const sv=list.find(d=>d.key==='gameplan');const lh=local?hash(JSON.stringify(local)):'';
+  if(!sv){if(local&&(local.rows.length||(local.deleted||[]).length)){const r=await call('PUT','/doc',{key:'gameplan',baseRev:0,body:local,device:device()});if(r.status===200){s.gpRev=r.data.rev;s.gpH=lh}}return}
+  if(sv.rev===s.gpRev&&lh===s.gpH)return;
+  for(let t=0;t<3;t++){const r=await call('GET','/doc?key=gameplan');if(r.status!==200)return;const srv=r.data.body||{rows:[],deleted:[]};
+   const m=local?mergePlans(local,srv):srv,mh=hash(JSON.stringify(m));
+   if(mh!==lh){localStorage.setItem(GPK(),JSON.stringify(m));local=m;document.querySelectorAll('iframe').forEach(f=>{try{f.contentWindow.postMessage({gameplan:'changed'},location.origin)}catch(e){}})}
+   if(mh===hash(JSON.stringify(srv))){s.gpRev=r.data.rev;s.gpH=mh;return}
+   const p=await call('PUT','/doc',{key:'gameplan',baseRev:r.data.rev,body:m,device:device()});if(p.status===200){s.gpRev=p.data.rev;s.gpH=mh;return}if(p.status!==409)return}}
+
  /* --- Film Room: one document per game (newest save wins); finished games too; deletions stick --- */
  const J=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}};
  function filmLocal(){const out=new Map(),list=J('fr:games',[]),pub=J('fr:pub',{index:[],games:{}});
@@ -125,12 +141,12 @@
 
  async function syncNow(){const s0=st();if(busy||!s0.token||!(s0.exp>Date.now())||!navigator.onLine)return emit();busy=true;emit();
   try{const s=st();const lr=await call('GET','/docs');if(lr.status!==200)throw new Error(lr.data.error||'Server error');
-   const list=lr.data.docs||[];await syncGlossary(s,list);await syncGames(s,list);await syncSchedule(s,list);await syncFilm(s,list);
-   const x=st();Object.assign(x,{glRev:s.glRev,glSig:s.glSig,games:s.games,schRev:s.schRev,schH:s.schH,film:s.film,last:Date.now(),error:null});put(x)}
+   const list=lr.data.docs||[];await syncGlossary(s,list);await syncGames(s,list);await syncSchedule(s,list);await syncGameplan(s,list);await syncFilm(s,list);
+   const x=st();Object.assign(x,{glRev:s.glRev,glSig:s.glSig,games:s.games,schRev:s.schRev,schH:s.schH,gpRev:s.gpRev,gpH:s.gpH,film:s.film,last:Date.now(),error:null});put(x)}
   catch(e){const x=st();x.error=e.message||'Sync failed';put(x)}
   finally{busy=false;emit()}}
  function soon(ms=4000){clearTimeout(timer);timer=setTimeout(syncNow,ms)}
- function start(){addEventListener('online',()=>soon(1000));addEventListener('storage',e=>{if(e.key===ALM||(e.key&&(e.key.indexOf('glossary_v1_')===0||e.key.indexOf('schedule_v1_')===0||e.key.indexOf('fr:')===0)))soon()});
+ function start(){addEventListener('online',()=>soon(1000));addEventListener('storage',e=>{if(e.key===ALM||(e.key&&(e.key.indexOf('glossary_v1_')===0||e.key.indexOf('schedule_v1_')===0||e.key.indexOf('gameplan_v1_')===0||e.key.indexOf('fr:')===0)))soon()});
   setInterval(()=>soon(0),60000);soon(3000)}
  root.SUITESYNC={mergeGame,mergeRows,status,login,setup,signOut,syncNow,start,onChange:f=>listeners.push(f)};
 })(window);

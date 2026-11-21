@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Gameplan</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0f1720">
+<style>
+:root{--bg:#0f1720;--card:#18232f;--line:#2a3948;--tx:#e8eef4;--mut:#8ea0b2;--acc:#9b7bff;--acc2:#3b9cff;--ok:#2fbf71;--warn:#f2b632;--bad:#ef5b5b}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--tx);font:15px -apple-system,system-ui,sans-serif}
+button,input,select,textarea{font:inherit;color:var(--tx)}
+input,select,textarea{background:#102030;border:1px solid var(--line);border-radius:8px;padding:8px}
+input[type=text],input:not([type]){min-width:0}
+header{position:sticky;top:0;z-index:5;display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 12px;background:#0b1118;border-bottom:1px solid var(--line)}
+header h1{font-size:15px;margin:0;letter-spacing:.06em;text-transform:uppercase;color:var(--acc)}
+.btn{background:#223140;border:1px solid var(--line);border-radius:8px;padding:8px 12px;min-height:38px;text-transform:uppercase;font-weight:700;font-size:12px;white-space:nowrap}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#120a2a}
+.btn.bad{color:var(--bad)}.btn.dim{opacity:.55}.btn.sm{min-height:30px;padding:4px 9px;font-size:11px}
+.sp{flex:1}
+main{padding:12px;max-width:1200px;margin:0 auto}
+.mut{color:var(--mut)}.note{color:var(--mut);font-size:12px}
+.block{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--acc);border-radius:14px;margin-bottom:16px;overflow:hidden}
+.bh{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 12px}
+.bh .nm{font-size:20px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;width:min(300px,100%);flex:1 1 200px}
+.bh .ps{width:130px}
+.bm{display:flex;gap:12px;padding:0 12px 10px;flex-wrap:wrap;align-items:stretch}
+.thumb{flex:0 0 280px;max-width:100%;border:1px solid var(--line);border-radius:10px;overflow:hidden;cursor:pointer;position:relative;background:#101c14}
+.thumb svg{display:block;width:100%;height:auto}
+.thumb .tag{position:absolute;right:6px;bottom:6px;background:#000a;border-radius:6px;padding:2px 7px;font-size:11px;color:var(--mut);text-transform:uppercase}
+.pd{flex:1 1 300px;background:#111c28;border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.pd .k{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--mut);margin-bottom:6px}
+.pdg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.pdg label{font-size:10px;text-transform:uppercase;color:var(--mut);display:block}
+.pdg input{width:100%;padding:6px}
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch;border-top:1px solid var(--line)}
+table{border-collapse:collapse;width:100%;table-layout:fixed;min-width:560px}
+th,td{border:1px solid var(--line);padding:0;vertical-align:top}
+th{background:#111c28;text-align:left}
+th .h{padding:7px 8px;font-weight:800;text-transform:uppercase;font-size:13px;cursor:pointer}
+th .s{font-weight:500;color:var(--mut);font-size:11px;text-transform:none;display:block;min-height:13px}
+th.rl{width:92px}
+td.c{height:46px;cursor:pointer}td.c:active{background:#223140}
+td .cc{padding:6px 8px;min-height:44px}
+td .cc b{display:block;font-size:14px;text-transform:uppercase;letter-spacing:.02em}
+td .cc span{display:block;font-size:11px;color:var(--mut);text-transform:uppercase}
+td .cc.empty{color:#3e5163;font-size:20px}
+.rl{background:#111c28;cursor:pointer;padding:7px 8px;font-weight:700;font-size:12px;text-transform:uppercase;color:var(--mut)}
+.addrow{padding:8px 12px}
+.modal{position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;z-index:30}
+.modal.show{display:flex}
+.box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;width:min(560px,95vw);max-height:92vh;overflow:auto}
+.box h3{margin:0 0 6px}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:10px 0 4px}
+.box input[type=text],.box input:not([type]){width:100%;font-size:16px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.chip{background:#223140;border:1px solid var(--line);border-radius:10px;padding:5px 10px;min-height:34px;font-weight:700;font-size:13px;text-transform:uppercase}
+.chip.on{background:var(--acc);border-color:var(--acc);color:#120a2a}.chip.off{opacity:.5}
+.slot{border-top:1px solid var(--line);padding:6px 0}
+.slot .top{display:flex;gap:8px;align-items:center}.slot .top b{font-size:12px;text-transform:uppercase;letter-spacing:.05em;min-width:120px}
+.slot input{flex:1}
+.full{position:fixed;inset:0;background:var(--bg);z-index:40;display:none;flex-direction:column}
+.full.show{display:flex}
+.fh{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 12px;background:#0b1118;border-bottom:1px solid var(--line)}
+.fb{flex:1;overflow:auto;display:flex;gap:12px;padding:12px;flex-wrap:wrap;align-items:flex-start}
+.cv{flex:1 1 560px;min-width:300px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#101c14;touch-action:none}
+.cv svg{display:block;width:100%;height:auto;touch-action:none}
+.pn{flex:0 1 320px;min-width:260px}
+.pn .g{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 10px;margin-bottom:10px}
+.pn .g .k{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--mut)}
+.sw{width:34px;height:34px;border-radius:50%;border:3px solid transparent;display:inline-block;margin:4px 6px 0 0}.sw.on{border-color:var(--acc2)}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#000d;padding:10px 16px;border-radius:10px;z-index:60;display:none;max-width:90vw;text-align:center}
+.empty{padding:30px;color:var(--mut);text-align:center}
+@media print{
+ :root{--bg:#fff;--card:#fff;--line:#999;--tx:#000;--mut:#444}
+ body,html{background:#fff;color:#000}header,.addrow,.bh .btn,.act,.full,.modal,#toast,.noprint{display:none!important}
+ .block{break-inside:avoid;border-color:#999;background:#fff}.thumb,.pd,th,.rl{background:#fff!important}
+ input{border:0!important;background:none!important;color:#000!important}.thumb{background:#fff!important}
+}
+</style></head><body>
+<header><h1>Gameplan</h1>
+ <select id="plan" style="max-width:220px"></select>
+ <button class="btn" id="pnew">+ Plan</button><button class="btn" id="pmore">Plan…</button>
+ <span class="sp"></span>
+ <button class="btn pri" id="addb">+ Formation</button><button class="btn" id="addc">+ Column</button><button class="btn" id="addr">+ Row</button>
+ <button class="btn" id="looks">Draw all looks</button><button class="btn" id="mr">Send to Mental Reps</button><button class="btn" id="alm">Add to almanac</button><button class="btn" id="prn">Print / PDF</button>
+</header>
+<main id="main"></main>
+<div class="modal" id="modal"><div class="box" id="mbox"></div></div>
+<div class="full" id="ed"></div>
+<div id="toast"></div>
+<script src="../shared/glossary.js"></script>
+<script>
+/* Gameplan grid (Staff Meeting). Coach-defined plan: columns and rows are whatever the coach types,
+   each formation block holds a drawing, a predicted-defense strip and a grid of calls.
+   Stored on the device under gameplan_v1_<program> and synced by suite/sync.js as the 'gameplan' document
+   (whole plan, newest edit wins). Standalone: nothing here feeds the Almanac until Noah says so. */
+const PROGRAM=new URLSearchParams(location.search).get('program')||(()=>{try{return(JSON.parse(localStorage.getItem('suite_sync'))||{}).program||'deer-creek'}catch(e){return'deer-creek'}})();
+const KEY='gameplan_v1_'+PROGRAM;
+const $=id=>document.getElementById(id);
+const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const uid=p=>p+Math.random().toString(36).slice(2,8);
+const clone=o=>JSON.parse(JSON.stringify(o));
+function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',2600)}
+
+/* ---------- storage ---------- */
+let ST=readStore();
+function readStore(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&Array.isArray(s.rows))return s}catch(e){}return{rows:[],deleted:[]}}
+function writeStore(){try{localStorage.setItem(KEY,JSON.stringify(ST))}catch(e){toast('Could not save on this device')}}
+let cur=null;
+function plan(){return ST.rows.find(p=>p.id===cur)||ST.rows[0]||null}
+function touch(p){p.upd=Date.now();writeStore()}
+
+/* ---------- drawing data ---------- */
+const OLK=['LT','LG','C','RG','RT'],SK=['Q','X','Z','M','H','Y','F','A','B','T'];
+const COLS=['#ffffff','#ef5b5b','#5aa9ff','#f2b632','#2fbf71','#c58bff'];
+const TC={Q:'#ffffff',X:'#5aa9ff',Z:'#5aa9ff',M:'#f2b632',H:'#2fbf71',Y:'#c58bff',F:'#5ad1c8',A:'#ff9bd0',B:'#b0b8c4',T:'#ef7b5b'};
+const LOS=110,VW=480,VH=250;
+function baseDraw(){const t={},put=(k,x,y,on)=>t[k]={x,y,on};
+ put('X',30,114,1);put('Z',456,112,1);put('M',165,150,1);put('Q',235,168,1);put('T',210,205,1);put('H',385,128,1);
+ put('Y',395,112,0);put('F',430,150,0);put('A',300,190,0);put('B',260,205,0);
+ OLK.forEach((k,i)=>put(k,175+i*30,LOS,1));return{t,l:[]}}
+let svgN=0;
+function svgOf(d,sel,cur){const n=++svgN,used=new Set();
+ const lines=(d.l||[]).concat(cur?[cur]:[]);lines.forEach(l=>used.add(l.col||'#ffffff'));
+ let s=`<svg viewBox="0 0 ${VW} ${VH}" xmlns="http://www.w3.org/2000/svg"><defs>`+[...used].map(c=>`<marker id="a${n}${c.slice(1)}" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L8 4L0 8z" fill="${c}"/></marker>`).join('')+`</defs>`;
+ s+=`<rect width="${VW}" height="${VH}" fill="#101c14"/>`;
+ for(let y=LOS+40;y<VH;y+=40)s+=`<line x1="0" x2="${VW}" y1="${y}" y2="${y}" stroke="#ffffff10"/>`;
+ s+=`<line x1="0" x2="${VW}" y1="${LOS}" y2="${LOS}" stroke="#ffffff55" stroke-dasharray="6 5"/><text x="6" y="${LOS-5}" fill="#ffffff66" font-size="9" font-family="sans-serif">LOS</text>`;
+ for(const l of lines){const c=l.col||'#ffffff',pts=(l.pts||[]).map(p=>p.join(',')).join(' ');if((l.pts||[]).length<2)continue;
+  s+=`<polyline points="${pts}" fill="none" stroke="${c}" stroke-width="${l.dot?3:2.6}" stroke-linecap="round" stroke-linejoin="round" ${l.dot?'stroke-dasharray="1 7"':''} ${l.arrow?`marker-end="url(#a${n}${c.slice(1)})"`:''}/>`}
+ const order=[...OLK,...SK];
+ for(const k of order){const t=d.t[k];if(!t||!t.on)continue;const ol=OLK.includes(k),c=TC[k]||'#fff';
+  s+=`<g data-k="${k}" ${sel===k?'':''}>${sel===k?`<circle cx="${t.x}" cy="${t.y}" r="17" fill="none" stroke="#9b7bff" stroke-width="2.5"/>`:''}<circle cx="${t.x}" cy="${t.y}" r="12" fill="${ol?'#101c14':c}" stroke="${ol?'#e8eef4':'#0008'}" stroke-width="${ol?1.8:1}"/><text x="${t.x}" y="${t.y+4.5}" text-anchor="middle" font-size="12.5" font-weight="800" font-family="sans-serif" fill="${ol?'#e8eef4':'#0b1118'}" pointer-events="none">${ol?'O':k}</text></g>`}
+ return s+'</svg>'}
+
+/* ---------- glossary ---------- */
+let GLO=null;function glossary(){try{GLO=window.GL?GL.load(PROGRAM):null}catch(e){GLO=null}return GLO}
+function terms(types){const g=glossary();if(!g)return[];const out=[],seen=new Set();for(const t of types)for(const x of GL.active(g,t)){const n=x.name;if(!seen.has(n.toUpperCase())){seen.add(n.toUpperCase());out.push(n)}}return out.sort((a,b)=>a.localeCompare(b))}
+const SLOTS=[['ftag','Formation tag',['ftag']],['motion','Motion / Shift',['motion']],['formation','Formation',['formation']],['concept','Concept or one word',['run','pass','oneword']],['tag','Play tag',['tag']],['glf','GLF',['glf']]];
+
+/* ---------- seed ---------- */
+function samplePlan(){const cols=[['Jab','Favorite'],['Cross','Motion / formation tag'],['Counter',''],['Knock out!','Gadget / shot']].map(([h,s])=>({id:uid('c'),head:h,sub:s}));
+ const rows=['Field run','Bdy run','Pass 1','Pass 2'].map(l=>({id:uid('r'),label:l}));
+ const mk=(name,pers,pd,data,lines)=>{const d=baseDraw();d.l=lines||[];const cells={};
+  data.forEach((r,ri)=>r.forEach((v,ci)=>{if(v)cells[rows[ri].id+'|'+cols[ci].id]={s:{concept:v},n:''}}));
+  return{id:uid('b'),name,pers,pd,draw:d,cells}};
+ return{id:uid('p'),upd:Date.now(),name:'Sample week (edit or delete)',cols,rows,blocks:[
+  mk('Crown LT','—',{box:'',front:'',cov:'',blitz:''},[['MASH SNRS','Z OUT','',''],['LA','HOT S','MIRROR SNRS','MAP G VEGAS'],['BROWN LAP','','','CURL'],['AGGIES','','','']],
+   [{pts:[[165,150],[300,150]],dot:1,col:'#f2b632',arrow:1},{pts:[[456,112],[456,50]],dot:0,col:'#ffffff',arrow:1}]),
+  mk('Zap Joker','—',{box:'',front:'',cov:'Star 53%',blitz:''},[['GANG RAIDER','BEHIND','',''],['MIRROR SNRS','SPRAY','',''],['LANCE CAL','','','WHEEL'],['LASR RCE','','','STANFORD']])]}}
+
+/* ---------- main render ---------- */
+function cellHTML(c){if(!c)return`<div class="cc empty">+</div>`;const s=c.s||{},main=s.concept||s.tag||s.formation||'',extra=SLOTS.filter(x=>s[x[0]]&&s[x[0]]!==main).map(x=>s[x[0]]);
+ const parts=[];if(!main&&!extra.length&&!c.n)return`<div class="cc empty">+</div>`;
+ return`<div class="cc"><b>${esc(main||extra.shift()||'')}</b>${extra.length?`<span>${esc(extra.join(' · '))}</span>`:''}${c.n?`<span style="text-transform:none">${esc(c.n)}</span>`:''}</div>`}
+function render(){const p=plan();
+ $('plan').innerHTML=ST.rows.map(x=>`<option value="${x.id}" ${p&&x.id===p.id?'selected':''}>${esc(x.name)}</option>`).join('');
+ if(!p){$('main').innerHTML='<div class="empty">No gameplan yet.<br><br><button class="btn pri" id="mk0">Start a plan</button> <button class="btn" id="mk1">Start with the sample</button></div>';
+  $('mk0').onclick=()=>newPlan(false);$('mk1').onclick=()=>newPlan(true);return}
+ cur=p.id;try{localStorage.setItem('gp_cur',cur)}catch(e){}
+ const fm=terms(['formation']);
+ $('main').innerHTML=`<datalist id="fm">${fm.map(n=>`<option value="${esc(n)}">`).join('')}</datalist>`+
+ (p.blocks.length?p.blocks.map((b,bi)=>`<div class="block" data-b="${bi}">
+  <div class="bh"><input class="nm" data-f="name" value="${esc(b.name)}" list="fm" placeholder="Formation name"><input class="ps" data-f="pers" value="${esc(b.pers)}" placeholder="Personnel"><span class="sp"></span>
+   <span class="act"><button class="btn sm" data-a="up">↑</button> <button class="btn sm" data-a="dn">↓</button> <button class="btn sm" data-a="dup">Copy</button> <button class="btn sm bad" data-a="del">Delete</button></span></div>
+  <div class="bm"><div class="thumb" data-a="draw">${svgOf(b.draw)}<span class="tag">Edit drawing</span></div>
+   <div class="pd"><div class="k">Predicted defense</div><div class="pdg">${[['box','Box'],['front','Front'],['cov','Coverage'],['blitz','Blitz']].map(([k,l])=>`<div><label>${l}</label><input data-pd="${k}" value="${esc((b.pd||{})[k])}"></div>`).join('')}</div>
+    <div class="note" style="margin-top:6px">Typed by hand for now. It will fill itself from the opponent scout (by formation, with % and n) once that is connected.</div></div></div>
+  <div class="tw"><table><colgroup><col style="width:92px">${p.cols.map(()=>'<col>').join('')}</colgroup>
+   <tr><th class="rl"></th>${p.cols.map((c,ci)=>`<th><div class="h" data-ch="${ci}">${esc(c.head)||'&nbsp;'}<span class="s">${esc(c.sub)}</span></div></th>`).join('')}</tr>
+   ${p.rows.map((r,ri)=>`<tr><td class="rl" data-rh="${ri}">${esc(r.label)}</td>${p.cols.map(c=>`<td class="c" data-cell="${r.id}|${c.id}">${cellHTML(b.cells[r.id+'|'+c.id])}</td>`).join('')}</tr>`).join('')}
+  </table></div></div>`).join(''):'<div class="empty">No formations yet. Tap <b>+ Formation</b>.</div>');
+}
+$('main').addEventListener('change',e=>{const p=plan(),bl=e.target.closest('.block');if(!p||!bl)return;const b=p.blocks[+bl.dataset.b];
+ if(e.target.dataset.f){b[e.target.dataset.f]=e.target.value;touch(p)}
+ else if(e.target.dataset.pd){b.pd=b.pd||{};b.pd[e.target.dataset.pd]=e.target.value;touch(p)}});
+$('main').addEventListener('click',e=>{const p=plan();if(!p)return;const bl=e.target.closest('.block'),bi=bl?+bl.dataset.b:-1,b=p.blocks[bi];
+ const a=e.target.closest('[data-a]');
+ if(a&&b){const k=a.dataset.a;
+  if(k==='draw')return openDraw(bi);
+  if(k==='up'&&bi>0){[p.blocks[bi-1],p.blocks[bi]]=[p.blocks[bi],p.blocks[bi-1]];touch(p);return render()}
+  if(k==='dn'&&bi<p.blocks.length-1){[p.blocks[bi+1],p.blocks[bi]]=[p.blocks[bi],p.blocks[bi+1]];touch(p);return render()}
+  if(k==='dup'){const c=clone(b);c.id=uid('b');c.name=b.name+' copy';p.blocks.splice(bi+1,0,c);touch(p);return render()}
+  if(k==='del')return dialog({title:'Delete '+(b.name||'formation')+'?',text:'The drawing and every call in this block go away.',buttons:[{t:'Cancel'},{t:'Delete',cls:'bad',fn:()=>{p.blocks.splice(bi,1);touch(p);render()}}]})}
+ const ce=e.target.closest('[data-cell]');if(ce&&b)return openCell(bi,ce.dataset.cell);
+ const ch=e.target.closest('[data-ch]');if(ch)return editCol(+ch.dataset.ch);
+ const rh=e.target.closest('[data-rh]');if(rh)return editRow(+rh.dataset.rh)});
+
+/* ---------- dialogs ---------- */
+function dialog({title,text,fields=[],buttons=[]}){const m=$('modal');
+ $('mbox').innerHTML=`<h3>${esc(title)}</h3>${text?`<p class="note">${esc(text)}</p>`:''}${fields.map((f,i)=>`<div class="lab">${esc(f.label)}</div><input type="text" data-fi="${i}" value="${esc(f.val||'')}" ${f.list?`list="${f.list}"`:''} autocapitalize="off" autocorrect="off">`).join('')}
+ <div class="row">${buttons.map((b,i)=>`<button class="btn ${b.cls||''}" data-bi="${i}">${esc(b.t)}</button>`).join('')}</div>`;
+ m.classList.add('show');const first=$('mbox').querySelector('input');if(first)setTimeout(()=>first.focus(),50);
+ $('mbox').onclick=e=>{const bt=e.target.closest('[data-bi]');if(!bt)return;const b=buttons[+bt.dataset.bi],vals=[...$('mbox').querySelectorAll('[data-fi]')].map(i=>i.value);
+  if(b.keep&&b.fn){b.fn(vals);return}m.classList.remove('show');if(b.fn)b.fn(vals)};
+ $('mbox').onkeydown=e=>{if(e.key==='Enter'&&fields.length){const ok=buttons.find(b=>b.cls==='pri');if(ok){m.classList.remove('show');ok.fn&&ok.fn([...$('mbox').querySelectorAll('[data-fi]')].map(i=>i.value))}}}}
+$('modal').addEventListener('click',e=>{if(e.target.id==='modal')$('modal').classList.remove('show')});
+
+/* ---------- plans, columns, rows ---------- */
+function newPlan(sample){let p;if(sample)p=samplePlan();else{const cols=['Jab','Cross','Counter','Knock out!'].map(h=>({id:uid('c'),head:h,sub:''})),rows=['Field run','Bdy run','Pass 1','Pass 2'].map(l=>({id:uid('r'),label:l}));p={id:uid('p'),upd:Date.now(),name:'New gameplan',cols,rows,blocks:[]}}
+ ST.rows.push(p);cur=p.id;writeStore();render()}
+$('pnew').onclick=()=>dialog({title:'New gameplan',fields:[{label:'Name (week or opponent)',val:''}],buttons:[{t:'Cancel'},{t:'Create',cls:'pri',fn:v=>{newPlan(false);const p=plan();p.name=v[0].trim()||'New gameplan';touch(p);render()}}]});
+$('plan').onchange=e=>{cur=e.target.value;render()};
+$('pmore').onclick=()=>{const p=plan();if(!p)return;dialog({title:p.name,fields:[{label:'Rename',val:p.name}],buttons:[
+ {t:'Save name',cls:'pri',fn:v=>{p.name=v[0].trim()||p.name;touch(p);render()}},
+ {t:'Duplicate plan',fn:()=>{const c=clone(p);c.id=uid('p');c.name=p.name+' copy';c.upd=Date.now();ST.rows.push(c);cur=c.id;writeStore();render()}},
+ {t:'Delete plan',cls:'bad',fn:()=>dialog({title:'Delete '+p.name+'?',text:'Every formation and call in it goes away.',buttons:[{t:'Cancel'},{t:'Delete',cls:'bad',fn:()=>{ST.rows=ST.rows.filter(x=>x.id!==p.id);ST.deleted=(ST.deleted||[]).concat(p.id);cur=null;writeStore();render()}}]})},
+ {t:'Cancel'}]})};
+$('addb').onclick=()=>{const p=plan();if(!p)return newPlan(false);p.blocks.push({id:uid('b'),name:'New formation',pers:'',pd:{box:'',front:'',cov:'',blitz:''},draw:baseDraw(),cells:{}});touch(p);render();setTimeout(()=>{const n=document.querySelectorAll('.block .nm');if(n.length)n[n.length-1].scrollIntoView({behavior:'smooth',block:'center'})},50)};
+$('addc').onclick=()=>{const p=plan();if(!p)return;dialog({title:'New column',fields:[{label:'Header (Jab, Cross, anything)',val:''},{label:'Small text under it (optional)',val:''}],buttons:[{t:'Cancel'},{t:'Add',cls:'pri',fn:v=>{p.cols.push({id:uid('c'),head:v[0].trim(),sub:v[1].trim()});touch(p);render()}}]})};
+$('addr').onclick=()=>{const p=plan();if(!p)return;dialog({title:'New row',fields:[{label:'Row name (Field run, Bdy run, anything)',val:''}],buttons:[{t:'Cancel'},{t:'Add',cls:'pri',fn:v=>{p.rows.push({id:uid('r'),label:v[0].trim()});touch(p);render()}}]})};
+function editCol(i){const p=plan(),c=p.cols[i];dialog({title:'Column',fields:[{label:'Header',val:c.head},{label:'Small text',val:c.sub}],buttons:[
+ {t:'Save',cls:'pri',fn:v=>{c.head=v[0].trim();c.sub=v[1].trim();touch(p);render()}},
+ {t:'← Move',fn:()=>{if(i>0){[p.cols[i-1],p.cols[i]]=[p.cols[i],p.cols[i-1]];touch(p);render()}}},{t:'Move →',fn:()=>{if(i<p.cols.length-1){[p.cols[i+1],p.cols[i]]=[p.cols[i],p.cols[i+1]];touch(p);render()}}},
+ {t:'Delete column',cls:'bad',fn:()=>{p.cols.splice(i,1);touch(p);render()}},{t:'Cancel'}]})}
+function editRow(i){const p=plan(),r=p.rows[i];dialog({title:'Row',fields:[{label:'Row name',val:r.label}],buttons:[
+ {t:'Save',cls:'pri',fn:v=>{r.label=v[0].trim();touch(p);render()}},
+ {t:'↑ Move',fn:()=>{if(i>0){[p.rows[i-1],p.rows[i]]=[p.rows[i],p.rows[i-1]];touch(p);render()}}},{t:'Move ↓',fn:()=>{if(i<p.rows.length-1){[p.rows[i+1],p.rows[i]]=[p.rows[i],p.rows[i+1]];touch(p);render()}}},
+ {t:'Delete row',cls:'bad',fn:()=>{p.rows.splice(i,1);touch(p);render()}},{t:'Cancel'}]})}
+for(const [id,msg] of [['looks','Draw all looks needs the tag rules (Outside, Heavy, Lite, Stooge, Map) filled into the glossary first. Coming next.'],['mr','Sending to Mental Reps is not connected yet.'],['alm','Adding to the almanac is not connected. Waiting for your go.']])$(id).onclick=()=>toast(msg);
+$('prn').onclick=()=>{try{window.print()}catch(e){toast('Print is not available here')}};
+
+/* ---------- cell editor ---------- */
+function openCell(bi,key){const p=plan(),b=p.blocks[bi],r=p.rows.find(x=>x.id===key.split('|')[0]),c=p.cols.find(x=>x.id===key.split('|')[1]);
+ const old=b.cells[key]||{s:{},n:''},C={s:Object.assign({},old.s),n:old.n||'',q:{}};
+ const m=$('modal'),opts={};SLOTS.forEach(sl=>opts[sl[0]]=terms(sl[2]));
+ function chips(k){const q=(C.q[k]||'').trim().toUpperCase(),list=opts[k].filter(n=>!q||n.toUpperCase().includes(q)).slice(0,40),cv=C.s[k];
+  let h=list.map(n=>`<button class="chip ${cv===n?'on':''}" data-pick="${k}" data-v="${esc(n)}">${esc(n)}</button>`).join('');
+  if(cv&&!list.includes(cv))h=`<button class="chip on" data-pick="${k}" data-v="${esc(cv)}">${esc(cv)}</button>`+h;
+  const typed=(C.q[k]||'').trim();if(typed&&!list.some(n=>n.toUpperCase()===typed.toUpperCase()))h+=`<button class="chip" data-pick="${k}" data-v="${esc(typed)}" style="border-style:dashed">Use “${esc(typed)}”</button>`;
+  if(!opts[k].length&&!typed&&!cv)h+=`<span class="note">No ${k} words in the glossary yet. Type one above.</span>`;return h}
+ $('mbox').innerHTML=`<h3>${esc(p.blocks[bi].name||'Formation')} · ${esc(r.label)} × ${esc(c.head||'column')}</h3>
+ <div class="note">Pick from the glossary or type your own. Leave a slot empty if the call does not use it.</div>
+ ${SLOTS.map(sl=>`<div class="slot"><div class="top"><b>${sl[1]}</b><input type="text" data-q="${sl[0]}" placeholder="Search or type" autocapitalize="off" autocorrect="off"></div><div class="chips" id="ch_${sl[0]}">${chips(sl[0])}</div></div>`).join('')}
+ <div class="lab">Note</div><input type="text" id="cn" value="${esc(C.n)}" placeholder="Optional"><div class="row"><button class="btn pri" data-x="save">Save cell</button><button class="btn" data-x="clear">Clear cell</button><button class="btn" data-x="cancel">Cancel</button></div>`;
+ m.classList.add('show');
+ $('mbox').oninput=e=>{const k=e.target.dataset.q;if(!k)return;C.q[k]=e.target.value;$('ch_'+k).innerHTML=chips(k)};
+ $('mbox').onclick=e=>{const pk=e.target.closest('[data-pick]');
+  if(pk){const k=pk.dataset.pick,v=pk.dataset.v;if(C.s[k]===v)delete C.s[k];else C.s[k]=v;$('ch_'+k).innerHTML=chips(k);return}
+  const x=e.target.closest('[data-x]');if(!x)return;
+  if(x.dataset.x==='save'){C.n=$('cn').value.trim();Object.keys(C.s).forEach(k=>{if(!C.s[k])delete C.s[k]});if(Object.keys(C.s).length||C.n)b.cells[key]={s:C.s,n:C.n};else delete b.cells[key];touch(p)}
+  if(x.dataset.x==='clear'){delete b.cells[key];touch(p)}
+  m.classList.remove('show');render()};
+ $('mbox').onkeydown=null}
+
+/* ---------- drawing editor ---------- */
+let E=null;
+function openDraw(bi){const p=plan(),b=p.blocks[bi];E={bi,d:clone(b.draw||baseDraw()),sel:null,mode:'move',cur:null,dot:false,arrow:true,col:COLS[0],grp:true,hist:[],drag:null};
+ if(!E.d.t)E.d=baseDraw();$('ed').classList.add('show');edRender()}
+function snap(){E.hist.push(JSON.stringify(E.d));if(E.hist.length>60)E.hist.shift()}
+function edRender(){const p=plan(),b=p.blocks[E.bi];
+ $('ed').innerHTML=`<div class="fh"><b style="text-transform:uppercase">${esc(b.name||'Formation')}</b><span class="mut">${esc(b.pers||'')}</span><span class="sp"></span><button class="btn" data-e="cancel">Cancel</button><button class="btn pri" data-e="save">Save drawing</button></div>
+ <div class="fb"><div class="cv" id="cv">${svgOf(E.d,E.sel,E.cur)}</div><div class="pn">
+  <div class="g"><div class="k">Players on the field</div><div class="chips">${SK.map(k=>`<button class="chip ${E.d.t[k]&&E.d.t[k].on?'on':'off'}" data-e="pl" data-k="${k}">${k}</button>`).join('')}</div></div>
+  <div class="g"><div class="k">Offensive line</div><div class="chips"><button class="chip ${E.grp?'on':''}" data-e="grp">Move as group</button><button class="chip ${!E.grp?'on':''}" data-e="one">Move one at a time</button></div>
+   <div class="chips"><button class="chip" data-e="lite">Lite</button><button class="chip" data-e="heavy">Heavy</button><button class="chip" data-e="reset">Reset to base</button></div>
+   <div class="note" style="margin-top:6px">Heavy: right tackle over to the left side. Lite: left tackle over to the right side.</div></div>
+  <div class="g"><div class="k">Tap to</div><div class="chips"><button class="chip ${E.mode==='move'?'on':''}" data-e="mm">Move players</button><button class="chip ${E.mode==='line'?'on':''}" data-e="ml">Draw a line</button></div>
+   <div class="note" style="margin-top:6px">${E.mode==='move'?'Drag a player where he lines up.':(E.cur?'Tap the field to add points. Tap Done when the route ends.':(E.sel?'Tap the field to start a line from '+E.sel+'.':'Tap a player first, then tap the field.'))}</div>
+   ${E.mode==='line'?`<div class="chips"><button class="chip" data-e="done">Done with line</button></div>`:''}</div>
+  <div class="g"><div class="k">Line style</div><div class="chips"><button class="chip ${!E.dot?'on':''}" data-e="solid">Solid</button><button class="chip ${E.dot?'on':''}" data-e="dotted">Dotted (motion / shift)</button><button class="chip ${E.arrow?'on':''}" data-e="arrow">Arrowhead</button></div>
+   <div>${COLS.map(c=>`<span class="sw ${E.col===c?'on':''}" data-e="col" data-c="${c}" style="background:${c}"></span>`).join('')}</div></div>
+  <div class="g"><div class="k">Edit</div><div class="chips"><button class="chip" data-e="undo">Undo</button><button class="chip" data-e="dellast">Delete last line</button><button class="chip" data-e="clear">Clear all lines</button></div></div>
+ </div></div>`}
+function pt(ev){const sv=$('cv').querySelector('svg'),m=sv.getScreenCTM();if(!m)return{x:0,y:0};const q=sv.createSVGPoint();q.x=ev.clientX;q.y=ev.clientY;const r=q.matrixTransform(m.inverse());return{x:Math.max(8,Math.min(VW-8,Math.round(r.x))),y:Math.max(8,Math.min(VH-8,Math.round(r.y)))}}
+function finishLine(){if(E.cur&&E.cur.pts.length>1){snap();E.d.l.push(E.cur)}E.cur=null}
+function redrawCanvas(){const cv=$('cv');if(cv)cv.innerHTML=svgOf(E.d,E.sel,E.cur)}
+$('ed').addEventListener('pointerdown',e=>{const cv=e.target.closest('#cv');if(!cv||!E)return;const g=e.target.closest('[data-k]'),p0=pt(e);
+ if(E.mode==='move'){if(!g)return;const k=g.dataset.k;E.sel=k;snap();const start={};const ids=(OLK.includes(k)&&E.grp)?OLK:[k];ids.forEach(i=>start[i]={x:E.d.t[i].x,y:E.d.t[i].y});E.drag={p0,start};cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);redrawCanvas();e.preventDefault();return}
+ // line mode
+ if(g&&!E.cur){E.sel=g.dataset.k;redrawCanvas();edRender();return}
+ if(!E.cur){if(!E.sel||!E.d.t[E.sel]||!E.d.t[E.sel].on)return;const t=E.d.t[E.sel];E.cur={pts:[[t.x,t.y]],dot:E.dot,arrow:E.arrow,col:E.col}}
+ E.cur.pts.push([p0.x,p0.y]);E.cur.dot=E.dot;E.cur.arrow=E.arrow;E.cur.col=E.col;redrawCanvas();edRender();e.preventDefault()});
+$('ed').addEventListener('pointermove',e=>{if(!E||!E.drag)return;const p1=pt(e),dx=p1.x-E.drag.p0.x,dy=p1.y-E.drag.p0.y;
+ for(const k in E.drag.start){const s=E.drag.start[k],t=E.d.t[k];t.x=Math.max(8,Math.min(VW-8,s.x+dx));t.y=Math.max(8,Math.min(VH-8,s.y+dy))}redrawCanvas()});
+const endDrag=()=>{if(E&&E.drag){E.drag=null;edRender()}};
+$('ed').addEventListener('pointerup',endDrag);$('ed').addEventListener('pointercancel',endDrag);
+$('ed').addEventListener('click',e=>{const b=e.target.closest('[data-e]');if(!b||!E)return;const a=b.dataset.e,t=E.d.t;
+ if(a==='cancel'){E=null;$('ed').classList.remove('show');return}
+ if(a==='save'){finishLine();const p=plan();p.blocks[E.bi].draw=E.d;touch(p);E=null;$('ed').classList.remove('show');render();return}
+ if(a==='pl'){const k=b.dataset.k;snap();t[k].on=t[k].on?0:1;if(E.sel===k&&!t[k].on)E.sel=null}
+ else if(a==='grp')E.grp=true;else if(a==='one')E.grp=false;
+ else if(a==='lite'){snap();t.LT.x=t.RT.x+30;t.LT.y=LOS}
+ else if(a==='heavy'){snap();t.RT.x=t.LT.x-30;t.RT.y=LOS}
+ else if(a==='reset'){snap();const bd=baseDraw();OLK.forEach(k=>t[k]=bd.t[k])}
+ else if(a==='mm'){finishLine();E.mode='move'}else if(a==='ml'){E.mode='line'}
+ else if(a==='done')finishLine();
+ else if(a==='solid'){E.dot=false;if(E.cur)E.cur.dot=false}else if(a==='dotted'){E.dot=true;if(E.cur)E.cur.dot=true}
+ else if(a==='arrow'){E.arrow=!E.arrow;if(E.cur)E.cur.arrow=E.arrow}
+ else if(a==='col'){E.col=b.dataset.c;if(E.cur)E.cur.col=E.col}
+ else if(a==='undo'){if(E.cur){E.cur=null}else if(E.hist.length)E.d=JSON.parse(E.hist.pop())}
+ else if(a==='dellast'){snap();E.d.l.pop()}
+ else if(a==='clear'){snap();E.d.l=[];E.cur=null}
+ edRender()});
+
+/* ---------- boot ---------- */
+function boot(){ST=readStore();try{cur=localStorage.getItem('gp_cur')||null}catch(e){}if(!ST.rows.length&&!(ST.deleted||[]).length){ST.rows.push(samplePlan());writeStore()}render()}
+addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.gameplan==='changed'&&!E&&!$('modal').classList.contains('show')){ST=readStore();render()}});
+addEventListener('storage',e=>{if(e.key===KEY&&!E&&!$('modal').classList.contains('show')){ST=readStore();render()}});
+boot();
+</script></body></html>
