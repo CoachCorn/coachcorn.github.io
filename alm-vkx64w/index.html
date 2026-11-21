@@ -194,6 +194,10 @@ function lsChips(c){const o=LS[c],q=lsTerm(c),sel=o.sel().filter(Boolean);const 
 function lsPick(c,text){const o=LS[c];for(const t0 of text.split(',')){const t=t0.trim().toUpperCase();if(!t)continue;const L=A.lists[c]=A.lists[c]||[];let v=L.find(y=>y.toUpperCase()===t)||L.find(y=>y.toUpperCase().includes(t));
   if(!v){v=c==='formations'?t.toLowerCase().replace(/\b\w/g,m=>m.toUpperCase()):t;L.push(v);const g0=G();g0.extra=g0.extra||{};(g0.extra[c]=g0.extra[c]||[]).push(v);const pl=g0.plan;if(pl&&pl[c]&&!pl[c].includes(v))pl[c].push(v)}
   if(o.multi){if(!d.ftags.includes(v))d.ftags.push(v)}else d[o.g]=v}}
+const csbox=(k,ph)=>`<input id="cs_${k}" data-k="${k}" type="search" placeholder="${ph}" autocomplete="off" autocapitalize="characters" style="width:100%;margin-bottom:6px;padding:8px 10px;font-size:16px;background:transparent;color:var(--tx);border:1px solid var(--line);border-radius:8px">`;
+function applyCS(k){const q=(document.getElementById('cs_'+k)||{value:''}).value.trim().toUpperCase(),box=document.getElementById('cc_'+k);if(!box)return;
+ box.querySelectorAll('[data-g]').forEach(b=>{b.style.display=(!q||b.classList.contains('on')||b.dataset.v.toUpperCase().includes(q))?'':'none'});
+ box.querySelectorAll('.pair').forEach(p=>{p.style.display=[...p.querySelectorAll('[data-g]')].every(b=>b.style.display==='none')?'none':''})}
 function lastPasser(){try{const pl=G().plays;for(let i=pl.length-1;i>=0;i--)if(pl[i].k==='p'&&pl[i].passer)return pl[i].passer}catch(e){}return null}
 const ylNum=f=>f<=50?f:100-f, ylSide=f=>f<=50?'own':'opp';
 const ylFmt=f=>f===50?'50':f<50?'-'+f:'+'+(100-f);
@@ -235,11 +239,11 @@ function renderEntry(){const L=A.lists,e=edit!==null;
  h+=C('s3','Motion / Shift','',`${sbox('msrch','Search…',SQ.motions)}<div class="chips scroll" id="lschips_motions">${lsChips('motions')}</div>`);
  h+=C('s3','Formation','',`${sbox('frmsrch','Search…',SQ.formations)}<div class="chips scroll" id="lschips_formations">${lsChips('formations')}</div>`);
  h+=d.hash==='M'?C('s1','Dir','',`<div class="chips">${chip('dir','LT','LT',d.dir==='LT')}${chip('dir','RT','RT',d.dir==='RT')}</div>`):C('s1','FIB','',`<div class="chips">${chip('fib','Y','Y',d.fib==='Y')}${chip('fib','N','N',d.fib==='N')}</div>`);
- h+=C('s12','Green light formation (GLF)',d.glf?`<span class="note">${d.formation&&d.formation.toUpperCase()!==d.glf?'shifted out to '+d.formation:'stayed in it'}</span>`:'',`<div class="chips">${(L.glfs||[]).map(x=>chip('glf',x,x,d.glf===x)).join('')}</div>`);
+ h+=C('s12','Green light formation (GLF)',d.glf?`<span class="note">${d.formation&&d.formation.toUpperCase()!==d.glf?'shifted out to '+d.formation:'stayed in it'}</span>`:'',`${csbox('glf','Search green light formations')}<div class="chips" id="cc_glf">${(L.glfs||[]).map(x=>chip('glf',x,x,d.glf===x)).join('')}</div>`);
  h+=C('s12','Play tag(s)','',`<input id="tsrch" type="search" placeholder="Search all tags — commas for several, Enter adds" autocomplete="off" autocapitalize="characters" value="${TQ.replace(/"/g,'')}" style="width:100%;margin-bottom:6px;padding:8px 10px;font-size:16px;background:transparent;color:var(--tx);border:1px solid var(--line);border-radius:8px"><div class="chips scroll" id="tchips">${tagChipsHtml()}</div>`);
- h+=C('s12','One word','',`<div class="owg">${owL.map(x=>chip('owc',x,x,d.owc===x)).join('')}</div>`);
- h+=C('s6','Run concepts','',`<div class="chips scroll">${conceptChips(runL)}${oth('runs')}</div>`);
- h+=C('s6','Pass concepts','',`<div class="chips scroll">${conceptChips(passL)}${oth('passes')}</div>`);
+ h+=C('s12','One word','',`${csbox('ow','Search one words')}<div class="owg" id="cc_ow">${owL.map(x=>chip('owc',x,x,d.owc===x)).join('')}</div>`);
+ h+=C('s6','Run concepts','',`${csbox('run','Search run concepts')}<div class="chips scroll" id="cc_run">${conceptChips(runL)}${oth('runs')}</div>`);
+ h+=C('s6','Pass concepts','',`${csbox('pass','Search pass concepts')}<div class="chips scroll" id="cc_pass">${conceptChips(passL)}${oth('passes')}</div>`);
  h+=C('s12','Target (route)','',`${sbox('tgsrch','Search routes — Enter picks',SQ.target)}<div class="chips scroll" id="tgchips">${tgtChipsHtml()}</div>`);
  h+=C('s4','Result','',`<div class="chips">${RESULTS.map(r=>chip('result',r[0],r[1],d.result===r[0],['SACK','INT','FUM'].includes(r[0])?'neg':'res')).join('')}${chip('td','t','TD',d.td,'res')}</div>`);
  h+=C('s5','Gain / loss','',`<div class="chips" style="align-items:center;justify-content:center"><div class="step"><button class="chip" data-a="gm">−</button><input id="gv" type="number" inputmode="numeric" min="-99" max="99" value="${d.gain}" style="width:62px;font-size:20px;font-weight:700;text-align:center;background:transparent;color:var(--tx);border:1px solid var(--line);border-radius:6px;padding:4px 0"><button class="chip" data-a="gp">+</button></div></div><div class="chips" style="margin-top:6px;justify-content:center">${[-5,0,2,4,6,8,10,15,20].map(n=>chip('gain',n,(n>0?'+':'')+n,d.gain===n)).join('')}</div>`);
@@ -266,7 +270,8 @@ function renderLog(){const g=G(),s=summary();
 function renderHdr(){const gb=document.getElementById('gpbtn');if(gb){const on=G()&&G().plan&&Object.values(G().plan).some(a=>a&&a.length);gb.textContent=on?'Gameplan ✓':'Gameplan';gb.classList.toggle('pri',!!on)}
 document.getElementById('gsel').innerHTML=A.games.map(g=>`<option value="${g.id}" ${g.id===A.cur?'selected':''}>${g.opp}</option>`).join('')}
 function renderAll(){renderHdr();renderEntry();renderLog()}
-document.getElementById('entry').addEventListener('keydown',ev=>{{const c=Object.keys(LS).find(k=>LS[k].id===ev.target.id);if(c&&ev.key==='Enter'){ev.preventDefault();if(!SQ[c].trim())return;lsPick(c,SQ[c]);SQ[c]='';FOCID=LS[c].id;save();renderEntry();return}}
+document.getElementById('entry').addEventListener('keydown',ev=>{if(ev.key==='Enter'&&ev.target.id&&ev.target.id.indexOf('cs_')===0){ev.preventDefault();const k=ev.target.dataset.k,q=ev.target.value.trim().toUpperCase();if(!q)return;const box=document.getElementById('cc_'+k);const m=[...box.querySelectorAll('[data-g]')].filter(b=>b.style.display!=='none'&&!b.classList.contains('on'));const ex=m.find(b=>b.dataset.v.toUpperCase()===q)||m[0];if(ex)ex.click();else{const o=box.querySelector('[data-a=oth]');if(o)o.click()}return}
+{const c=Object.keys(LS).find(k=>LS[k].id===ev.target.id);if(c&&ev.key==='Enter'){ev.preventDefault();if(!SQ[c].trim())return;lsPick(c,SQ[c]);SQ[c]='';FOCID=LS[c].id;save();renderEntry();return}}
 if(ev.key==='Enter'&&ev.target.id==='tgsrch'){ev.preventDefault();if(!SQ.target.trim())return;pickTarget(SQ.target);SQ.target='';save();renderEntry();return}
 if(ev.key==='Enter'&&ev.target.id==='plsrch'){ev.preventDefault();if(!SQ.player.trim())return;pickPlayer(SQ.player);SQ.player='';save();renderEntry();return}
 if(ev.target.id==='tsrch'&&ev.key==='Enter'){ev.preventDefault();if(!TQ.trim())return;pickTags(TQ);TQ='';TFOC=true;save();renderEntry()}});
@@ -303,7 +308,8 @@ document.getElementById('entry').addEventListener('click',ev=>{const b=ev.target
  else if(a==='cancel'){edit=null;d=freshDraft(lastNext());renderAll();return}
  else if(a==='del'){G().plays.splice(edit,1);edit=null;d=freshDraft(lastNext());save();renderAll();return}
  renderEntry()});
-document.getElementById('entry').addEventListener('input',ev=>{{const c=Object.keys(LS).find(k=>LS[k].id===ev.target.id);if(c){SQ[c]=ev.target.value;document.getElementById('lschips_'+c).innerHTML=lsChips(c);return}}
+document.getElementById('entry').addEventListener('input',ev=>{if(ev.target.dataset&&ev.target.dataset.k&&ev.target.id.indexOf('cs_')===0){applyCS(ev.target.dataset.k);return}
+{const c=Object.keys(LS).find(k=>LS[k].id===ev.target.id);if(c){SQ[c]=ev.target.value;document.getElementById('lschips_'+c).innerHTML=lsChips(c);return}}
 if(ev.target.id==='tgsrch'){SQ.target=ev.target.value;document.getElementById('tgchips').innerHTML=tgtChipsHtml();return}
 if(ev.target.id==='plsrch'){SQ.player=ev.target.value;document.getElementById('plchips').innerHTML=plyChipsHtml();return}
 if(ev.target.id==='tsrch'){TQ=ev.target.value;document.getElementById('tchips').innerHTML=tagChipsHtml();return}
