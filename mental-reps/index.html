@@ -158,8 +158,12 @@ function cleanCfg(c){
 function sampleCfg(){
   var s=SAMPLE.settings;
   return cleanCfg({name:s["App name"],team:s["Team name"],positions:String(s["Positions"]).split(","),streak:s["Mastery streak"],days:s["Mastery days"],
-    cards:SAMPLE.cards.map(function(r,i){return {id:"sample-"+(i+1),deck:r[0],pos:String(r[1]).split(","),q:r[2],a:r[3],wrong:[r[4],r[5],r[6]],back:r[7],img:r[8]}})});
+    cards:SAMPLE.cards.map(function(r,i){return {id:"sample-"+(i+1),deck:r[0],pos:String(r[1]).split(","),q:r[2],a:r[3],wrong:[r[4],r[5],r[6]],back:r[7],img:r[8]}}).concat(demoDeckCards())});
 }
+/* Demo mode: decks sent from the Gameplan tab while signed out are kept on this device (key gp.demodeck) and shown here. */
+function demoDeckCards(){var d=jget("gp.demodeck",[]);if(!Array.isArray(d))return [];
+  return d.map(function(c,i){return {id:"gp-"+i,deck:c.deck,pos:["ALL"],q:c.q,a:c.a,wrong:c.wrong||[],back:c.back||"",img:c.img||""}})}
+window.addEventListener("storage",function(e){if(e.key==="gp.demodeck"&&!ONLINE)location.reload()});
 function applyCfg(c){
   cfg=c;
   MASTER.streak=c.streak;MASTER.days=c.days;

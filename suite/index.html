@@ -113,9 +113,10 @@ const TOOLS=[
 ];
 const $=id=>document.getElementById(id),made={};
 const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const mrSrc=()=>SUITESYNC.status().signedIn?'../mental-reps/':'../mental-reps/?demo=1';
 function frame(t){if(made[t.id])return made[t.id];let el;
  if(t.soon){el=document.createElement('div');el.className='soonv';el.innerHTML='<h2>'+t.name+'</h2><p>'+t.soon+'</p>'}
- else{el=document.createElement('iframe');el.src=t.src;el.title=t.name;el.setAttribute('allow','clipboard-write')}
+ else{el=document.createElement('iframe');el.src=t.id==='mreps'?mrSrc():t.src;el.title=t.name;el.setAttribute('allow','clipboard-write')}
  $('views').appendChild(el);return made[t.id]=el}
 function open(id){const t=TOOLS.find(x=>x.id===id)||DTOOLS.find(x=>x.id===id);if(!t)return goHome();
  for(const k in made)made[k].classList.toggle('on',k===t.id);frame(t).classList.add('on');
@@ -195,7 +196,7 @@ function signInModal(){const s=SUITESYNC.status();
  $('ss').onclick=async()=>{$('se').textContent='';try{await SUITESYNC.setup($('su').value,$('sp').value.trim().toLowerCase(),$('sn2').value,$('sc').value,$('sa').value);$('se').style.color='var(--ok)';$('se').textContent='Program set. Now tap Sign in.'}catch(e){$('se').style.color='';$('se').textContent=e.message}}}
 (()=>{let x0=null,y0=null;const h=$('home');h.addEventListener('touchstart',e=>{x0=e.touches[0].clientX;y0=e.touches[0].clientY},{passive:true});
  h.addEventListener('touchend',e=>{if(x0==null)return;const dx=e.changedTouches[0].clientX-x0,dy=e.changedTouches[0].clientY-y0;x0=null;if(Math.abs(dx)>70&&Math.abs(dx)>2*Math.abs(dy))setSide(dx<0?'D':'O')},{passive:true})})();
-SUITESYNC.onChange(()=>{renderHome();barStatus()});
+SUITESYNC.onChange(()=>{renderHome();barStatus();if(made.mreps&&made.mreps.tagName==='IFRAME'){const w=mrSrc();if(!made.mreps.src.endsWith(w.replace('..','')))made.mreps.src=w}});
 frame(TOOLS[0]); // load the Almanac in the background so it is ready (and so sync can reach it)
 let start='';try{start=localStorage.getItem('suite_tab')||''}catch(e){}
 start?open(start):renderHome();renderHome();barStatus();setInterval(()=>{if(!document.body.classList.contains('tool'))renderHome()},30000);

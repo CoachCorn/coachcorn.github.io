@@ -322,11 +322,11 @@ function mrCards(p,o){const out=[],names=[...new Set(p.blocks.map(b=>b.name).fil
  if(o.calls)calls.forEach(k=>{const img=svgImg(k.b.draw);out.push({pos:'ALL',q:`${k.b.name} · ${k.r.label} · ${k.c.head||'column'}: what is the call?`,a:k.t,wrong:some(texts.filter(t=>t!==k.t),3),expl:'',img:img.length>45000?'':img})});
  return out}
 function mrEndpoint(){let e='';try{e=localStorage.getItem('gp.mrurl')||''}catch(x){}return e||'https://script.google.com/macros/s/AKfycbyeNCmURP7bIelclh1GqoAqswhVThJL77XvsgsepuOQfiXSIKqOveFCdhTe1weY4js/exec'}
-$('mr').onclick=()=>{const p=plan();if(!p)return toast('Start a plan first');let code='';try{code=localStorage.getItem('cs.code')||''}catch(e){}
- $('mbox').innerHTML=`<h3>Send to Mental Reps</h3><div class="note">Makes one deck tab in the Mental Reps sheet from this plan. Players see it as soon as they refresh.</div>
- <div class="lab">Deck name (cannot start with _)</div><input type="text" id="mr_n" value="${esc(p.name.replace(/^_+/,'').slice(0,60))}">
+$('mr').onclick=()=>{const p=plan();if(!p)return toast('Start a plan first');let code='';try{code=localStorage.getItem('cs.code')||''}catch(e){}if(!signedIn())code='demo';
+ $('mbox').innerHTML=`<h3>Send to Mental Reps</h3><div class="note">${signedIn()?'Makes one deck tab in the Mental Reps sheet from this plan. Players see it as soon as they refresh.':'Demo mode: makes a deck from this plan inside the Mental Reps tab on this device. Nothing is sent anywhere.'}</div>
+ <div class="lab">Deck name (cannot start with _)</div><input type="text" id="mr_n" value="${esc((p.sample?'Demo week':p.name).replace(/^_+/,'').slice(0,60))}">
  <div class="chips"><button class="chip on" id="mr_f">Formation cards</button><button class="chip on" id="mr_c">Call cards</button></div>
- <div class="note" style="margin-top:4px">Formation cards: the drawing, “What formation is this?”. Call cards: “Crown LT · Field run · Jab: what is the call?” with the drawing, answers taken from your other calls.</div>
+ <div class="note" style="margin-top:4px">Formation cards: the drawing, “What formation is this?”. Call cards: “${esc((p.blocks[0]||{}).name||'Formation')} · ${esc((p.rows[0]||{}).label||'Row')} · ${esc((p.cols[0]||{}).head||'Column')}: what is the call?” with the drawing, answers taken from your other calls.</div>
  ${code?'':`<div class="lab">Coach code</div><input type="password" id="mr_k" autocapitalize="off" autocorrect="off">`}
  <div id="mr_s" class="note" style="margin-top:8px"></div><div class="row"><button class="btn pri" id="mr_go">Send</button><button class="btn" id="mr_x">Close</button></div>`;
  $('modal').classList.add('show');$('mbox').onclick=null;$('mbox').onkeydown=null;
@@ -334,6 +334,8 @@ $('mr').onclick=()=>{const p=plan();if(!p)return toast('Start a plan first');let
  $('mr_go').onclick=async()=>{const st=$('mr_s'),name=$('mr_n').value.trim(),cd=code||($('mr_k')?$('mr_k').value:'');
   const cards=mrCards(p,{forms:$('mr_f').classList.contains('on'),calls:$('mr_c').classList.contains('on')});
   if(!name)return st.textContent='Give the deck a name.';if(!cd)return st.textContent='Enter the coach code.';if(!cards.length)return st.textContent='Nothing to send yet: add formations or calls first.';
+  if(!signedIn()){try{const old=JSON.parse(localStorage.getItem('gp.demodeck')||'[]').filter(c=>c.deck!==name);cards.forEach(c=>old.push({deck:name,q:c.q,a:c.a,wrong:c.wrong,back:c.expl,img:c.img}));localStorage.setItem('gp.demodeck',JSON.stringify(old));
+    st.style.color='var(--ok)';st.textContent='Added '+cards.length+' cards to the demo deck “'+name+'”. Open the Mental Reps tab to try them.'}catch(e){st.style.color='var(--bad)';st.textContent='Could not save the demo deck on this device (storage full?).'}return}
   st.textContent='Sending '+cards.length+' cards…';$('mr_go').disabled=true;
   try{const r=await fetch(mrEndpoint(),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({type:'deck',code:cd,name,cards})}),t=(await r.text()).trim();
    if(/^ok:/.test(t)){st.style.color='var(--ok)';st.textContent='Sent '+t.slice(3)+' cards to the deck “'+name+'”.'}
