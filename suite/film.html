@@ -176,7 +176,10 @@ const CFG=()=>({kind:KIND(),offTeam:(($('#offTeam')||{}).value||'').trim(),game:
   goalEff:+$('#goalEff').value||50,goalExp:+$('#goalExp').value||12,expRun:+$('#expRun').value||15,expPass:+$('#expPass').value||15});
 const nums=s=>s.split(/[^0-9]+/).filter(Boolean);
 function rosterMap(){const m={};$('#roster').value.split('\n').forEach(l=>{const x=l.trim().match(/^#?(\d+)\s+(.+)$/);if(x)m[x[1]]=x[2].trim()});return m}
-const LS=()=>'fr:game:'+CUR;
+const SIGNED=(()=>{try{const s=JSON.parse(localStorage.getItem('suite_sync'));return !!(s&&s.token&&s.exp>Date.now())}catch(e){return false}})();const FP=SIGNED?'fr:':'frd:';const TEAM=SIGNED?'Deer Creek':'Your team';
+const LS=()=>FP+'game:'+CUR;
+if(!SIGNED)document.title=document.title.replace(/Deer Creek/g,TEAM);addEventListener('storage',e=>{if(e.key==='suite_sync'){const s=(()=>{try{const x=JSON.parse(e.newValue);return !!(x&&x.token&&x.exp>Date.now())}catch(_){return false}})();if(s!==SIGNED)location.reload()}});
+if(!SIGNED){const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);const ns=[];while(w.nextNode())ns.push(w.currentNode);ns.forEach(n=>{if(n.nodeValue.includes('Deer Creek'))n.nodeValue=n.nodeValue.replace(/Deer Creek/g,TEAM)})}
 
 /* ================= loading clips ================= */
 function angleOf(s){s=s.toLowerCase();if(/end ?zone|\bez\b|endzone/.test(s))return 'End Zone';if(/tight/.test(s))return 'Tight';return 'Wide'}
@@ -522,7 +525,7 @@ $('#aiStop').onclick=()=>S.aiCtl&&S.aiCtl.abort();
 /* ================= Opponent scout (their defense) ================= */
 function KIND(){return S.kind||'self'}
 function OPP(){return KIND()==='opp'}
-function OFFN(){return OPP()?(CFG().offTeam||'the offense on film'):'Deer Creek'}
+function OFFN(){return OPP()?(CFG().offTeam||'the offense on film'):TEAM}
 const BOXES=['31','32','33','34','41','42','43','44','51','52','53'],MOFS=['0-high','1-high','2-high','3-high'],COVS=['Man','Zone'],RUSH=['3','4','5','6','7','8'];
 function defEditor(p){return `<div class="panel" style="padding:10px;gap:8px;background:var(--panel2)"><span class="meta">Defense (${esc(CFG().opp||'team we are scouting')})</span>
   <div class="bar"><span class="meta">Box</span>${seg('box',BOXES,p.box)}</div>
@@ -596,8 +599,8 @@ async function hydrateOpp(){for(const x of oppPlays().filter(x=>x.exp)){const a=
 /* ================= Film Room ================= */
 let G=null, TAB='result', HALF='full', FILTER={half:'all',type:'all',flagged:false}, CUR=null;
 /* KDNCE: finished (published) games live on this device and sync privately with the program, never in this public page. */
-const PUBK='fr:pub';const EMB=(()=>{try{const x=JSON.parse(localStorage.getItem(PUBK));if(x&&x.index&&x.games)return x}catch(e){}return {index:[],games:{}}})();
-function savePub(){try{localStorage.setItem(PUBK,JSON.stringify(EMB));localStorage.setItem('fr:upd:pub',String(Date.now()))}catch(e){}}
+const PUBK=FP+'pub';const EMB=(()=>{try{const x=JSON.parse(localStorage.getItem(PUBK));if(x&&x.index&&x.games)return x}catch(e){}return {index:[],games:{}}})();
+function savePub(){try{localStorage.setItem(PUBK,JSON.stringify(EMB));localStorage.setItem(FP+'upd:pub',String(Date.now()))}catch(e){}}
 /* KDNCE highlight clips: stored privately on the program's server (Cloudflare R2), played with a short-lived pass. */
 const SY=()=>{try{return JSON.parse(localStorage.getItem('suite_sync'))||{}}catch(e){return{}}};
 const CLOUD={ct:null,url:null,ready:false,have:{},size:{}};
@@ -621,8 +624,8 @@ const vid=t0=>{const t=cfile(t0);return t.url?`<video controls preload="metadata
 const BLOBS={};async function blobUrl(u){if(!BLOBS[u]){const r=await fetch(u);if(!r.ok)throw new Error(r.status);BLOBS[u]=URL.createObjectURL(await r.blob())}return BLOBS[u]}
 function wireVids(){$$('.vwrap').forEach(w=>{const pst=w.dataset.poster;if(pst)blobUrl(pst).then(u=>{w.querySelector('img').src=u}).catch(()=>{});
   w.onclick=async()=>{const b=w.querySelector('.vplay');b.textContent='Loading…';try{const u=await blobUrl(w.dataset.file);const v=document.createElement('video');v.controls=true;v.playsInline=true;v.src=u;w.replaceWith(v);v.play().catch(()=>{})}catch(e){b.textContent="Couldn't load clip"}}})}
-const SAVED=()=>{try{return JSON.parse(localStorage.getItem('fr:games')||'[]')}catch(e){return []}};
-function setSaved(list){try{localStorage.setItem('fr:games',JSON.stringify(list))}catch(e){}}
+const SAVED=()=>{try{return JSON.parse(localStorage.getItem(FP+'games')||'[]')}catch(e){return []}};
+function setSaved(list){try{localStorage.setItem(FP+'games',JSON.stringify(list))}catch(e){}}
 function fillPicker(){const sv=SAVED();
   $('#gamePick').innerHTML=(EMB.index.length||SAVED().length?'':'<option value="">Choose a game…</option>')+EMB.index.map(g=>`<option value="emb:${g.id}">${esc(g.label)}</option>`).join('')+sv.map(g=>`<option value="loc:${g.id}">${esc(g.label)}</option>`).join('')+'<option value="new:self">+ New self scout (our offense)…</option><option value="new:opp">+ New opponent scout (their defense)…</option>';
   if(CUR&&sv.some(g=>g.id===CUR))$('#gamePick').value='loc:'+CUR;}
@@ -685,7 +688,7 @@ function renderMg(){const sv=SAVED(),P=$('#mgPanel');
     if(!b.dataset.arm){b.dataset.arm=1;b.dataset.t=b.textContent;b.textContent='Click again to delete';setTimeout(()=>{if(b.isConnected){delete b.dataset.arm;b.textContent=b.dataset.t}},3000);return}
     mgRemove(b.id==='mgAll'?SAVED().map(g=>g.id):[b.dataset.mgdel])}}
 function mgRemove(ids){if(!ids.length)return;
-  tombstone(ids);ids.forEach(id=>{try{localStorage.removeItem('fr:game:'+id)}catch(e){}});setSaved(SAVED().filter(g=>!ids.includes(g.id)));
+  tombstone(ids);ids.forEach(id=>{try{localStorage.removeItem(FP+'game:'+id)}catch(e){}});setSaved(SAVED().filter(g=>!ids.includes(g.id)));
   if(CUR&&ids.includes(CUR)){CUR=null;fillPicker();startPick()}else fillPicker();
   renderMg();toast(ids.length>1?'Deleted '+ids.length+' games':'Game deleted')}
 const TABSETS={self:[['result','Game Result &amp; Why'],['fiftytwelve','50 / 12'],['stats','Stats'],['tagger','Film Tagger'],['hudl','Export to Hudl']],
@@ -717,7 +720,7 @@ const TAGK=['yl','hash','type','result','td','nd','h2','gainOverride','skip','al
 function mergeSaved(){ // new clips loaded: keep saved tags by clip number
   let s=null;try{s=JSON.parse(localStorage.getItem(LS())||'null')}catch(e){} if(!s||!s.plays)return;
   const by=new Map(s.plays.map(p=>[p.n,p]));let k=0;S.plays.forEach(p=>{const t=by.get(p.n);if(t){TAGK.forEach(x=>{if(t[x]!==undefined)p[x]=t[x]});k++}});if(k)toast('Kept saved tags for '+k+' plays')}
-function save(){if(!CUR)return;try{localStorage.setItem('fr:upd:'+CUR,String(Date.now()));localStorage.setItem(LS(),JSON.stringify({kind:KIND(),cfg:CFG(),roster:$('#roster').value,alm:S.alm,drv:S.drv,summary:S.summary,tideOff:S.tideOff,
+function save(){if(!CUR)return;try{localStorage.setItem(FP+'upd:'+CUR,String(Date.now()));localStorage.setItem(LS(),JSON.stringify({kind:KIND(),cfg:CFG(),roster:$('#roster').value,alm:S.alm,drv:S.drv,summary:S.summary,tideOff:S.tideOff,
   plays:S.plays.map(p=>{const o={n:p.n};TAGK.forEach(k=>o[k]=p[k]);return o})}));
   const c=CFG(),sv=SAVED(),e=sv.find(g=>g.id===CUR);if(e){const lab=OPP()?'Opp scout: '+(c.opp||c.game||'new')+(c.offTeam?' vs '+c.offTeam:''):(c.game||c.opp||'New game')+(c.us!==''&&c.them!==''?` (${+c.us>+c.them?'W':+c.us<+c.them?'L':'T'} ${c.us}-${c.them})`:' (in progress)');
     if(e.label!==lab){e.label=lab;setSaved(sv);const o=$('#gamePick').querySelector(`option[value="loc:${CUR}"]`);if(o)o.textContent=lab}}}catch(e){}}
@@ -756,9 +759,9 @@ function buildG(){compute();const c=CFG(),R=rosterMap(),QB=new Set(c.qbs);
   const turningPoints=autoTide(plays,R,QB).map(t=>({...t,url:urlOf(t._p),file:fileOf(t._p)}));
   const us=c.us!==''?+c.us:null,them=c.them!==''?+c.them:null,res=us==null||them==null?'':us>them?'W':us<them?'L':'T';
   const s=stats.full,ef=pct(s.effN,s.effD),ex=pct(s.explN,s.explD);
-  const summary=S.summary||(plays.length?`${us!=null?`Deer Creek ${us}, ${c.opp||'opponent'} ${them}. `:''}Offense: ${s.snaps} snaps, ${s.yards} yards, ${ef}% efficient (goal ${c.goalEff}%), ${ex}% explosive (goal ${c.goalExp}%), ${s.third} on 3rd down. ${drives.filter(d=>d.result==='TD').length} TD drives in ${drives.length}.`:'No plays tagged yet. Open Film Tagger to load clips.');
+  const summary=S.summary||(plays.length?`${us!=null?`${TEAM} ${us}, ${c.opp||'opponent'} ${them}. `:''}Offense: ${s.snaps} snaps, ${s.yards} yards, ${ef}% efficient (goal ${c.goalEff}%), ${ex}% explosive (goal ${c.goalExp}%), ${s.third} on 3rd down. ${drives.filter(d=>d.result==='TD').length} TD drives in ${drives.length}.`:'No plays tagged yet. Open Film Tagger to load clips.');
   const nRev=S.plays.filter(needsReview).length;
-  return {id:CUR,local:true,clipBase:cloudBase(CUR),kind:KIND(),view:'staff',title:c.game||('Deer Creek vs '+(c.opp||'opponent')),opponent:c.opp||'Opponent',final:{us:us??'–',them:them??'–',result:res},
+  return {id:CUR,local:true,clipBase:cloudBase(CUR),kind:KIND(),view:'staff',title:c.game||(TEAM+' vs '+(c.opp||'opponent')),opponent:c.opp||'Opponent',final:{us:us??'–',them:them??'–',result:res},
     scoreTimeline:us!=null?[{when:'Final',us,them}]:[],goals:{eff:c.goalEff,expl:c.goalExp},plays,drives,stats,byDown,explosives,turningPoints,summary,
     why:autoWhy(plays,drives,s,c,R,QB),notes:[S.alm.length?'Tags: film plus almanac (down, distance and spot from the almanac; hash and checks from film).':'Tags: film only (opponent scout mode); down and distance are worked out from the spots.',
       nRev?`${nRev} plays still flagged for review in Film Tagger.`:'Review queue is clear.','"Plays that turned the tide" are picked automatically; tick or untick "Turned the tide" on a play to change them.'],accuracy:null};
@@ -902,7 +905,7 @@ async function draftWhy(){const b=$('#aiWhy');b.disabled=true;b.textContent='Wri
   try{const data={final:g.final,opponent:g.opponent,goals:g.goals,stats:{...g.stats.full,rushing:g.stats.full.rushing.slice(0,4),receiving:g.stats.full.receiving.slice(0,4)},
       drives:g.drives.map(d=>({n:d.n,half:d.half,start:d.start,plays:d.plays,yards:d.yards,result:d.result,eff:d.effD?pct(d.effN,d.effD):null,expl:d.expl})),
       turningPoints:g.turningPoints.map(t=>({clip:t.clip,title:t.title,when:t.when})),explosives:g.explosives.map(t=>({title:t.title,when:t.when}))};
-    const r=await S.sample(`Write the 2-3 sentence summary at the top of a high school offensive staff's postgame report. Data-first, direct, no hype or cheerleading. Use only the data below; do not invent players, plays, quarters or context that is not in it. Yard lines: negative = Deer Creek's own half. Lead with the result and the biggest reason. Plain text, no heading.\n\nDATA:\n${JSON.stringify(data)}`,{modelTier:'default'});
+    const r=await S.sample(`Write the 2-3 sentence summary at the top of a high school offensive staff's postgame report. Data-first, direct, no hype or cheerleading. Use only the data below; do not invent players, plays, quarters or context that is not in it. Yard lines: negative = ${TEAM}'s own half. Lead with the result and the biggest reason. Plain text, no heading.\n\nDATA:\n${JSON.stringify(data)}`,{modelTier:'default'});
     S.summary=(r.text||'').trim();refresh();render()}catch(e){toast('Could not write the summary ('+((e&&e.code)||'error')+')');b.disabled=false}}
 async function saveFile(name,data,mime){
   try{const dl=await claude.use('downloads');if(dl){await dl.save({filename:name,data});toast('Saved '+name);return}}catch(e){if(e&&e.code==='declined')return}
@@ -952,7 +955,7 @@ $('#saveHl').onclick=async()=>{if(!CLOUD.ready){toast('Sign in on the KDNCE home
     try{const blob=await a.get();await cloudPut(CUR,'clip'+pad3(p.n)+'.mp4',blob instanceof Blob?blob:new Blob([blob],{type:'video/mp4'}))}catch(e){toast('Clip '+p.n+': '+e.message);break}}
   b.disabled=false;b.textContent='Save highlight clips to KDNCE';await cloudList(CUR);toast(`Saved ${k} highlight clip${k>1?'s':''}. Other devices can watch them now.`);refresh()};
 /* ---------- start ---------- */
-function tombstone(ids){try{const t=JSON.parse(localStorage.getItem('fr:deleted')||'[]');ids.forEach(i=>{if(i&&!t.includes(i))t.push(i)});localStorage.setItem('fr:deleted',JSON.stringify(t))}catch(e){}}
+function tombstone(ids){try{const t=JSON.parse(localStorage.getItem(FP+'deleted')||'[]');ids.forEach(i=>{if(i&&!t.includes(i))t.push(i)});localStorage.setItem(FP+'deleted',JSON.stringify(t))}catch(e){}}
 function startPick(){const v=$('#gamePick').value;if(v&&!v.startsWith('new:')){pick(v);return}G=null;render();$('#out').innerHTML='<div class="panel empty">No games yet. Pick <b>+ New self scout</b> in the Game menu, send a game from the Almanac, or <b>Import game file</b> for a finished game.</div>'}
 fillPicker();
 {const p=new URLSearchParams(location.search).get('game');if(p&&EMB.games[p])pick('emb:'+p);else startPick()}

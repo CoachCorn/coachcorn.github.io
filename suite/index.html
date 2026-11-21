@@ -122,13 +122,14 @@ function open(id){const t=TOOLS.find(x=>x.id===id)||DTOOLS.find(x=>x.id===id);if
  $('ttl').textContent=t.name;document.body.classList.add('tool');try{localStorage.setItem('suite_tab',t.id)}catch(e){}}
 function goHome(){document.body.classList.remove('tool');try{localStorage.setItem('suite_tab','')}catch(e){}renderHome()}
 function reviewCount(){if(!window.GL)return 0;const g=GL.load(PROGRAM);return g?GL.reviewList(g).length:0}
-function curGame(){try{const A=JSON.parse(localStorage.getItem('almanac_v1'));const g=A&&A.games.find(x=>x.id===A.cur);if(!g)return'';const n=g.plays.filter(p=>p.k==='p').length;return esc(g.opp)+' · '+n+' play'+(n===1?'':'s')+(g.scout?' · scout loaded':'')}catch(e){return''}}
-function almInfo(){try{const A=JSON.parse(localStorage.getItem('almanac_v1'));const g=A&&A.games.find(x=>x.id===A.cur);if(!g)return null;return{opp:g.opp,n:g.plays.filter(p=>p.k==='p').length,scout:g.scout&&g.scout.name,demo:g.demo}}catch(e){return null}}
-function seasonO(){try{const A=JSON.parse(localStorage.getItem('almanac_v1'));const y=new Date().getFullYear(),L=A.lists||{};
+const ALMK=()=>{try{const s=JSON.parse(localStorage.getItem('suite_sync'));return(s&&s.token&&s.exp>Date.now())?'almanac_v1':'almanac_demo'}catch(e){return'almanac_demo'}};
+function curGame(){try{const A=JSON.parse(localStorage.getItem(ALMK()));const g=A&&A.games.find(x=>x.id===A.cur);if(!g)return'';const n=g.plays.filter(p=>p.k==='p').length;return esc(g.opp)+' · '+n+' play'+(n===1?'':'s')+(g.scout?' · scout loaded':'')}catch(e){return''}}
+function almInfo(){try{const A=JSON.parse(localStorage.getItem(ALMK()));const g=A&&A.games.find(x=>x.id===A.cur);if(!g)return null;return{opp:g.opp,n:g.plays.filter(p=>p.k==='p').length,scout:g.scout&&g.scout.name,demo:g.demo}}catch(e){return null}}
+function seasonO(){try{const A=JSON.parse(localStorage.getItem(ALMK()));const y=new Date().getFullYear(),L=A.lists||{};
  const P=A.games.filter(g=>!g.demo&&!/\(other iPad\)$/.test(g.opp||'')&&(parseInt(String(g.id).slice(1),10)>1e12?new Date(parseInt(String(g.id).slice(1),10)).getFullYear():y)===y).flatMap(g=>g.plays.filter(p=>p.k==='p'&&p.result!=='PEN'));
  if(!P.length)return null;const ef=p=>{if(p.td)return 1;const g=+p.gain||0,n=+p.dist||10;return p.down===1?g>=(n>=10?4:n):p.down===2?g>=Math.ceil(n/2):g>=n};
  return{eff:Math.round(100*P.filter(ef).length/P.length),ypp:(P.reduce((a,p)=>a+(+p.gain||0),0)/P.length).toFixed(1),n:P.length}}catch(e){return null}}
-function theirD(opp){try{const A=JSON.parse(localStorage.getItem('almanac_v1'));const U=x=>String(x||'').trim().toUpperCase();
+function theirD(opp){try{const A=JSON.parse(localStorage.getItem(ALMK()));const U=x=>String(x||'').trim().toUpperCase();
  const g=A.games.find(g=>g.scout&&(U(g.opp)===U(opp)||U(g.scout.name).includes(U(opp))));if(!g)return null;const R=g.scout.rows.filter(r=>r.cv);if(!R.length)return null;
  const m={};R.forEach(r=>m[r.cv]=(m[r.cv]||0)+1);const top=Object.entries(m).sort((a,b)=>b[1]-a[1])[0];const rr=g.scout.rows.filter(r=>r.rs!=='');
  const pr=rr.length?Math.round(100*rr.filter(r=>+r.rs>=4).length/rr.length):null;return{cov:top[0],covP:Math.round(100*top[1]/R.length),pr,n:g.scout.rows.length}}catch(e){return null}}

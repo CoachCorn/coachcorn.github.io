@@ -250,7 +250,8 @@ $('prn').onclick=()=>{try{window.print()}catch(e){toast('Print is not available 
 /* ---------- scout: predicted defense ---------- */
 const SKEY='gpscout_v1_'+PROGRAM+'_';
 const U=x=>String(x==null?'':x).trim().toUpperCase();
-function almData(){try{return JSON.parse(localStorage.getItem('almanac_v1'))}catch(e){return null}}
+const ALMK=()=>{try{const s=JSON.parse(localStorage.getItem('suite_sync'));return(s&&s.token&&s.exp>Date.now())?'almanac_v1':'almanac_demo'}catch(e){return'almanac_demo'}};
+function almData(){try{return JSON.parse(localStorage.getItem(ALMK()))}catch(e){return null}}
 function almGames(){const A=almData();return(A&&A.games||[]).filter(g=>g.scout&&g.scout.rows&&g.scout.rows.length&&!g.demo)}
 function ownScout(p){try{return JSON.parse(localStorage.getItem(SKEY+p.id))}catch(e){return null}}
 /* Which scout feeds this plan: its own choice, else the Almanac game for the plan's opponent, else the Almanac's current game. */

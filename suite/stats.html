@@ -49,10 +49,11 @@ tr.click{cursor:pointer}tr.click:active{background:#223140}
    Explosive: the program's thresholds (Almanac > Setup > Explosive run / pass; default 15+ on any play). */
 const $=id=>document.getElementById(id);
 const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const prog=()=>{try{return(JSON.parse(localStorage.getItem('suite_sync'))||{}).program||'deer-creek'}catch(e){return'deer-creek'}};
+const ALMK=()=>{try{const s=JSON.parse(localStorage.getItem('suite_sync'));return(s&&s.token&&s.exp>Date.now())?'almanac_v1':'almanac_demo'}catch(e){return'almanac_demo'}};
+const prog=()=>{try{return ALMK()==='almanac_v1'?((JSON.parse(localStorage.getItem('suite_sync'))||{}).program||'deer-creek'):'demo'}catch(e){return'demo'}};
 const SKEY=()=>'schedule_v1_'+prog();
 let V={tab:'schedule',game:null,season:null};
-function A(){try{return JSON.parse(localStorage.getItem('almanac_v1'))||{games:[],lists:{}}}catch(e){return{games:[],lists:{}}}}
+function A(){try{return JSON.parse(localStorage.getItem(ALMK()))||{games:[],lists:{}}}catch(e){return{games:[],lists:{}}}}
 function sched(){try{return JSON.parse(localStorage.getItem(SKEY()))||{rows:[],deleted:[]}}catch(e){return{rows:[],deleted:[]}}}
 function saveSched(S){S.rows.sort((a,b)=>String(a.date).localeCompare(String(b.date)));localStorage.setItem(SKEY(),JSON.stringify(S))}
 const newId=()=>'s'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
@@ -149,7 +150,7 @@ function render(){hdr();let h;
  document.querySelectorAll('[data-row]').forEach(b=>b.onclick=()=>editRow(b.dataset.row));
  document.querySelectorAll('tr[data-g]').forEach(r=>r.onclick=()=>{V.game=r.dataset.g;render()});
  const bk=$('back');if(bk)bk.onclick=()=>{V.game=null;render()}}
-addEventListener('storage',e=>{if(e.key==='almanac_v1'||(e.key&&e.key.indexOf('schedule_v1_')===0))render()});
+addEventListener('storage',e=>{if(e.key==='almanac_v1'||e.key==='almanac_demo'||(e.key&&e.key.indexOf('schedule_v1_')===0))render()});
 addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.schedule)render()});
 render();
 </script></body></html>
