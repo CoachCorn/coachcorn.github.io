@@ -46,7 +46,7 @@ tr.r{cursor:pointer}tr.r:active{background:#223140}
 const SIGNED=(()=>{try{const s=JSON.parse(localStorage.getItem('suite_sync'));return !!(s&&s.token&&s.exp>Date.now())}catch(e){return false}})();
 addEventListener('storage',e=>{if(e.key==='suite_sync'){let n=false;try{const x=JSON.parse(e.newValue);n=!!(x&&x.token&&x.exp>Date.now())}catch(_){}if(n!==SIGNED)location.reload()}});
 const PROGRAM=SIGNED?(new URLSearchParams(location.search).get('program')||'deer-creek'):'demo';
-const TYPES=[['formation','Formations'],['ftag','Formation tags'],['motion','Motion / Shift'],['tag','Play tags'],['run','Run concepts'],['pass','Pass concepts'],['oneword','One words'],['glf','Green light'],['route','Routes'],['front','Fronts'],['frontmod','Front tags'],['coverage','Coverages'],['shell','Shells']];
+const TYPES=[['formation','Formations'],['ftag','Formation tags'],['motion','Motion / Shift'],['tag','Play tags'],['run','Run concepts'],['pass','Pass concepts'],['oneword','One words'],...(SIGNED?[['glf','Green light']]:[]),['route','Routes'],['front','Fronts'],['frontmod','Front tags'],['coverage','Coverages'],['shell','Shells']];
 const DEF_SIDE=t=>['front','frontmod','coverage','shell'].includes(t)?'D':'O';
 const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const $=id=>document.getElementById(id);

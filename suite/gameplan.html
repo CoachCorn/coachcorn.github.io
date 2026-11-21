@@ -153,7 +153,8 @@ function svgOf(d,sel,cur,selL){const n=++svgN,used=new Set(),edit=selL!==undefin
 /* ---------- glossary ---------- */
 let GLO=null;function glossary(){try{GLO=window.GL?GL.load(PROGRAM):null}catch(e){GLO=null}return GLO}
 function terms(types){const g=glossary();if(!g)return[];const out=[],seen=new Set();for(const t of types)for(const x of GL.active(g,t)){const n=x.name;if(!seen.has(n.toUpperCase())){seen.add(n.toUpperCase());out.push(n)}}return out.sort((a,b)=>a.localeCompare(b))}
-const SLOTS=[['ftag','Formation tag',['ftag']],['motion','Motion / Shift',['motion']],['formation','Formation',['formation']],['concept','Concept or one word',['run','pass','oneword']],['tag','Play tag',['tag']],['glf','GLF',['glf']]];
+const SLOTS=[['ftag','Formation tag',['ftag']],['motion','Motion / Shift',['motion']],['formation','Formation',['formation']],['concept','Concept or one word',['run','pass','oneword']],['tag','Play tag',['tag']]];
+if(signedIn())SLOTS.push(['glf','GLF',['glf']]);
 
 /* ---------- seed ---------- */
 function samplePlan(){const cols=[['Play 1',''],['Play 2',''],['Play 3',''],['Play 4','']].map(([h,s])=>({id:uid('c'),head:h,sub:s}));
