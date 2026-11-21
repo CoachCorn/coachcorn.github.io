@@ -156,13 +156,19 @@ const SLOTS=[['ftag','Formation tag',['ftag']],['motion','Motion / Shift',['moti
 /* ---------- seed ---------- */
 function samplePlan(){const cols=[['Jab','Favorite'],['Cross','Motion / formation tag'],['Counter',''],['Knock out!','Gadget / shot']].map(([h,s])=>({id:uid('c'),head:h,sub:s}));
  const rows=['Field run','Bdy run','Pass 1','Pass 2'].map(l=>({id:uid('r'),label:l}));
- const mk=(name,pers,pd,data,lines)=>{const d=baseDraw();d.l=lines||[];const cells={};
+ const mk=(name,pers,pd,data,lines,tw)=>{const d=baseDraw();if(tw)tw(d.t);d.l=lines||[];const cells={};
   data.forEach((r,ri)=>r.forEach((v,ci)=>{if(v)cells[rows[ri].id+'|'+cols[ci].id]={s:{concept:v},n:''}}));
   return{id:uid('b'),name,pers,pd,draw:d,cells}};
  return{id:uid('p'),upd:Date.now(),name:'Sample week (edit or delete)',cols,rows,blocks:[
   mk('Crown LT','—',{box:'',front:'',cov:'',blitz:''},[['MASH SNRS','Z OUT','',''],['LA','HOT S','MIRROR SNRS','MAP G VEGAS'],['BROWN LAP','','','CURL'],['AGGIES','','','']],
    [{pts:[[165,150],[300,150]],dot:1,col:'#f2b632',arrow:1},{pts:[[456,112],[456,50]],dot:0,col:'#ffffff',arrow:1}]),
-  mk('Zap Joker','—',{box:'',front:'',cov:'Star 53%',blitz:''},[['GANG RAIDER','BEHIND','',''],['MIRROR SNRS','SPRAY','',''],['LANCE CAL','','','WHEEL'],['LASR RCE','','','STANFORD']])]}}
+  mk('Zap Joker','—',{box:'',front:'',cov:'Star 53%',blitz:''},[['GANG RAIDER','BEHIND','',''],['MIRROR SNRS','SPRAY','',''],['LANCE CAL','','','WHEEL'],['LASR RCE','','','STANFORD']]),
+  mk('Demo formation 1','11',{box:'',front:'',cov:'',blitz:''},[['MASH','CURL','',''],['LA','','',''],['SPACING','Z OUT','','WHEEL'],['','','','']],
+   [{pts:[[456,112],[456,40]],dot:0,col:'#ffffff',arrow:1},{pts:[[165,150],[300,150]],dot:1,col:'#f2b632',arrow:1},{pts:[[395,112],[395,70],[330,60]],dot:0,col:'#2fbf71',arrow:1}],
+   t=>{t.Y.on=1;t.H.on=0}),
+  mk('Demo formation 2','12',{box:'',front:'',cov:'',blitz:''},[['','HEAVY','',''],['LA','HEAVY','',''],['MASH','','','CURL'],['','','','']],
+   [{pts:[[30,114],[60,60],[110,30]],dot:0,col:'#5aa9ff',arrow:1},{pts:[[385,128],[385,80]],dot:0,col:'#ef5b5b',arrow:1}],
+   t=>{t.RT.x=t.LT.x-30;t.Y.on=1;t.Y.x=330;t.Y.y=112})]}}
 
 /* ---------- main render ---------- */
 function cellHTML(c){if(!c)return`<div class="cc empty">+</div>`;const s=c.s||{},main=s.concept||s.tag||s.formation||'',extra=SLOTS.filter(x=>s[x[0]]&&s[x[0]]!==main).map(x=>s[x[0]]);
@@ -218,6 +224,7 @@ $('plan').onchange=e=>{cur=e.target.value;render()};
 $('pmore').onclick=()=>{const p=plan();if(!p)return newPlanDialog();dialog({title:'Plans',fields:[{label:'Name of this plan',val:p.name}],buttons:[
  {t:'Save name',cls:'pri',fn:v=>{p.name=v[0].trim()||p.name;touch(p);render()}},
  {t:'+ New plan',fn:()=>setTimeout(newPlanDialog,0)},
+ {t:'+ Sample week',fn:()=>{const c=samplePlan();ST.rows.push(c);cur=c.id;writeStore();render();toast('Added a sample week')}},
  {t:'Duplicate plan',fn:()=>{const c=clone(p);c.id=uid('p');c.name=p.name+' copy';c.upd=Date.now();ST.rows.push(c);cur=c.id;writeStore();render()}},
  {t:'Delete plan',cls:'bad',fn:()=>dialog({title:'Delete '+p.name+'?',text:'Every formation and call in it goes away.',buttons:[{t:'Cancel'},{t:'Delete',cls:'bad',fn:()=>{ST.rows=ST.rows.filter(x=>x.id!==p.id);ST.deleted=(ST.deleted||[]).concat(p.id);cur=null;writeStore();render()}}]})},
  {t:'Cancel'}]})};
