@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Stats</title>
+<meta name="robots" content="noindex,nofollow">
+<style>
+:root{--bg:#0f1720;--card:#18232f;--line:#2a3948;--tx:#e8eef4;--mut:#8ea0b2;--acc:#3b9cff;--ok:#2fbf71;--warn:#f2b632;--bad:#ef5b5b}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px -apple-system,system-ui,sans-serif}
+button,input,select{font:inherit;color:var(--tx)}
+header{position:sticky;top:0;z-index:3;background:#0b1118;border-bottom:1px solid var(--line);padding:8px 12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.tab{background:transparent;border:1px solid transparent;border-radius:9px;padding:7px 13px;font-weight:700;text-transform:uppercase;font-size:13px;color:var(--mut)}
+.tab.on{background:var(--card);border-color:var(--line);color:#fff}
+header .sp{flex:1}
+select,input[type=text],input[type=date],input[type=number]{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px}
+main{max-width:980px;margin:0 auto;padding:14px 12px 40px}
+.rec{display:flex;align-items:baseline;gap:10px;margin:4px 0 14px}.rec b{font-size:28px}.rec span{color:var(--mut)}
+.row{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px;width:100%;text-align:left}
+.logo{flex:none;width:52px;height:52px;border-radius:12px;display:grid;place-items:center;font-weight:900;font-size:17px;letter-spacing:.02em;overflow:hidden;color:#fff}
+.logo img{width:100%;height:100%;object-fit:contain;background:#fff}
+.row .mid{flex:1;min-width:0}.row .opp{font-size:18px;font-weight:800}.row .opp small{font-weight:600;color:var(--mut);font-size:14px;margin-right:4px}
+.row .meta{color:var(--mut);font-size:13px;margin-top:2px}
+.row .res{flex:none;text-align:right;font-weight:800;font-size:17px}.res .w{color:var(--ok)}.res .l{color:var(--bad)}.res .t{color:var(--mut)}.res small{display:block;font-size:12px;color:var(--mut);font-weight:600}
+.cd{color:var(--warn)}
+.btn{background:#223140;border:1px solid var(--line);border-radius:8px;padding:9px 14px;min-height:40px;text-transform:uppercase;font-weight:700;font-size:13px}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}.btn.bad{color:var(--bad)}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+@media(max-width:620px){.tiles{grid-template-columns:repeat(2,1fr)}}
+.t{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}.t b{display:block;font-size:22px}.t span{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em}
+h3{font-size:13px;text-transform:uppercase;letter-spacing:.07em;color:var(--mut);margin:20px 0 6px}
+table{width:100%;border-collapse:collapse;font-size:14px;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+th{font-size:11px;text-transform:uppercase;color:var(--mut);text-align:right;padding:7px 8px;background:#132030}th:first-child,td:first-child{text-align:left}
+td{padding:7px 8px;border-top:1px solid var(--line);text-align:right}
+tr.click{cursor:pointer}tr.click:active{background:#223140}
+.up{color:var(--ok);font-weight:700}.dn{color:var(--bad);font-weight:700}.mut{color:var(--mut)}.note{color:var(--mut);font-size:12px}
+.empty{color:var(--mut);padding:30px 10px;text-align:center}
+.modal{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:9}.modal.show{display:flex}
+.box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;width:min(480px,94vw);max-height:90vh;overflow:auto}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:10px 0 4px}
+.seg{display:flex;gap:6px}.seg button{flex:1;background:#223140;border:1px solid var(--line);border-radius:8px;padding:8px;font-weight:700}.seg button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+</style></head><body>
+<header id="hdr"></header>
+<main id="main"></main>
+<div class="modal" id="modal"><div class="box" id="mbox"></div></div>
+<script>
+/* Stats + schedule. Reads the Almanac's games from this device (kept in step by sync) and the program schedule.
+   Efficiency: 1st down 4+ (or the distance if shorter), 2nd down half the distance (rounded up), 3rd/4th convert, TD always.
+   Explosive: the Almanac's own thresholds (Setup > Explosive run / pass), so these numbers match its Stats screen. */
+const $=id=>document.getElementById(id);
+const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const prog=()=>{try{return(JSON.parse(localStorage.getItem('suite_sync'))||{}).program||'deer-creek'}catch(e){return'deer-creek'}};
+const SKEY=()=>'schedule_v1_'+prog();
+let V={tab:'schedule',game:null,season:null};
+function A(){try{return JSON.parse(localStorage.getItem('almanac_v1'))||{games:[],lists:{}}}catch(e){return{games:[],lists:{}}}}
+function sched(){try{return JSON.parse(localStorage.getItem(SKEY()))||{rows:[],deleted:[]}}catch(e){return{rows:[],deleted:[]}}}
+function saveSched(S){S.rows.sort((a,b)=>String(a.date).localeCompare(String(b.date)));localStorage.setItem(SKEY(),JSON.stringify(S))}
+const newId=()=>'s'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+const U=x=>String(x||'').trim().toUpperCase();
+/* ---------- games and plays ---------- */
+const realGames=a=>(a.games||[]).filter(g=>!g.demo&&!/\(other iPad\)$/.test(g.opp||''));
+function gameYear(g,S){const r=S.rows.find(x=>x.game===g.id||(!x.game&&U(x.opp)===U(g.opp)));if(r&&r.date)return+r.date.slice(0,4);const t=parseInt(String(g.id).slice(1),10);return t>1e12?new Date(t).getFullYear():new Date().getFullYear()}
+function rowFor(g,S){return S.rows.find(x=>x.game===g.id)||S.rows.find(x=>!x.game&&U(x.opp)===U(g.opp))}
+function plays(gs){return gs.flatMap(g=>(g.plays||[]).filter(p=>p.k==='p'&&p.result!=='PEN').map(p=>Object.assign({_g:g.id},p)))}
+function eff(p){if(p.td)return 1;const g=+p.gain||0,n=+p.dist||10;if(p.down===1)return g>=(n>=10?4:n)?1:0;if(p.down===2)return g>=Math.ceil(n/2)?1:0;return g>=n?1:0}
+function expl(p,L){const t=p.ptype==='run'?(L.expRun||12):(L.expPass||16);return(+p.gain||0)>=t?1:0}
+function summ(P,L){const n=P.length,y=P.reduce((a,p)=>a+(+p.gain||0),0),e=P.reduce((a,p)=>a+eff(p),0),x=P.reduce((a,p)=>a+expl(p,L),0),r=P.filter(p=>p.ptype==='run').length;
+ return{n,ypp:n?y/n:0,eff:n?e/n:0,exp:n?x/n:0,run:n?r/n:0,yds:y,to:P.filter(p=>p.result==='INT'||p.result==='FUM').length,td:P.filter(p=>p.td).length}}
+const pct=v=>Math.round(v*100)+'%',f1=v=>(Math.round(v*10)/10).toFixed(1);
+function delta(v,avg,isPct,n){if(n<3)return`<span class="mut">${isPct?pct(v):f1(v)}</span>`;const d=isPct?Math.round((v-avg)*100):Math.round((v-avg)*10)/10;
+ const s=(d>0?'+':'')+(isPct?d+'%':d.toFixed(1));return`${isPct?pct(v):f1(v)} <span class="${d>0?'up':d<0?'dn':'mut'}">${d===0?'':s}</span>`}
+/* ---------- header ---------- */
+function seasons(){const a=A(),S=sched(),ys=new Set([...S.rows.map(r=>+String(r.date||'').slice(0,4)).filter(Boolean),...realGames(a).map(g=>gameYear(g,S))]);if(!ys.size)ys.add(new Date().getFullYear());return[...ys].sort((x,y)=>y-x)}
+function hdr(){const ss=seasons();if(!V.season||!ss.includes(V.season))V.season=ss[0];
+ $('hdr').innerHTML=[['schedule','Schedule'],['season','Season'],['games','By game'],['splits','Splits']].map(([k,l])=>`<button class="tab ${V.tab===k&&!V.game?'on':''}" data-tab="${k}">${l}</button>`).join('')+`<span class="sp"></span><select id="ssel">${ss.map(y=>`<option ${y===V.season?'selected':''}>${y}</option>`).join('')}</select>`;
+ document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{V.tab=b.dataset.tab;V.game=null;render()});$('ssel').onchange=e=>{V.season=+e.target.value;render()}}
+/* ---------- schedule ---------- */
+const initials=n=>String(n||'?').replace(/[^A-Za-z ]/g,'').split(/\s+/).filter(Boolean).map(w=>w[0]).join('').slice(0,3).toUpperCase()||'?';
+const logoHtml=r=>`<span class="logo" style="background:${r.logo?'#fff':(r.color||'#3b4b5c')}">${r.logo?`<img src="${r.logo}" alt="">`:esc(initials(r.opp))}</span>`;
+function result(r){if(r.us!=null&&r.us!==''&&r.them!=null&&r.them!==''){const u=+r.us,t=+r.them,c=u>t?'w':u<t?'l':'t';return`<span class="${c}">${u>t?'W':u<t?'L':'T'} ${u}–${t}</span>`}
+ if(!r.date)return'';const d=Math.round((new Date(r.date+'T12:00')-new Date(new Date().toDateString()+' 12:00'))/864e5);
+ return d===0?'<span class="cd">Today</span>':d===1?'<span class="cd">Tomorrow</span>':d>1?`<span class="cd">in ${d} days</span><small>&nbsp;</small>`:'<small>Add score</small>'}
+function viewSchedule(){const S=sched(),rows=S.rows.filter(r=>String(r.date||'').startsWith(String(V.season)));
+ let w=0,l=0,t=0;for(const r of rows)if(r.us!==''&&r.us!=null&&r.them!==''&&r.them!=null){+r.us>+r.them?w++:+r.us<+r.them?l++:t++}
+ const fmt=d=>d?new Date(d+'T12:00').toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}):'No date';
+ return`<div class="rec"><b>${w}–${l}${t?'–'+t:''}</b><span>${V.season} record</span><span style="flex:1"></span><button class="btn pri" id="addg">+ Add game</button></div>`+
+ (rows.length?rows.map(r=>`<button class="row" data-row="${r.id}">${logoHtml(r)}<span class="mid"><div class="opp"><small>${r.ha==='A'?'at':'vs.'}</small>${esc(r.opp)}</div><div class="meta">${fmt(r.date)} · ${r.ha==='A'?'Away':r.ha==='N'?'Neutral':'Home'}${r.game||matchGame(r)?' · stats ready':''}</div></span><span class="res">${result(r)}</span></button>`).join('')
+ :'<div class="empty">No games on the '+V.season+' schedule yet. Tap <b>+ Add game</b> to type them in.</div>')}
+function matchGame(r){return r.game||((realGames(A()).find(g=>U(g.opp)===U(r.opp))||{}).id)}
+function editRow(id){const S=sched(),r=id?S.rows.find(x=>x.id===id):{id:newId(),opp:'',date:'',ha:'H',us:'',them:'',color:'#3b4b5c',logo:null,game:null};
+ const games=realGames(A());let ha=r.ha||'H',logo=r.logo||null;
+ $('mbox').innerHTML=`<h3 style="margin-top:0;color:var(--tx);font-size:17px;text-transform:none;letter-spacing:0">${id?'Edit game':'Add game'}</h3>
+ <div class="lab">Opponent</div><input type="text" id="eo" style="width:100%" value="${esc(r.opp)}">
+ <div class="two"><div><div class="lab">Date</div><input type="date" id="ed" style="width:100%" value="${esc(r.date)}"></div><div><div class="lab">Site</div><div class="seg" id="eha">${[['H','Home'],['A','Away'],['N','Neutral']].map(([k,l])=>`<button data-ha="${k}" class="${ha===k?'on':''}">${l}</button>`).join('')}</div></div></div>
+ <div class="two"><div><div class="lab">Our score</div><input type="number" inputmode="numeric" id="eu" style="width:100%" value="${esc(r.us)}"></div><div><div class="lab">Their score</div><input type="number" inputmode="numeric" id="et" style="width:100%" value="${esc(r.them)}"></div></div>
+ <div class="lab">Logo</div><div style="display:flex;gap:10px;align-items:center"><span id="elp">${logoHtml(Object.assign({},r,{logo}))}</span><label class="btn">Upload PNG<input type="file" id="el" accept="image/*" style="display:none"></label><button class="btn" id="elx">Remove</button><input type="color" id="ec" value="${esc(r.color||'#3b4b5c')}" title="Badge color" style="width:44px;height:40px;padding:2px"></div>
+ <div class="lab">Almanac game</div><select id="eg" style="width:100%"><option value="">${games.find(g=>U(g.opp)===U(r.opp))?'Match by name ('+esc(r.opp)+')':'None yet'}</option>${games.map(g=>`<option value="${g.id}" ${r.game===g.id?'selected':''}>${esc(g.opp)} · ${(g.plays||[]).filter(p=>p.k==='p').length} plays</option>`).join('')}</select>
+ <p style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px"><button class="btn pri" id="es">Save</button>${id?'<button class="btn bad" id="ex">Delete</button>':''}<button class="btn" id="ec2">Cancel</button></p>`;
+ $('modal').classList.add('show');
+ document.querySelectorAll('[data-ha]').forEach(b=>b.onclick=()=>{ha=b.dataset.ha;document.querySelectorAll('[data-ha]').forEach(x=>x.classList.toggle('on',x===b))});
+ const prev=()=>{$('elp').innerHTML=logoHtml({opp:$('eo').value,color:$('ec').value,logo})};$('eo').oninput=prev;$('ec').oninput=prev;
+ $('el').onchange=e=>{const f=e.target.files[0];if(!f)return;const im=new Image();im.onload=()=>{const c=document.createElement('canvas'),z=128,k=Math.min(z/im.width,z/im.height);c.width=c.height=z;const x=c.getContext('2d');
+  x.drawImage(im,(z-im.width*k)/2,(z-im.height*k)/2,im.width*k,im.height*k);logo=c.toDataURL('image/png');prev();URL.revokeObjectURL(im.src)};im.src=URL.createObjectURL(f)};
+ $('elx').onclick=()=>{logo=null;prev()};$('ec2').onclick=closeM;
+ $('es').onclick=()=>{const opp=$('eo').value.trim();if(!opp){$('eo').focus();return}const S2=sched();const i=S2.rows.findIndex(x=>x.id===r.id);
+  const row=Object.assign({},r,{opp,date:$('ed').value,ha,us:$('eu').value,them:$('et').value,color:$('ec').value,logo,game:$('eg').value||null,upd:Date.now()});
+  if(i>=0)S2.rows[i]=row;else S2.rows.push(row);saveSched(S2);if(row.date)V.season=+row.date.slice(0,4);closeM();render()};
+ const xb=$('ex');if(xb)xb.onclick=()=>{if(!confirm('Delete '+r.opp+' from the schedule?'))return;const S2=sched();S2.rows=S2.rows.filter(x=>x.id!==r.id);S2.deleted=[...(S2.deleted||[]),r.id];saveSched(S2);closeM();render()}}
+function closeM(){$('modal').classList.remove('show')}
+$('modal').onclick=e=>{if(e.target.id==='modal')closeM()};
+/* ---------- season / game ---------- */
+function gamesInSeason(){const a=A(),S=sched();return realGames(a).filter(g=>gameYear(g,S)===V.season)}
+function viewSeason(gs,title){const L=A().lists||{},P=plays(gs),s=summ(P,L);
+ if(!P.length)return`<div class="empty">No logged plays ${title?'for '+esc(title):'in '+V.season} yet.</div>`;
+ let h=title?`<div class="rec"><b>${esc(title)}</b><span>${gs.length===1?'':''}</span><span style="flex:1"></span><button class="btn" id="back">‹ Back</button></div>`:'';
+ h+=`<div class="tiles"><div class="t"><b>${title?s.n:gs.length}</b><span>${title?'Plays':'Games'}</span></div><div class="t"><b>${f1(s.ypp)}</b><span>Yds / play</span></div><div class="t"><b>${pct(s.eff)}</b><span>Efficient</span></div><div class="t"><b>${pct(s.exp)}</b><span>Explosive</span></div>
+ <div class="t"><b>${title?s.yds:s.n}</b><span>${title?'Total yards':'Plays'}</span></div><div class="t"><b>${pct(s.run)}</b><span>Run</span></div><div class="t"><b>${s.td}</b><span>TDs</span></div><div class="t"><b>${s.to}</b><span>Turnovers</span></div></div>`;
+ // passing
+ const by=(arr,key)=>{const m={};for(const p of arr){const k=key(p);if(!k)continue;(m[k]=m[k]||[]).push(p)}return m};
+ const pass=by(P.filter(p=>['COMP','INC','INT','SACK'].includes(p.result)),p=>p.passer||'?');
+ h+='<h3>Passing</h3>'+tbl(['QB','Cmp/Att','Yds','TD','INT','Sacks','Yds/att'],Object.entries(pass).map(([q,a])=>{const at=a.filter(p=>p.result!=='SACK'),c=a.filter(p=>p.result==='COMP'),y=c.reduce((s,p)=>s+(+p.gain||0),0);
+  return['#'+esc(q),c.length+'/'+at.length,y,c.filter(p=>p.td).length,a.filter(p=>p.result==='INT').length,a.filter(p=>p.result==='SACK').length,at.length?f1(y/at.length):'–']}));
+ const rush=by(P.filter(p=>p.result==='RUSH'||p.result==='SCRAM'),p=>p.player||p.passer||'?');
+ h+='<h3>Rushing</h3>'+tbl(['Player','Car','Yds','Avg','TD','Long'],Object.entries(rush).sort((a,b)=>b[1].length-a[1].length).map(([k,a])=>{const y=a.reduce((s,p)=>s+(+p.gain||0),0);return['#'+esc(k),a.length,y,f1(y/a.length),a.filter(p=>p.td).length,Math.max(...a.map(p=>+p.gain||0))]}));
+ const rec=by(P.filter(p=>p.result==='COMP'),p=>p.player||'?');
+ h+='<h3>Receiving</h3>'+tbl(['Player','Rec','Yds','Avg','TD','Long'],Object.entries(rec).sort((a,b)=>b[1].length-a[1].length).map(([k,a])=>{const y=a.reduce((s,p)=>s+(+p.gain||0),0);return['#'+esc(k),a.length,y,f1(y/a.length),a.filter(p=>p.td).length,Math.max(...a.map(p=>+p.gain||0))]}));
+ return h}
+function tbl(head,rows,click){if(!rows.length)return'<p class="note">None yet.</p>';return`<table><thead><tr>${head.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${rows.map((r,i)=>`<tr ${click?`class="click" data-g="${click[i]}"`:''}>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`}
+function viewGames(){const gs=gamesInSeason(),S=sched(),L=A().lists||{};if(!gs.length)return`<div class="empty">No logged games in ${V.season} yet.</div>`;
+ const all=summ(plays(gs),L);
+ const rows=gs.map(g=>{const s=summ(plays([g]),L),r=rowFor(g,S);return[`${r?logoHtml(r).replace('class="logo"','class="logo" style="width:28px;height:28px;font-size:11px;border-radius:7px;display:inline-grid;vertical-align:middle;margin-right:8px;'+(r.logo?'background:#fff':'background:'+(r.color||'#3b4b5c'))+'"'):''}${esc(g.opp)}`,r?result(r):'',s.n,delta(s.ypp,all.ypp,false,s.n),delta(s.eff,all.eff,true,s.n),delta(s.exp,all.exp,true,s.n),pct(s.run)]});
+ return`<p class="note">Green / red = above / below the season average. Tap a game for its full stats.</p>`+tbl(['Game','Result','Plays','Yds/play','Eff','Exp','Run'],rows,gs.map(g=>g.id))}
+/* ---------- splits ---------- */
+function bucket(p){if(p.down===1)return'1st down';const n=+p.dist||10,b=n<=3?'short (1-3)':n<=6?'medium (4-6)':'long (7+)';return(p.down===2?'2nd ':p.down===3?'3rd ':'4th ')+b}
+function zone(f){f=+f||25;return f<=20?'Backed up (own 1-20)':f<=40?'Own 20-40':f<=60?'Open field':f<=80?'Plus territory (opp 40-20)':f<=90?'Opp 20-10':'Red zone'}
+function viewSplits(){const gs=V.game?realGames(A()).filter(g=>g.id===V.game):gamesInSeason(),L=A().lists||{},P=plays(gs),all=summ(P,L);
+ if(!P.length)return`<div class="empty">No logged plays in ${V.season} yet.</div>`;
+ const split=(title,key)=>{const m={};for(const p of P){const k=key(p);if(!k)continue;(m[k]=m[k]||[]).push(p)}
+  const rows=Object.entries(m).sort((a,b)=>b[1].length-a[1].length).map(([k,a])=>{const s=summ(a,L);return[esc(k),s.n,delta(s.ypp,all.ypp,false,s.n),delta(s.eff,all.eff,true,s.n),delta(s.exp,all.exp,true,s.n)]});
+  return`<h3>${title}</h3>`+tbl(['','Plays','Yds/play','Eff','Exp'],rows)};
+ return`<p class="note">Compared with the ${V.season} average (${f1(all.ypp)} yds/play, ${pct(all.eff)} efficient, ${pct(all.exp)} explosive). Fewer than 3 plays shows no +/–.</p>`+
+  split('By call (one word or concept)',p=>p.owc||p.call)+split('By formation',p=>p.formation?(p.formation+(p.ftag?' '+p.ftag:'')):null)+split('By down and distance',bucket)+split('By field zone',p=>zone(p.f))+split('Run / pass',p=>p.ptype==='run'?'Run':'Pass')}
+/* ---------- render ---------- */
+function render(){hdr();let h;
+ if(V.game){const g=realGames(A()).find(x=>x.id===V.game);h=g?viewSeason([g],g.opp):'<div class="empty">Game not found.</div>'}
+ else if(V.tab==='schedule')h=viewSchedule();else if(V.tab==='season')h=viewSeason(gamesInSeason());else if(V.tab==='games')h=viewGames();else h=viewSplits();
+ $('main').innerHTML=h;
+ const ag=$('addg');if(ag)ag.onclick=()=>editRow(null);
+ document.querySelectorAll('[data-row]').forEach(b=>b.onclick=()=>editRow(b.dataset.row));
+ document.querySelectorAll('tr[data-g]').forEach(r=>r.onclick=()=>{V.game=r.dataset.g;render()});
+ const bk=$('back');if(bk)bk.onclick=()=>{V.game=null;render()}}
+addEventListener('storage',e=>{if(e.key==='almanac_v1'||(e.key&&e.key.indexOf('schedule_v1_')===0))render()});
+addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.schedule)render()});
+render();
+</script></body></html>

@@ -26,15 +26,20 @@ button,input{font:inherit;color:var(--tx)}
 .hero .prog:empty{display:none}
 .hero .date{color:#cfe3d2;font-size:13px;margin-top:10px;text-shadow:0 1px 6px rgba(0,0,0,.6)}
 .wrap{width:min(760px,100%);margin:-40px auto 0;padding:0 16px 30px;position:relative;z-index:2}
-.week{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:16px}
+.week{margin-bottom:14px}
+.gcard{background:linear-gradient(135deg,#17324f,#152230 65%);border:1px solid var(--line);border-radius:16px;padding:14px 16px;box-shadow:0 6px 18px rgba(0,0,0,.3)}
+.gcard .lab2{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin-bottom:8px}
+.gtop{display:flex;align-items:center;gap:12px}.gtop .lg{flex:none;width:46px;height:46px;border-radius:11px;display:grid;place-items:center;font-weight:900;color:#fff;overflow:hidden}.gtop .lg img{width:100%;height:100%;object-fit:contain;background:#fff}
+.gtop .op{font-size:19px;font-weight:800}.gtop .op small{color:var(--mut);font-weight:600;font-size:14px;margin-right:4px}.gtop .wh{color:var(--mut);font-size:13px;margin-top:2px}.gtop .cd{margin-left:auto;color:var(--warn);font-weight:800;white-space:nowrap}
+.gstats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.gs{background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:12px;padding:10px 12px}.gs .k{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--mut)}.gs .v{font-size:20px;font-weight:800;margin-top:2px}.gs .s{font-size:12px;color:var(--mut);margin-top:1px}
+.gloss{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;color:var(--mut)}.gloss .gd{width:9px;height:9px;border-radius:50%;background:var(--ok)}.gloss .gd.w{background:var(--warn)}
 .pill{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:7px 13px;font-size:13px;color:var(--mut)}
 .pill b{color:var(--tx)}
-.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-@media(max-width:700px){.tiles{grid-template-columns:1fr}}
-@media(min-width:701px){.tile:not(.main){flex-direction:column;align-items:flex-start;min-height:150px}.tile:not(.main) .go{position:absolute;right:14px;bottom:12px}}
-.tile{position:relative;display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:linear-gradient(180deg,#1b2835,#151f2a);border:1px solid var(--line);border-radius:16px;padding:16px;min-height:92px;box-shadow:0 6px 18px rgba(0,0,0,.25);transition:transform .08s}
+.tiles{display:grid;grid-template-columns:1fr;gap:10px}
+.tile{position:relative;display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:linear-gradient(180deg,#1b2835,#151f2a);border:1px solid var(--line);border-radius:16px;padding:14px 16px;height:84px;box-shadow:0 6px 18px rgba(0,0,0,.25);transition:transform .08s}
 .tile:active{transform:scale(.98)}
-.tile.main{grid-column:1/-1;min-height:112px;background:linear-gradient(120deg,#17324f,#152230 60%)}
+
 .tile .ic{flex:none;width:52px;height:52px;border-radius:14px;display:grid;place-items:center}
 .tile .ic svg{width:28px;height:28px}
 .tile .tx{flex:1;min-width:0}
@@ -86,12 +91,14 @@ const IC={
  almanac:['#3b9cff','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 3v2h6V3"/><path d="M8.5 10h7M8.5 14h7M8.5 18h4"/></svg>'],
  film:['#2fbf71','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3"/></svg>'],
  gameplan:['#9b7bff','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>'],
+ stats:['#ef5b5b','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>'],
  glossary:['#f2b632','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/><path d="M9 7h6M9 11h4"/></svg>']};
 const TOOLS=[
  {id:'almanac',name:'Almanac',desc:'Sideline log, stats, predicted call',src:'../almanac/'},
  {id:'film',name:'Film Room',desc:'Game reports and tagging',src:'../film-room/'},
  {id:'gameplan',name:'Gameplan',desc:'Weekly grid and best calls',soon:'The gameplan grid is still a mockup. When it is built it opens here and sends its gameplan and best calls to the Almanac.'},
- {id:'glossary',name:'Glossary',desc:'Every term every tool uses',src:'glossary.html'}
+ {id:'glossary',name:'Glossary',desc:'Every term every tool uses',src:'glossary.html'},
+ {id:'stats',name:'Stats',desc:'Schedule, season and game stats',src:'stats.html'}
 ];
 const $=id=>document.getElementById(id),made={};
 const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -106,14 +113,29 @@ function goHome(){document.body.classList.remove('tool');try{localStorage.setIte
 function reviewCount(){if(!window.GL)return 0;const g=GL.load(PROGRAM);return g?GL.reviewList(g).length:0}
 function curGame(){try{const A=JSON.parse(localStorage.getItem('almanac_v1'));const g=A&&A.games.find(x=>x.id===A.cur);if(!g)return'';const n=g.plays.filter(p=>p.k==='p').length;return esc(g.opp)+' · '+n+' play'+(n===1?'':'s')+(g.scout?' · scout loaded':'')}catch(e){return''}}
 function almInfo(){try{const A=JSON.parse(localStorage.getItem('almanac_v1'));const g=A&&A.games.find(x=>x.id===A.cur);if(!g)return null;return{opp:g.opp,n:g.plays.filter(p=>p.k==='p').length,scout:g.scout&&g.scout.name,demo:g.demo}}catch(e){return null}}
-function renderHome(){const s=SUITESYNC.status(),n=reviewCount(),ai=almInfo();
+function seasonO(){try{const A=JSON.parse(localStorage.getItem('almanac_v1'));const y=new Date().getFullYear(),L=A.lists||{};
+ const P=A.games.filter(g=>!g.demo&&!/\(other iPad\)$/.test(g.opp||'')&&(parseInt(String(g.id).slice(1),10)>1e12?new Date(parseInt(String(g.id).slice(1),10)).getFullYear():y)===y).flatMap(g=>g.plays.filter(p=>p.k==='p'&&p.result!=='PEN'));
+ if(!P.length)return null;const ef=p=>{if(p.td)return 1;const g=+p.gain||0,n=+p.dist||10;return p.down===1?g>=(n>=10?4:n):p.down===2?g>=Math.ceil(n/2):g>=n};
+ return{eff:Math.round(100*P.filter(ef).length/P.length),ypp:(P.reduce((a,p)=>a+(+p.gain||0),0)/P.length).toFixed(1),n:P.length}}catch(e){return null}}
+function theirD(opp){try{const A=JSON.parse(localStorage.getItem('almanac_v1'));const U=x=>String(x||'').trim().toUpperCase();
+ const g=A.games.find(g=>g.scout&&(U(g.opp)===U(opp)||U(g.scout.name).includes(U(opp))));if(!g)return null;const R=g.scout.rows.filter(r=>r.cv);if(!R.length)return null;
+ const m={};R.forEach(r=>m[r.cv]=(m[r.cv]||0)+1);const top=Object.entries(m).sort((a,b)=>b[1]-a[1])[0];const rr=g.scout.rows.filter(r=>r.rs!=='');
+ const pr=rr.length?Math.round(100*rr.filter(r=>+r.rs>=4).length/rr.length):null;return{cov:top[0],covP:Math.round(100*top[1]/R.length),pr,n:g.scout.rows.length}}catch(e){return null}}
+function nextGame(){try{const p=(JSON.parse(localStorage.getItem('suite_sync'))||{}).program||'deer-creek';const S=JSON.parse(localStorage.getItem('schedule_v1_'+p));if(!S)return null;
+ const today=new Date(new Date().toDateString()+' 12:00');const r=S.rows.find(r=>r.date&&new Date(r.date+'T12:00')>=today&&!(r.us!==''&&r.us!=null));if(!r)return null;
+ const d=Math.round((new Date(r.date+'T12:00')-today)/864e5);return{opp:r.opp,ha:r.ha,date:r.date,logo:r.logo,color:r.color,when:d===0?'Today':d===1?'Tomorrow':'in '+d+' days'}}catch(e){return null}}
+function renderHome(){const s=SUITESYNC.status(),n=reviewCount(),ai=almInfo(),ng=nextGame();
  $('pname').textContent=s.signedIn&&s.name?s.name+' Football':'';
  $('psub').textContent=new Date().toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'});
- const pills=[];if(ai&&!ai.demo){pills.push(`<span class="pill">Game <b>${esc(ai.opp)}</b></span>`);pills.push(`<span class="pill">Scout <b>${ai.scout?esc(ai.scout):'not loaded'}</b></span>`)}
- if(n)pills.push(`<span class="pill"><b style="color:var(--warn)">${n}</b> glossary terms to review</span>`);
- $('week').innerHTML=pills.join('');
+ const o=seasonO(),dd=ng?theirD(ng.opp):null,ini=n2=>String(n2).split(/\s+/).map(w=>w[0]).join('').slice(0,3).toUpperCase();
+ const card=`<div class="gcard"><div class="lab2">Upcoming game</div>${ng?`<div class="gtop"><span class="lg" style="background:${ng.logo?'#fff':(ng.color||'#3b4b5c')}">${ng.logo?`<img src="${ng.logo}" alt="">`:esc(ini(ng.opp))}</span><div><div class="op"><small>${ng.ha==='A'?'at':'vs.'}</small>${esc(ng.opp)}</div><div class="wh">${new Date(ng.date+'T12:00').toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'})} · ${ng.ha==='A'?'Away':ng.ha==='N'?'Neutral':'Home'}</div></div><span class="cd">${ng.when}</span></div>`
+  :`<div class="gtop"><div class="wh">No upcoming game. Add your schedule in <b>Stats</b>.</div></div>`}
+ <div class="gstats"><div class="gs"><div class="k">Our offense</div>${o?`<div class="v">${o.eff}% efficient</div><div class="s">${o.ypp} yds/play · ${o.n} plays this season</div>`:`<div class="v">–</div><div class="s">No plays logged this season</div>`}</div>
+ <div class="gs"><div class="k">Their defense</div>${dd?`<div class="v">${esc(dd.cov)} ${dd.covP}%</div><div class="s">${dd.pr!=null?dd.pr+'% bring 4+ · ':''}${dd.n} scout plays</div>`:`<div class="v">–</div><div class="s">${ng?'Load their scout in the Almanac':'Needs an upcoming game'}</div>`}</div></div>
+ <div class="gloss"><span class="gd ${n?'w':''}"></span>${n?`Glossary: <b style="color:var(--warn)">${n} term${n===1?'':'s'} to review</b>`:'Glossary up to date'}</div></div>`;
+ $('week').innerHTML=card;
  const desc=t=>t.id==='almanac'&&ai&&!ai.demo?`${esc(ai.opp)} · ${ai.n} play${ai.n===1?'':'s'}${ai.scout?' · scout loaded':''}`:t.desc;
- $('tiles').innerHTML=TOOLS.map(t=>{const[c,svg]=IC[t.id];return`<button class="tile ${t.id==='almanac'?'main':''} ${t.soon?'soon':''}" data-t="${t.id}"><span class="ic" style="background:${c}22;color:${c}">${svg}</span><span class="tx"><b>${t.name}${t.soon?'<span class="tag">SOON</span>':''}</b><span class="d">${desc(t)}</span></span><span class="go">›</span>${t.id==='glossary'&&n?`<span class="dot">${n}</span>`:''}</button>`}).join('');
+ $('tiles').innerHTML=TOOLS.map(t=>{const[c,svg]=IC[t.id];return`<button class="tile ${t.soon?'soon':''}" data-t="${t.id}"><span class="ic" style="background:${c}22;color:${c}">${svg}</span><span class="tx"><b>${t.name}${t.soon?'<span class="tag">SOON</span>':''}</b><span class="d">${desc(t)}</span></span><span class="go">›</span>${t.id==='glossary'&&n?`<span class="dot">${n}</span>`:''}</button>`}).join('');
  const ago=s.last?Math.round((Date.now()-s.last)/60000):null,cls=!s.signedIn?'':s.busy?'busy':s.error?'bad':'ok';
  const txt=s.signedIn?(s.busy?'Syncing…':s.error?esc(s.error):'Synced '+(ago===0?'just now':ago+' min ago'))+(navigator.onLine?'':' · offline'):'This iPad only · not syncing';
  $('syncline').innerHTML=`<span class="sd ${cls}"></span><span>${txt}</span><button id="syncbtn">${s.signedIn?'Sync':'Sign in'}</button>`;
@@ -124,7 +146,7 @@ $('homebtn').onclick=goHome;
 /* A tool can ask the shell to open another tool, e.g. the Almanac's Glossary button. */
 addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||!e.data.open)return;open(e.data.open);
  if(e.data.open==='glossary'&&made.glossary&&made.glossary.contentWindow)made.glossary.contentWindow.postMessage({glossary:'review'},location.origin)});
-addEventListener('storage',e=>{if(e.key&&e.key.indexOf('glossary_v1_')===0&&!document.body.classList.contains('tool'))renderHome()});
+addEventListener('storage',e=>{if(e.key&&(e.key.indexOf('glossary_v1_')===0||e.key.indexOf('schedule_v1_')===0)&&!document.body.classList.contains('tool'))renderHome()});
 addEventListener('online',()=>{renderHome();barStatus()});addEventListener('offline',()=>{renderHome();barStatus()});
 /* sign in */
 function modal(h){$('mbox').innerHTML=h;$('modal').classList.add('show')}

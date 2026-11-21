@@ -168,10 +168,15 @@ function load(){try{A=JSON.parse(localStorage.getItem(KEY))}catch(e){A=null}
  if(A.v<11){const T=A.lists.targets=A.lists.targets||[];if(!T.some(x=>String(x).toUpperCase()==='BUBBLE'))T.push('BUBBLE');A.v=11}
  if(A.v<12){if(!A.lists.passers)A.lists.passers=['9','12'];A.v=12}
  if(A.v<13){const L=A.lists,add=(k,a)=>{L[k]=L[k]||[];for(const x of a)if(!L[k].some(y=>String(y).toUpperCase()===x))L[k].push(x)};const T=['BOOT', 'SWEEP', 'READ', 'LOOK', 'S', 'LASER', 'ROCKET', 'DRIP', 'LEAK', 'ARROW', 'BULL', 'YELL', 'GREY', 'YELLOW'];add('tagsRun',T);add('tagsPass',T);add('motions',['AIRPLANE','BUMP']);add('ftags',['LITE','HEAVY']);A.v=13}
+ if(A.v<14){for(const g of A.games)(g.plays||[]).forEach((p,k)=>{if(!p.pid){p.pid='o'+k;p.ts=k}});A.v=14}
  try{glInit()}catch(e){GLO=null}
  if(!A.games.length)buildDemo(true);
  if(!A.cur||!A.games.find(g=>g.id===A.cur))A.cur=A.games[0].id;save()}
-function save(){try{glCapture()}catch(e){}try{localStorage.setItem(KEY,JSON.stringify(A))}catch(e){}}
+const newPid=()=>'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+/* Every play and marker carries a permanent id and the time it was logged, so two iPads' copies of a game can be merged play by play. */
+function stampPlays(){const now=Date.now();for(const g of A.games)for(const p of g.plays||[])if(!p.pid){p.pid=newPid();p.ts=now}}
+function tomb(g,p){if(p&&p.pid){g.deleted=g.deleted||[];if(!g.deleted.includes(p.pid))g.deleted.push(p.pid)}}
+function save(){try{stampPlays()}catch(e){}try{glCapture()}catch(e){}try{localStorage.setItem(KEY,JSON.stringify(A))}catch(e){}}
 function newGame(name,quiet){const g={id:'g'+Date.now(),opp:name,program:CONFIG.program,plays:[]};A.games.push(g);A.cur=g.id;d=freshDraft(null);if(!quiet){save();renderAll()}}
 const G=()=>A.games.find(g=>g.id===A.cur);
 const esc2=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -220,7 +225,7 @@ function logPlay(){if(!d.result){toast('Pick a result');return}
  const p=Object.assign({k:'p'},d);p.tags=[...(d.tags||[])];p.ftags=[...(d.ftags||[])];p.tag=p.tags.join(' ');p.ftag=p.ftags.join(' ');if(p.call)p.call=al(p.call);if(p.owc){owApply(p);p.tag=p.tags.join(' ');p.call=owLong(p.owc,p.hash);p.ptype=(OW[p.owc]||{t:p.ptype}).t}else p.owc=null;delete p.autoT;
  {const U=x=>String(x||'').toUpperCase(),gl=(A.lists.glfs||[]).map(U);if(!p.glf&&p.formation&&gl.includes(U(p.formation)))p.glf=U(p.formation);
   if(p.glf){if(!p.formation)p.formation=p.glf.charAt(0)+p.glf.slice(1).toLowerCase();if(!p.call&&!p.owc){p.call=p.glf;p.ptype='pass'}p.glfOut=U(p.formation)!==p.glf}else{p.glf=null;p.glfOut=false}}
- if(edit!==null){G().plays[edit]=p;edit=null;d=freshDraft(lastNext())}
+ if(edit!==null){p.upd=Date.now();G().plays[edit]=p;edit=null;d=freshDraft(lastNext())}
  else{G().plays.push(p);const a=advance(p);if(a.nd)G().plays.push({k:'d'});d=freshDraft(a.next)}
  save();renderAll()}
 function lastNext(){const pl=G().plays;for(let i=pl.length-1;i>=0;i--)if(pl[i].k==='p'){const a=advance(pl[i]);return a.next}return{down:1,dist:10,f:25}}
@@ -315,7 +320,7 @@ document.getElementById('entry').addEventListener('click',ev=>{const b=ev.target
  else if(a==='pother'){ask('Jersey number',x=>{d.player=x;renderEntry()});return}
  else if(a==='log'){logPlay();return}
  else if(a==='cancel'){edit=null;d=freshDraft(lastNext());renderAll();return}
- else if(a==='del'){G().plays.splice(edit,1);edit=null;d=freshDraft(lastNext());save();renderAll();return}
+ else if(a==='del'){tomb(G(),G().plays[edit]);G().plays.splice(edit,1);edit=null;d=freshDraft(lastNext());save();renderAll();return}
  renderEntry()});
 document.getElementById('entry').addEventListener('input',ev=>{if(ev.target.dataset&&ev.target.dataset.k&&ev.target.id.indexOf('cs_')===0){applyCS(ev.target.dataset.k);return}
 {const c=Object.keys(LS).find(k=>LS[k].id===ev.target.id);if(c){SQ[c]=ev.target.value;document.getElementById('lschips_'+c).innerHTML=lsChips(c);return}}
@@ -336,7 +341,7 @@ document.getElementById('qtr').onclick=()=>{const pl=G().plays,h=pl.some(p=>p.k=
  if(!h&&!q1)m={k:'q',n:1};else if(!h)m={k:'h'};else if(!q3)m={k:'q',n:3};else{toast('All quarter breaks marked (use Undo to fix)');return}
  pl.push(m);d=freshDraft({down:1,dist:10,f:25});edit=null;save();renderAll();toast(m.k==='h'?'End of Q2 (halftime) marked':'End of Q'+m.n+' marked')};
 document.getElementById('half').onclick=()=>{if(G().plays.some(p=>p.k==='h')){toast('Halftime already marked');return}G().plays.push({k:'h'});d=freshDraft({down:1,dist:10,f:25});edit=null;save();renderAll();toast('Halftime marked')};
-document.getElementById('undo').onclick=()=>{const pl=G().plays;if(pl.length){const x=pl.pop();d=freshDraft(lastNext());edit=null;save();renderAll();toast('Undid '+(x.k==='q'?'quarter break':x.k==='h'?'halftime':x.k==='d'?'drive marker':'last play'))}else toast('Nothing to undo')};
+document.getElementById('undo').onclick=()=>{const pl=G().plays;if(pl.length){const x=pl.pop();tomb(G(),x);d=freshDraft(lastNext());edit=null;save();renderAll();toast('Undid '+(x.k==='q'?'quarter break':x.k==='h'?'halftime':x.k==='d'?'drive marker':'last play'))}else toast('Nothing to undo')};
 const HEAD=['DOWN','DISTANCE','JUMBO Y/N','SHIFT','MOTION','PLAY TAG','RUN CALL','PASS CALL','RGS Y/N','SHOT Y/N','RESULT','PLAYER','YARD LINE','GAIN/LOSS','<50','CROSS 50','>50','BCKWD CROSS 50','GAIN/LOSS','EXPLOSIVE','EFFICIENT','RUN SCHEME','PASS SCHEME','FORMATION','DIRECTION','PLAY TYPE','FORMATION TAG','CONCEPT','TARGET','ONE WORD','GLF','PASSER'];
 function resText(p){const r=p.result;if(r==='PEN')return'PENALTY';if(r==='INC')return'INC';if(r==='INT')return'INT';if(r==='FUM')return'FUM';if(r==='SACK')return'SACK';if(p.td)return p.gain+' YD TD';return String(p.gain)}
 function rows(){const out=[HEAD];for(const p of G().plays){if(p.k==='q'){out.push(['NEW DRIVE']);continue}if(p.k==='h'){out.push(['HALFTIME']);continue}if(p.k==='d'){out.push(['NEW DRIVE']);continue}
@@ -504,7 +509,7 @@ function glRemoved(k,before,after){if(!glOn()||!GLX_MAP[k])return;const m=GLX_MA
  for(const x of before)if(!keep.has(GL.U(x))){const t=GL.find(GLO,m.type,x);if(t)ch=(m.use&&t.uses.length?GL.dropUse(t,m.use):GL.retire(t))||ch}
  if(ch)GL.save(GLO)}
 /* Sync (from the suite shell): add or replace games that came from another device. */
-window.syncBusy=()=>edit!==null;
+window.syncBusy=()=>edit!==null||!!(d&&(d.formation||d.call||d.owc||d.result||d.glf||(d.tags&&d.tags.length)||(d.ftags&&d.ftags.length)||d.motion));
 window.syncUpsert=games=>{for(const g of games){const i=A.games.findIndex(x=>x.id===g.id);if(i>=0)A.games[i]=g;else A.games.push(g)}
  if(!A.games.find(g=>g.id===A.cur))A.cur=A.games[0].id;d=freshDraft(lastNext());save();renderAll();toast(games.length+' game'+(games.length===1?'':'s')+' synced from another iPad')};
 addEventListener('storage',e=>{if(window.GL&&e.key===GL.key(CONFIG.program)){GLO=GL.load(CONFIG.program)||GLO;glApply();try{localStorage.setItem(KEY,JSON.stringify(A))}catch(x){}renderAll()}});

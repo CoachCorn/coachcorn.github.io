@@ -2,7 +2,7 @@
    Runs only in the shell (suite/index.html). Local data is always saved first; sync is extra.
    Glossary: merged term by term (newest change wins).
    Games: a game changed only here is sent up; changed only on another device is brought down;
-   changed on both keeps both (the other device's copy is added as a separate game). */
+   changed on both is merged play by play (plays carry permanent ids). */
 (function(root){
  const SK='suite_sync';
  const st=()=>{try{return JSON.parse(localStorage.getItem(SK))||{}}catch(e){return{}}};
@@ -49,6 +49,15 @@
 
  /* --- games --- */
  function almanacWin(){const f=document.querySelector('iframe[title=Almanac]');try{return f&&f.contentWindow&&f.contentWindow.syncUpsert?f.contentWindow:null}catch(e){return null}}
+ /* Merge two copies of one game play by play: every play from both sides, newest edit of each play,
+    deletions on either side win, plays in the order they were logged. Other game fields: ours, filling gaps from theirs. */
+ function mergeGame(a,b){const fix=g=>Object.assign({},g,{plays:(g.plays||[]).map((p,k)=>p.pid?p:Object.assign({},p,{pid:'o'+k,ts:k}))});a=fix(a);b=fix(b);
+  const out=Object.assign({},b,a);const del=new Set([...(a.deleted||[]),...(b.deleted||[])]);
+  const by=new Map();for(const p of [...b.plays,...a.plays]){const q=by.get(p.pid);if(!q||(p.upd||0)>=(q.upd||0))by.set(p.pid,p)}
+  const plays=[...by.values()].filter(p=>!del.has(p.pid)).sort((x,y)=>(x.ts||0)-(y.ts||0)||String(x.pid).localeCompare(String(y.pid)));
+  out.plays=plays;out.deleted=[...del];
+  if(a.scout||b.scout)out.scout=((a.scout&&a.scout.at)||0)>=((b.scout&&b.scout.at)||0)?(a.scout||b.scout):b.scout;
+  return out}
  async function syncGames(s,list){const w=almanacWin();if(!w)return; // the Almanac tab writes games; wait until it has loaded
   if(w.syncBusy&&w.syncBusy())return; // a play is being edited
   let A;try{A=JSON.parse(localStorage.getItem(ALM))}catch(e){A=null}if(!A||!Array.isArray(A.games))return;
@@ -56,27 +65,44 @@
   for(const g of A.games){if(/^demo/i.test(g.id)||g.demo)continue;
    const key='game/'+g.id,h=hash(JSON.stringify(g)),mem=s.games[g.id],sv=list.find(d=>d.key===key);
    if(!sv){const r=await call('PUT','/doc',{key,baseRev:0,body:g,device:device()});if(r.status===200)s.games[g.id]={rev:r.data.rev,h};continue}
-   if(mem&&mem.rev===sv.rev){if(mem.h!==h){const r=await call('PUT','/doc',{key,baseRev:sv.rev,body:g,device:device()});if(r.status===200)s.games[g.id]={rev:r.data.rev,h}}continue}
-   const r=await call('GET','/doc?key='+encodeURIComponent(key));if(r.status!==200||!okGame(r.data.body))continue;const sb=r.data.body,sh=hash(JSON.stringify(sb));
-   if(sh===h){s.games[g.id]={rev:r.data.rev,h};continue}
-   if(mem&&mem.h===h){upsert.push(sb);s.games[g.id]={rev:r.data.rev,h:sh};continue} // only the other device changed it
-   // both changed: keep ours, add theirs as its own game, then send ours up
-   const copy=Object.assign({},sb,{id:sb.id+'-'+(r.data.device||'other').replace(/[^a-z0-9]/gi,'').slice(0,10)+'-'+Date.now().toString(36),opp:(sb.opp||'Game')+' (other iPad)'});
-   if(!local.has(copy.id))upsert.push(copy);
-   const p=await call('PUT','/doc',{key,baseRev:r.data.rev,body:g,device:device()});if(p.status===200)s.games[g.id]={rev:p.data.rev,h}}
+   if(mem&&mem.rev===sv.rev){if(mem.h!==h){const r=await call('PUT','/doc',{key,baseRev:sv.rev,body:g,device:device()});if(r.status===200)s.games[g.id]={rev:r.data.rev,h};else if(r.status===409)delete s.games[g.id]}continue}
+   // the server copy changed since we last saw it: merge it with ours play by play
+   for(let tries=0;tries<3;tries++){
+    const r=await call('GET','/doc?key='+encodeURIComponent(key));if(r.status!==200||!okGame(r.data.body))break;
+    const m=mergeGame(g,r.data.body),mh=hash(JSON.stringify(m)),sh=hash(JSON.stringify(r.data.body));
+    if(mh!==h){upsert.push(m);Object.assign(g,m)}
+    if(mh===sh){s.games[g.id]={rev:r.data.rev,h:mh};break}
+    const p=await call('PUT','/doc',{key,baseRev:r.data.rev,body:m,device:device()});
+    if(p.status===200){s.games[g.id]={rev:p.data.rev,h:mh};break}if(p.status!==409)break}}
   for(const d of list){if(!d.key.startsWith('game/'))continue;const id=d.key.slice(5);if(local.has(id)||(s.games[id]&&s.games[id].gone))continue;
    if(s.games[id]&&!local.has(id)){s.games[id].gone=true;continue} // deleted on this device: leave it deleted here
    const r=await call('GET','/doc?key='+encodeURIComponent(d.key));if(r.status===200&&okGame(r.data.body)){upsert.push(r.data.body);s.games[id]={rev:r.data.rev,h:hash(JSON.stringify(r.data.body))}}}
   if(upsert.length){w.syncUpsert(upsert);for(const g of upsert)if(!s.games[g.id])s.games[g.id]={rev:0,h:hash(JSON.stringify(g))}}}
 
+ /* --- schedule: rows merged by id, newest edit wins, deletions stick --- */
+ const SCH=()=>'schedule_v1_'+(st().program||'deer-creek');
+ function mergeRows(a,b){const del=new Set([...(a.deleted||[]),...(b.deleted||[])]),by=new Map();
+  for(const r of [...(b.rows||[]),...(a.rows||[])]){const q=by.get(r.id);if(!q||(r.upd||0)>=(q.upd||0))by.set(r.id,r)}
+  return{rows:[...by.values()].filter(r=>!del.has(r.id)).sort((x,y)=>String(x.date||'').localeCompare(String(y.date||''))),deleted:[...del]}}
+ async function syncSchedule(s,list){let local=null;try{local=JSON.parse(localStorage.getItem(SCH()))}catch(e){}
+  const sv=list.find(d=>d.key==='schedule');const lh=local?hash(JSON.stringify(local)):'';
+  if(!sv){if(local){const r=await call('PUT','/doc',{key:'schedule',baseRev:0,body:local,device:device()});if(r.status===200){s.schRev=r.data.rev;s.schH=lh}}return}
+  if(sv.rev===s.schRev&&lh===s.schH)return;
+  for(let t=0;t<3;t++){const r=await call('GET','/doc?key=schedule');if(r.status!==200)return;const srv=r.data.body||{rows:[]};
+   const m=local?mergeRows(local,srv):srv,mh=hash(JSON.stringify(m));
+   if(mh!==lh){localStorage.setItem(SCH(),JSON.stringify(m));local=m;dispatchSch()}
+   if(mh===hash(JSON.stringify(srv))){s.schRev=r.data.rev;s.schH=mh;return}
+   const p=await call('PUT','/doc',{key:'schedule',baseRev:r.data.rev,body:m,device:device()});if(p.status===200){s.schRev=p.data.rev;s.schH=mh;return}if(p.status!==409)return}}
+ function dispatchSch(){document.querySelectorAll('iframe').forEach(f=>{try{f.contentWindow.postMessage({schedule:'changed'},location.origin)}catch(e){}})}
+
  async function syncNow(){const s0=st();if(busy||!s0.token||!(s0.exp>Date.now())||!navigator.onLine)return emit();busy=true;emit();
   try{const s=st();const lr=await call('GET','/docs');if(lr.status!==200)throw new Error(lr.data.error||'Server error');
-   const list=lr.data.docs||[];await syncGlossary(s,list);await syncGames(s,list);
-   const x=st();Object.assign(x,{glRev:s.glRev,glSig:s.glSig,games:s.games,last:Date.now(),error:null});put(x)}
+   const list=lr.data.docs||[];await syncGlossary(s,list);await syncGames(s,list);await syncSchedule(s,list);
+   const x=st();Object.assign(x,{glRev:s.glRev,glSig:s.glSig,games:s.games,schRev:s.schRev,schH:s.schH,last:Date.now(),error:null});put(x)}
   catch(e){const x=st();x.error=e.message||'Sync failed';put(x)}
   finally{busy=false;emit()}}
  function soon(ms=4000){clearTimeout(timer);timer=setTimeout(syncNow,ms)}
- function start(){addEventListener('online',()=>soon(1000));addEventListener('storage',e=>{if(e.key===ALM||(e.key&&e.key.indexOf('glossary_v1_')===0))soon()});
+ function start(){addEventListener('online',()=>soon(1000));addEventListener('storage',e=>{if(e.key===ALM||(e.key&&(e.key.indexOf('glossary_v1_')===0||e.key.indexOf('schedule_v1_')===0)))soon()});
   setInterval(()=>soon(0),60000);soon(3000)}
- root.SUITESYNC={status,login,setup,signOut,syncNow,start,onChange:f=>listeners.push(f)};
+ root.SUITESYNC={mergeGame,mergeRows,status,login,setup,signOut,syncNow,start,onChange:f=>listeners.push(f)};
 })(window);
