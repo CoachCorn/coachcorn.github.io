@@ -85,7 +85,7 @@ td .cc.empty{color:#3e5163;font-size:20px}
  <button class="btn" id="pmore">Plans</button>
  <span class="sp"></span>
  <button class="btn pri" id="addb">+ Formation</button><button class="btn" id="addc">+ Column</button><button class="btn" id="addr">+ Row</button>
- <button class="btn" id="scout">Scout</button><button class="btn" id="looks">Draw all looks</button><button class="btn" id="mr">Send to Mental Reps</button><button class="btn" id="alm">Add to almanac</button><button class="btn" id="prn">Print / PDF</button>
+ <button class="btn" id="scout">Scout</button><button class="btn" id="looks">Draw all looks</button><button class="btn" id="mr">Send to Mental Reps</button><button class="btn" id="alm">Send to Almanac</button><button class="btn" id="prn">Print / PDF</button>
 </header>
 <main id="main"></main>
 <div class="modal" id="modal"><div class="box" id="mbox"></div></div>
@@ -245,7 +245,8 @@ function editRow(i){const p=plan(),r=p.rows[i];dialog({title:'Row',fields:[{labe
  {t:'Save',cls:'pri',fn:v=>{r.label=v[0].trim();touch(p);render()}},
  {t:'↑ Move',fn:()=>{if(i>0){[p.rows[i-1],p.rows[i]]=[p.rows[i],p.rows[i-1]];touch(p);render()}}},{t:'Move ↓',fn:()=>{if(i<p.rows.length-1){[p.rows[i+1],p.rows[i]]=[p.rows[i],p.rows[i+1]];touch(p);render()}}},
  {t:'Delete row',cls:'bad',fn:()=>{p.rows.splice(i,1);touch(p);render()}},{t:'Cancel'}]})}
-for(const [id,msg] of [['looks','Draw all looks needs the tag rules (Outside, Heavy, Lite, Stooge, Map) filled into the glossary first. Coming next.'],['alm','Adding to the almanac is not connected. Waiting for your go.']])$(id).onclick=()=>toast(msg);
+$('alm').onclick=()=>{const p=plan();if(!p)return toast('Make a plan first');if(window.parent===window)return toast('Open Gameplan from the suite to send it to the Almanac');parent.postMessage({toAlmanac:p.id},location.origin)};
+for(const [id,msg] of [['looks','Draw all looks needs the tag rules (Outside, Heavy, Lite, Stooge, Map) filled into the glossary first. Coming next.']])$(id).onclick=()=>toast(msg);
 $('prn').onclick=()=>{try{window.print()}catch(e){toast('Print is not available here')}};
 
 

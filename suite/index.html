@@ -159,8 +159,9 @@ function barStatus(){const s=SUITESYNC.status();document.body.classList.toggle('
 $('tiles').onclick=e=>{const b=e.target.closest('[data-t]');if(b)open(b.dataset.t)};
 $('homebtn').onclick=goHome;$('demob1').onclick=()=>signInModal();
 /* A tool can ask the shell to open another tool, e.g. the Almanac's Glossary button. */
+function toAlm(id){open('almanac');const f=made.almanac;let tries=0;const go=()=>{let w=null;try{w=f.contentWindow;if(!w||!w.takeGrid)throw 0}catch(e){if(++tries<40)return setTimeout(go,250);return}w.takeGrid(id)};go()}
 function toFilm(txt){open('film');const f=made.film;let tries=0;const go=()=>{let w=null;try{w=f.contentWindow;if(!w||!w.takeAlmanac)throw 0}catch(e){if(++tries<40)return setTimeout(go,250);return}w.postMessage({almanac:txt},location.origin)};go()}
-addEventListener('message',e=>{if(e.origin!==location.origin||!e.data)return;if(e.data.toFilm){toFilm(e.data.toFilm);return}if(!e.data.open)return;open(e.data.open);
+addEventListener('message',e=>{if(e.origin!==location.origin||!e.data)return;if(e.data.toFilm){toFilm(e.data.toFilm);return}if(e.data.toAlmanac){toAlm(e.data.toAlmanac);return}if(!e.data.open)return;open(e.data.open);
  if(e.data.open==='glossary'&&made.glossary&&made.glossary.contentWindow)made.glossary.contentWindow.postMessage({glossary:'review'},location.origin)});
 addEventListener('storage',e=>{if(e.key&&(e.key.indexOf('glossary_v1_')===0||e.key.indexOf('schedule_v1_')===0)&&!document.body.classList.contains('tool'))renderHome()});
 addEventListener('online',()=>{renderHome();barStatus()});addEventListener('offline',()=>{renderHome();barStatus()});

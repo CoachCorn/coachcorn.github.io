@@ -621,14 +621,23 @@ function gpParse(text,extra){const v=gpVocab(extra),lines=text.split(/\n/).map(x
    for(const c of x.c){if(c==='ftags'||c==='motions'||c==='formations')plan[c].add(x.t);else if(c==='tag'){plan.tagsRun.add(x.t);plan.tagsPass.add(x.t)}}})}
  return{plan,unk,concepts,n,lines:lines.length}}
 let gpState={text:'',extra:{}};
+/* ===== Gameplan grid -> Almanac (native, same device) ===== */
+function gridPlans(){try{const pg=SIGNED?((JSON.parse(localStorage.getItem('suite_sync'))||{}).program||'deer-creek'):'demo',st=JSON.parse(localStorage.getItem('gameplan_v1_'+pg))||{},del=new Set(st.deleted||[]);return(st.rows||[]).filter(p=>!del.has(p.id)&&!p.deleted).sort((a,b)=>(b.upd||0)-(a.upd||0))}catch(e){return[]}}
+function gridText(p){const out=[];for(const b of p.blocks||[])for(const k in b.cells||{}){const sl=(b.cells[k]||{}).s||{},w=['ftag','motion','formation','concept','tag'].map(x=>sl[x]).filter(Boolean);if(w.length)out.push(w.join(' '))}return out.join('\n')}
+function gridApply(p){const g=G(),text=gridText(p),r=gpParse(text,{});if(!g)return false;if(!r.n){toast('That plan has no calls yet');return false}const L=A.lists,pl={};
+ for(const c in r.plan){const set=r.plan[c];pl[c]=(L[c]||[]).filter(x=>set.has(x.toUpperCase()))}
+ g.plan=pl;g.gp=[...r.concepts];g.gridPlan=p.name;save();modal_close();d=freshDraft(lastNext());renderAll();toast('Gameplan loaded from the grid: '+p.name+(r.unk.size?' ('+r.unk.size+' words skipped)':''));return true}
+window.takeGrid=function(id,n){n=n||0;if((!A||!G())&&n<20)return setTimeout(()=>takeGrid(id,n+1),250);const ps=gridPlans(),p=ps.find(x=>x.id===id)||ps[0];if(!p){toast('No plan found in the Gameplan grid');return}gridApply(p)};
 function gpModal(){const g=G(),r=gpParse(gpState.text,gpState.extra),on=g.plan&&Object.values(g.plan).some(a=>a&&a.length);
  const cnt=c=>r.plan[c].size;
  const unk=[...gpParse(gpState.text,{}).unk.entries()].sort((a,b)=>b[1]-a[1]);
- modal(`<h3 style="margin-top:0">Gameplan for ${esc2(g.opp)}</h3><p class="note">Paste the GAMEPLAN PLAYS column from the Play Script Tool, one call per line (like "PULSE JUMBO CAROLINA"). The almanac will only show the formations, motions, tags and concepts that appear. Left/Right partners come along automatically. <b>+ Other</b> is always there for anything else.${on?' <b>Scoping is on for this game.</b>':''}</p>
+ const gps=gridPlans(),gridBox=gps.length?`<div class="card" style="margin:8px 0 12px"><div class="lab"><span>From your Gameplan grid</span></div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><select id="gpgsel" style="flex:1;min-width:160px">${gps.map(p=>`<option value="${esc2(p.id)}">${esc2(p.name||'Plan')}</option>`).join('')}</select><button class="btn pri" id="gpgo">Use this plan</button></div></div>`:'';
+ modal(`<h3 style="margin-top:0">Gameplan for ${esc2(g.opp)}</h3>${gridBox}<p class="note">Or paste the GAMEPLAN PLAYS column from the Play Script Tool, one call per line (like "PULSE JUMBO CAROLINA"). The almanac will only show the formations, motions, tags and concepts that appear. Left/Right partners come along automatically. <b>+ Other</b> is always there for anything else.${on?' <b>Scoping is on for this game.</b>':''}</p>
  <textarea id="gptext" style="width:100%;min-height:150px" placeholder="HIP POKER BRUINS&#10;SWAP SHUFFLE&#10;TRIPS RT MUSTANG">${esc2(gpState.text)}</textarea>
  ${r.n?`<p class="note"><b>${r.n}</b> calls read &middot; ${GPCATS.map(([c,l])=>l+': '+cnt(c)).join(' &middot; ')}</p>`:''}
  ${unk.length?`<div class="lab"><span>Words not in your lists (${unk.length}) — tell me what each one is</span></div>${unk.map(([t,n])=>`<div style="display:flex;gap:8px;align-items:center;padding:3px 0"><b style="min-width:110px">${esc2(t)}</b><span class="note">${n}x</span><select data-w="${esc2(t)}" style="flex:1"><option value="">Ignore</option>${GPCATS.map(([c,l])=>`<option value="${c}" ${gpState.extra[t]===c?'selected':''}>${l}</option>`).join('')}</select></div>`).join('')}`:''}
  <p style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px"><button class="btn" id="gpread">Read it</button><button class="btn pri" id="gpapply">Apply to ${esc2(g.opp)}</button><button class="btn bad" id="gpclear">Clear gameplan</button><button class="btn" onclick="modal_close()">Close</button></p>`);
+ const gg=document.getElementById('gpgo');if(gg)gg.onclick=()=>{const p=gps.find(x=>x.id===document.getElementById('gpgsel').value);if(p)gridApply(p)};
  gptext.oninput=e=>{gpState.text=e.target.value};document.getElementById('gpread').onclick=()=>{gpState.text=gptext.value;gpModal()};
  document.querySelectorAll('#mbox select[data-w]').forEach(s=>s.onchange=e=>{gpState.extra[e.target.dataset.w]=e.target.value;gpModal()});
  const ap=document.getElementById('gpapply');if(ap)ap.onclick=()=>{gpState.text=gptext.value;const r=gpParse(gpState.text,gpState.extra);if(!r.n){toast('No plays found — paste the GAMEPLAN PLAYS column first');return}const L=A.lists,pl={};
