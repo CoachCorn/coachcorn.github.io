@@ -12,7 +12,7 @@ Runs on Cloudflare's free plan. Holds no secrets in this folder.
 - `PUT /doc` `{key, baseRev, body, device}`: baseRev must match the server's rev (0 for new), else 409 with the server copy
 
 ## Deploy (Cloudflare dashboard)
-1. D1: create a database named `coach-suite`; put its id in `wrangler.toml` (`database_id`). Tables are created on first request.
+1. D1: create a database named `kdnce`; put its id in `wrangler.toml` (`database_id`). Tables are created on first request.
 2. Workers: import this GitHub repo, root directory `server`, deploy command `npx wrangler deploy`.
 3. Worker settings > Variables and Secrets: add secrets `SIGNING_KEY` and `ADMIN_KEY` (long random strings).
 4. Open the suite app > Sign in > First-time setup with the admin key to create the program and staff passcode.
