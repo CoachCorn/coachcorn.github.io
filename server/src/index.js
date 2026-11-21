@@ -18,7 +18,7 @@ async function verify(env,tok){if(!tok||tok.split('.').length!==2)return null;co
 function eq(a,b){if(a.length!==b.length)return false;let r=0;for(let i=0;i<a.length;i++)r|=a.charCodeAt(i)^b.charCodeAt(i);return r===0}
 
 function cors(env,req){const o=req.headers.get('Origin')||'',allow=(env.ALLOWED_ORIGINS||'').split(',').map(s=>s.trim());
- return allow.includes(o)?{'Access-Control-Allow-Origin':o,'Vary':'Origin','Access-Control-Allow-Headers':'Content-Type, Authorization, X-Admin-Key','Access-Control-Allow-Methods':'GET, PUT, POST, OPTIONS','Access-Control-Max-Age':'86400'}:{}}
+ return allow.includes(o)?{'Access-Control-Allow-Origin':o,'Vary':'Origin','Access-Control-Allow-Headers':'Content-Type, Authorization, X-Admin-Key, Range','Access-Control-Allow-Methods':'GET, PUT, POST, OPTIONS','Access-Control-Expose-Headers':'Content-Range, Accept-Ranges, Content-Length','Access-Control-Max-Age':'86400'}:{}}
 const J=(env,req,data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store',...cors(env,req)}});
 async function readJson(req){const t=await req.text();if(t.length>MAX_BODY)throw Object.assign(new Error('Too large'),{status:413});try{return JSON.parse(t||'{}')}catch(e){throw Object.assign(new Error('Bad JSON'),{status:400})}}
 
@@ -29,6 +29,34 @@ async function auth(env,req){const h=req.headers.get('Authorization')||'';const 
  if(!row||row.pass_hash.slice(0,12)!==p.h)throw Object.assign(new Error('Sign in again'),{status:401});
  return p}
 
+/* ---------- highlight clips (R2 bucket bound as CLIPS) ----------
+   Keys are <program>/<game>/<file>. Playback uses a short-lived clip pass in the URL (a <video> tag cannot send headers). */
+const CLIPKEY=/^[A-Za-z0-9_.-]{1,80}\/[A-Za-z0-9_. -]{1,120}$/, CLIP_MAX=60*1024*1024, PASS_HOURS=12;
+const needBucket=(env,req)=>env.CLIPS?null:J(env,req,{error:'Clip storage is not connected yet'},503);
+async function clipPass(env,url){const p=await verify(env,url.searchParams.get('ct')||'');if(!p||p.k!=='clip')throw Object.assign(new Error('Clip pass expired'),{status:401});return p}
+const clipRoutes={
+ 'GET /cliptoken':async(env,req)=>{const p=await auth(env,req);const exp=Date.now()+PASS_HOURS*3600000;return J(env,req,{ct:await sign(env,{p:p.p,k:'clip',exp}),exp,ready:!!env.CLIPS})},
+ 'PUT /clip':async(env,req,url)=>{const nb=needBucket(env,req);if(nb)return nb;const p=await auth(env,req),key=url.searchParams.get('key')||'';
+  if(!CLIPKEY.test(key)||key.includes('..'))return J(env,req,{error:'Bad clip name'},400);
+  const len=+(req.headers.get('Content-Length')||0);if(len>CLIP_MAX)return J(env,req,{error:'Clip is over 60 MB'},413);
+  const o=await env.CLIPS.put(p.p+'/'+key,req.body,{httpMetadata:{contentType:req.headers.get('Content-Type')||'video/mp4'}});
+  return J(env,req,{ok:true,key,size:o&&o.size})},
+ 'GET /clips':async(env,req,url)=>{const nb=needBucket(env,req);if(nb)return nb;const p=await auth(env,req),game=url.searchParams.get('game')||'';
+  const pre=p.p+'/'+(game?game+'/':'');let cur,out=[];do{const r=await env.CLIPS.list({prefix:pre,cursor:cur});out.push(...r.objects.map(o=>({key:o.key.slice(p.p.length+1),size:o.size})));cur=r.truncated?r.cursor:null}while(cur);
+  return J(env,req,{clips:out,total:out.reduce((a,o)=>a+o.size,0)})},
+ 'POST /clipsdel':async(env,req)=>{const nb=needBucket(env,req);if(nb)return nb;const p=await auth(env,req),b=await readJson(req),game=String(b.game||'');
+  if(!/^[A-Za-z0-9_.-]{1,80}$/.test(game))return J(env,req,{error:'Bad game'},400);
+  const pre=p.p+'/'+game+'/';let cur,n=0;do{const r=await env.CLIPS.list({prefix:pre,cursor:cur});if(r.objects.length){await env.CLIPS.delete(r.objects.map(o=>o.key));n+=r.objects.length}cur=r.truncated?r.cursor:null}while(cur);
+  return J(env,req,{ok:true,deleted:n})},
+ 'GET /clip':async(env,req,url)=>{const nb=needBucket(env,req);if(nb)return nb;const p=await clipPass(env,url),key=url.searchParams.get('key')||'';
+  if(!CLIPKEY.test(key)||key.includes('..'))return J(env,req,{error:'Bad clip name'},400);
+  const rg=req.headers.get('Range');let range;const m=rg&&rg.match(/bytes=(\d*)-(\d*)/);
+  if(m){if(m[1]!=='')range={offset:+m[1],...(m[2]!==''?{length:+m[2]-+m[1]+1}:{})};else if(m[2]!=='')range={suffix:+m[2]}}
+  const o=await env.CLIPS.get(p.p+'/'+key,range?{range}:{});if(!o)return J(env,req,{error:'No such clip'},404);
+  const h=new Headers({...cors(env,req),'Accept-Ranges':'bytes','Cache-Control':'private, max-age=3600','Content-Type':(o.httpMetadata&&o.httpMetadata.contentType)||'video/mp4'});
+  if(range&&o.range){const st=o.range.offset??(o.size-o.range.suffix),ln=o.range.length??(o.size-st);h.set('Content-Range',`bytes ${st}-${st+ln-1}/${o.size}`);h.set('Content-Length',String(ln));return new Response(o.body,{status:206,headers:h})}
+  h.set('Content-Length',String(o.size));return new Response(o.body,{status:200,headers:h})}
+};
 const routes={
  'GET /health':async(env,req)=>J(env,req,{ok:true,time:new Date().toISOString()}),
 
@@ -87,5 +115,5 @@ async function ensureSchema(env){if(schemaReady)return;await env.DB.batch([
 export default{async fetch(req,env){const url=new URL(req.url);
  if(req.method!=='OPTIONS')try{await ensureSchema(env)}catch(e){return J(env,req,{error:'Database not connected'},500)}
  if(req.method==='OPTIONS')return new Response(null,{status:204,headers:cors(env,req)});
- const h=routes[req.method+' '+url.pathname];if(!h)return J(env,req,{error:'Not found'},404);
+ const h=routes[req.method+' '+url.pathname]||clipRoutes[req.method+' '+url.pathname];if(!h)return J(env,req,{error:'Not found'},404);
  try{return await h(env,req,url)}catch(e){return J(env,req,{error:e.status?e.message:'Server error'},e.status||500)}}};

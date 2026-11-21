@@ -133,7 +133,7 @@ body.opp .selfonly{display:none!important} body:not(.opp) .opponly{display:none!
       <div class="bar"><button id="clearGame">Delete this game</button><button id="dlJson" class="selfonly">Download game file for the public site</button></div>
     </details>
     <div class="bar">
-      <button class="pri" id="aiAll" disabled>AI tag untagged plays</button><button id="aiStop" hidden>Stop</button>
+      <button id="saveHl" title="Upload the turning-point and explosive clips so every iPad can watch them">Save highlight clips to KDNCE</button><button class="pri" id="aiAll" disabled>AI tag untagged plays</button><button id="aiStop" hidden>Stop</button>
       <label class="c">Model <select id="tier"><option value="complex">Most capable</option><option value="default">Balanced</option></select></label>
       <span id="aiStatus" class="sub" style="font-size:14px"></span><span style="flex:1"></span>
       <span class="meta">Plays <b id="sPlays">0</b> · Need review <b id="sReview">0</b> · Almanac <b id="sAlm">none</b> · <span id="aiAvail"></span></span>
@@ -589,7 +589,7 @@ function renderOppHurt(){const P=oppPlays();if(!P.length)return `<div class="pan
   const ypp=a=>a.length?(a.reduce((s,x)=>s+(x.gn||0),0)/a.length).toFixed(1):'';
   return `<section style="display:flex;flex-direction:column;gap:20px">
   <div class="panel"><h3>What worked against each look</h3><div class="tablewrap"><table><thead><tr><th>Look (box · shell coverage)</th><th class="n">Snaps</th><th class="n">Yds/play</th><th class="n">Eff allowed</th><th class="n">Expl</th><th class="n">Run yds/play (n)</th><th class="n">Pass yds/play (n)</th></tr></thead><tbody>${lk.map(o=>`<tr><td><b>${esc(o.k)}</b></td><td class="n">${o.n}</td><td class="n">${o.ypp.toFixed(1)}</td><td class="n ${o.eff!=null&&o.eff>=50?'hit':''}">${o.eff??''}${o.eff!=null?'%':''}</td><td class="n">${o.ex||''}</td><td class="n">${ypp(o.run)} (${o.run.length})</td><td class="n">${ypp(o.pass)} (${o.pass.length})</td></tr>`).join('')||'<tr><td colspan="7" class="sub">Tag box and MOF to fill this in</td></tr>'}</tbody></table></div><p class="sub" style="font-size:13px">Green = offenses were efficient 50%+ of the time against that look.</p></div>
-  <h2>Explosives they gave up (${ex.length})</h2><div class="clips">${ex.map(x=>{const a=x.p.angles.Wide||x.p.angles.Tight||Object.values(x.p.angles)[0];const t={url:a&&a.url?a.url+'#t=0.1':'',_p:x.p};
+  <h2>Explosives they gave up (${ex.length})</h2><div class="clips">${ex.map(x=>{const a=x.p.angles.Wide||x.p.angles.Tight||Object.values(x.p.angles)[0];const t={url:a&&a.url?a.url+'#t=0.1':'',file:a&&a.url?'':cloudFile(CUR,x.p.n),_p:x.p};
     return `<div class="clip bad">${vid(t)}<div class="cap"><strong>${x.gn}-yd ${x.type==='Pass'||/^Complete/.test(x.result)?'pass':'run'}${x.td?', TD':''}</strong><span class="meta">Clip ${x.p.n} · ${x.dn?['','1st','2nd','3rd','4th'][x.dn]+' & '+x.dist:''} at ${ylTxt(x.yl)}</span><span class="sub" style="font-size:14px">Their look: ${esc(look(x))}</span></div></div>`}).join('')||'<p class="sub">None tagged.</p>'}</div></section>`}
 async function hydrateOpp(){for(const x of oppPlays().filter(x=>x.exp)){const a=x.p.angles.Wide||x.p.angles.Tight||Object.values(x.p.angles)[0];if(a){try{await ensureUrl(a);a.keep=true}catch(e){}}}}
 
@@ -598,7 +598,20 @@ let G=null, TAB='result', HALF='full', FILTER={half:'all',type:'all',flagged:fal
 /* KDNCE: finished (published) games live on this device and sync privately with the program, never in this public page. */
 const PUBK='fr:pub';const EMB=(()=>{try{const x=JSON.parse(localStorage.getItem(PUBK));if(x&&x.index&&x.games)return x}catch(e){}return {index:[],games:{}}})();
 function savePub(){try{localStorage.setItem(PUBK,JSON.stringify(EMB));localStorage.setItem('fr:upd:pub',String(Date.now()))}catch(e){}}
-const CB=()=>G.clipBase||`clips/${G.id}/`;
+/* KDNCE highlight clips: stored privately on the program's server (Cloudflare R2), played with a short-lived pass. */
+const SY=()=>{try{return JSON.parse(localStorage.getItem('suite_sync'))||{}}catch(e){return{}}};
+const CLOUD={ct:null,url:null,ready:false,have:{},size:{}};
+const pad3=n=>String(n).padStart(3,'0');
+async function cloudInit(){const s=SY();if(!s.token||!(s.exp>Date.now())||!s.url)return false;CLOUD.url=s.url.replace(/\/$/,'');
+  try{const r=await fetch(CLOUD.url+'/cliptoken',{headers:{Authorization:'Bearer '+s.token}});const j=await r.json();if(r.ok&&j.ready){CLOUD.ct=j.ct;CLOUD.ready=true}}catch(e){}return CLOUD.ready}
+async function cloudList(gid){if(!CLOUD.ready)return new Set();try{const s=SY();const r=await fetch(CLOUD.url+'/clips?game='+encodeURIComponent(gid),{headers:{Authorization:'Bearer '+s.token}});const j=await r.json();
+  CLOUD.have[gid]=new Set((j.clips||[]).map(c=>c.key.split('/').slice(1).join('/')));CLOUD.size[gid]=j.total||0}catch(e){CLOUD.have[gid]=new Set()}return CLOUD.have[gid]}
+const cloudBase=gid=>CLOUD.ready?`${CLOUD.url}/clip?ct=${encodeURIComponent(CLOUD.ct)}&key=${encodeURIComponent(gid)}/`:null;
+async function cloudPut(gid,name,blob){const s=SY();const r=await fetch(CLOUD.url+'/clip?key='+encodeURIComponent(gid+'/'+name),{method:'PUT',headers:{Authorization:'Bearer '+s.token,'Content-Type':blob.type||'video/mp4'},body:blob});
+  const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||('upload failed '+r.status));(CLOUD.have[gid]=CLOUD.have[gid]||new Set()).add(name)}
+async function cloudDel(gid){const s=SY();const r=await fetch(CLOUD.url+'/clipsdel',{method:'POST',headers:{Authorization:'Bearer '+s.token,'Content-Type':'application/json'},body:JSON.stringify({game:gid})});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'delete failed');CLOUD.have[gid]=new Set();CLOUD.size[gid]=0;return j.deleted||0}
+const cloudFile=(gid,clip)=>{const h=CLOUD.have[gid];return h&&h.has('clip'+pad3(clip)+'.mp4')?'clip'+pad3(clip)+'.mp4':''};
+const CB=()=>G.clipBase||cloudBase(G.id)||`clips/${G.id}/`;
 const vsrc=t=>t.url?t.url:(t.file?`${CB()}${t.file}#t=0.1`:'');
 const vposter=t=>t.poster&&!t.url?`poster="${CB()}${t.poster}"`:'';
 const vid=t=>t.url?`<video controls preload="metadata" playsinline src="${t.url}"></video>`:t.file?`<div class="vwrap" data-file="${CB()}${t.file}" data-poster="${t.poster?CB()+t.poster:''}"><img alt=""><button class="vplay">▶ Play</button></div>`:`<div class="novid">Load this game's clips in Film Tagger › Game setup to watch</div>`;
@@ -615,9 +628,14 @@ $('#gamePick').onchange=()=>{if($('#gamePick').value)pick($('#gamePick').value)}
 /* ---- manage games: delete saved test games (published games like Union stay) ---- */
 $('#mgBtn').onclick=()=>{const P=$('#mgPanel');if(!P.hidden){P.hidden=true;return}renderMg();P.hidden=false};
 function renderMg(){const sv=SAVED(),P=$('#mgPanel');
-  P.innerHTML=`<h3>Games on this device</h3>${EMB.index.length?`<div class="sub">Finished games: ${EMB.index.map(g=>`${esc(g.label)} <button data-pubdel="${esc(g.id)}" style="font-size:12px;padding:2px 8px">Remove</button>`).join(' · ')}</div>`:''}`+
+  const clipBtns=gid=>CLOUD.ready?` <span class="sub" style="font-size:12px" data-csz="${esc(gid)}">${CLOUD.have[gid]?CLOUD.have[gid].size+' clips':''}</span> <label style="font-size:12px;padding:2px 8px;border:1.5px solid var(--line);border-radius:6px;cursor:pointer">Upload clips<input type="file" multiple accept="video/*,image/*,.mp4,.mov,.m4v,.jpg,.png" data-cup="${esc(gid)}" hidden></label> <button data-cdel="${esc(gid)}" style="font-size:12px;padding:2px 8px">Delete clips</button>`:'';
+  P.innerHTML=`<h3>Games on this device</h3>${CLOUD.ready?'':'<div class="sub">Sign in on the KDNCE home screen (and connect clip storage) to upload or delete clips.</div>'}${EMB.index.length?`<div class="sub">Finished games:</div>${EMB.index.map(g=>`<div class="bar" style="border-bottom:1px solid var(--line);padding:6px 0"><span style="flex:1">${esc(g.label)}</span>${clipBtns(g.id)}<button data-pubdel="${esc(g.id)}" style="font-size:12px;padding:2px 8px">Remove</button></div>`).join('')}`:''}`+
+    (sv.length?sv.map(g=>`<div class="bar" style="border-bottom:1px solid var(--line);padding:6px 0"><span style="flex:1">${esc(g.label)}</span>${clipBtns(g.id)}<button data-mgdel="${esc(g.id)}">Delete</button></div>`).join('')+`<div class="bar"><button id="mgAll">Delete all ${sv.length} saved game${sv.length>1?'s':''} (keep published games)</button></div>`:'<div class="sub">No saved test games.</div>');
+  if(CLOUD.ready)[...EMB.index.map(g=>g.id),...sv.map(g=>g.id)].forEach(async id=>{if(!CLOUD.have[id])await cloudList(id);const el=P.querySelector(`[data-csz="${CSS.escape(id)}"]`);if(el)el.textContent=CLOUD.have[id].size+' clips'+(CLOUD.size[id]?' · '+(CLOUD.size[id]/1048576).toFixed(0)+' MB':'')});
+  P.querySelectorAll('[data-cup]').forEach(inp=>inp.onchange=async()=>{const gid=inp.dataset.cup,fs=[...inp.files];let k=0;for(const f of fs){toast(`Uploading ${++k}/${fs.length}: ${f.name}`);try{await cloudPut(gid,f.name.replace(/[^A-Za-z0-9_. -]/g,'_'),f)}catch(e){toast(f.name+': '+e.message);break}}await cloudList(gid);toast('Uploaded '+k+' file'+(k>1?'s':''));renderMg();if(G&&G.id===gid)render()});
     (sv.length?sv.map(g=>`<div class="bar" style="justify-content:space-between;border-bottom:1px solid var(--line);padding:6px 0"><span>${esc(g.label)}</span><button data-mgdel="${esc(g.id)}">Delete</button></div>`).join('')+`<div class="bar"><button id="mgAll">Delete all ${sv.length} saved game${sv.length>1?'s':''} (keep published games)</button></div>`:'<div class="sub">No saved test games.</div>');
-  P.onclick=e=>{const pd=e.target.closest('[data-pubdel]');if(pd){if(!pd.dataset.arm){pd.dataset.arm=1;pd.textContent='Tap again';return}const id=pd.dataset.pubdel;EMB.index=EMB.index.filter(g=>g.id!==id);delete EMB.games[id];tombstone(['pub-'+id]);savePub();fillPicker();renderMg();if(G&&G.id===id){G=null;startPick()}return}
+  P.onclick=e=>{const cd=e.target.closest('[data-cdel]');if(cd){if(!cd.dataset.arm){cd.dataset.arm=1;cd.textContent='Tap again to delete clips';return}cloudDel(cd.dataset.cdel).then(n=>{toast('Deleted '+n+' clip files');renderMg();render()}).catch(err=>toast(err.message));return}
+    const pd=e.target.closest('[data-pubdel]');if(pd){if(!pd.dataset.arm){pd.dataset.arm=1;pd.textContent='Tap again';return}const id=pd.dataset.pubdel;EMB.index=EMB.index.filter(g=>g.id!==id);delete EMB.games[id];tombstone(['pub-'+id]);savePub();fillPicker();renderMg();if(G&&G.id===id){G=null;startPick()}return}
     const b=e.target.closest('[data-mgdel],#mgAll');if(!b)return;
     if(!b.dataset.arm){b.dataset.arm=1;b.dataset.t=b.textContent;b.textContent='Click again to delete';setTimeout(()=>{if(b.isConnected){delete b.dataset.arm;b.textContent=b.dataset.t}},3000);return}
     mgRemove(b.id==='mgAll'?SAVED().map(g=>g.id):[b.dataset.mgdel])}}
@@ -688,13 +706,14 @@ function buildG(){compute();const c=CFG(),R=rosterMap(),QB=new Set(c.qbs);
   const byDown={};['h1','h2','full'].forEach(h=>{byDown[h]=[1,2,3,4].map(dn=>{const r=plays.filter(x=>x.dn===dn&&x.eff&&(h==='full'||x.half===(h==='h1'?1:2)));return {dn,n:r.filter(x=>x.eff==='Y').length,d:r.length}})});
   const tag=x=>`${x.dn?['','1st','2nd','3rd','4th'][x.dn]+' and '+x.dist:''} at ${ylTxt(x.yl)}`;
   const urlOf=p=>{const a=p.angles.Wide||p.angles.Tight||Object.values(p.angles)[0];return a&&a.url?a.url+'#t=0.1':''};
-  const explosives=plays.filter(x=>x.expl==='YES').map(x=>({clip:x.clip,half:x.half,url:urlOf(x._p),_p:x._p,title:playTitle(x,R,QB),when:`Drive ${x._d?x._d.n:''} · ${tag(x)}`,note:x.call?x.call:''}));
-  const turningPoints=autoTide(plays,R,QB).map(t=>({...t,url:urlOf(t._p)}));
+  const fileOf=p=>urlOf(p)?'':cloudFile(CUR,p.n);
+  const explosives=plays.filter(x=>x.expl==='YES').map(x=>({clip:x.clip,half:x.half,url:urlOf(x._p),file:fileOf(x._p),_p:x._p,title:playTitle(x,R,QB),when:`Drive ${x._d?x._d.n:''} · ${tag(x)}`,note:x.call?x.call:''}));
+  const turningPoints=autoTide(plays,R,QB).map(t=>({...t,url:urlOf(t._p),file:fileOf(t._p)}));
   const us=c.us!==''?+c.us:null,them=c.them!==''?+c.them:null,res=us==null||them==null?'':us>them?'W':us<them?'L':'T';
   const s=stats.full,ef=pct(s.effN,s.effD),ex=pct(s.explN,s.explD);
   const summary=S.summary||(plays.length?`${us!=null?`Deer Creek ${us}, ${c.opp||'opponent'} ${them}. `:''}Offense: ${s.snaps} snaps, ${s.yards} yards, ${ef}% efficient (goal ${c.goalEff}%), ${ex}% explosive (goal ${c.goalExp}%), ${s.third} on 3rd down. ${drives.filter(d=>d.result==='TD').length} TD drives in ${drives.length}.`:'No plays tagged yet. Open Film Tagger to load clips.');
   const nRev=S.plays.filter(needsReview).length;
-  return {id:CUR,local:true,kind:KIND(),view:'staff',title:c.game||('Deer Creek vs '+(c.opp||'opponent')),opponent:c.opp||'Opponent',final:{us:us??'–',them:them??'–',result:res},
+  return {id:CUR,local:true,clipBase:cloudBase(CUR),kind:KIND(),view:'staff',title:c.game||('Deer Creek vs '+(c.opp||'opponent')),opponent:c.opp||'Opponent',final:{us:us??'–',them:them??'–',result:res},
     scoreTimeline:us!=null?[{when:'Final',us,them}]:[],goals:{eff:c.goalEff,expl:c.goalExp},plays,drives,stats,byDown,explosives,turningPoints,summary,
     why:autoWhy(plays,drives,s,c,R,QB),notes:[S.alm.length?'Tags: film plus almanac (down, distance and spot from the almanac; hash and checks from film).':'Tags: film only (opponent scout mode); down and distance are worked out from the spots.',
       nRev?`${nRev} plays still flagged for review in Film Tagger.`:'Review queue is clear.','"Plays that turned the tide" are picked automatically; tick or untick "Turned the tide" on a play to change them.'],accuracy:null};
@@ -879,11 +898,20 @@ function wireHudl(){
   $('#hCopy').onclick=async()=>{const cols=hudlCols();const t=hudlRows().map(r=>cols.map(c=>r[c]??'').join('\t')).join('\n');try{await navigator.clipboard.writeText(t);toast('Copied rows (no header)')}catch(e){toast('Copy not allowed here; use CSV')}};
 }
 
+/* ---------- save highlight clips from the film loaded on this iPad ---------- */
+$('#saveHl').onclick=async()=>{if(!CLOUD.ready){toast('Sign in on the KDNCE home screen first (and connect clip storage)');return}if(!CUR){toast('Open a tagged game first');return}
+  const g=buildG(),want=new Set([...g.turningPoints,...g.explosives].map(t=>t.clip));if(OPP())oppPlays().filter(x=>x.exp).forEach(x=>want.add(x.p.n));
+  const list=[...want].map(n=>S.plays.find(p=>p.n===n)).filter(p=>p&&Object.keys(p.angles).length);if(!list.length){toast('Load this game\'s clips first (Game setup › Clips)');return}
+  const b=$('#saveHl');b.disabled=true;let k=0;
+  for(const p of list){const a=p.angles.Wide||p.angles.Tight||Object.values(p.angles)[0];b.textContent=`Uploading ${++k}/${list.length}…`;
+    try{const blob=await a.get();await cloudPut(CUR,'clip'+pad3(p.n)+'.mp4',blob instanceof Blob?blob:new Blob([blob],{type:'video/mp4'}))}catch(e){toast('Clip '+p.n+': '+e.message);break}}
+  b.disabled=false;b.textContent='Save highlight clips to KDNCE';await cloudList(CUR);toast(`Saved ${k} highlight clip${k>1?'s':''}. Other iPads can watch them now.`);refresh()};
 /* ---------- start ---------- */
 function tombstone(ids){try{const t=JSON.parse(localStorage.getItem('fr:deleted')||'[]');ids.forEach(i=>{if(i&&!t.includes(i))t.push(i)});localStorage.setItem('fr:deleted',JSON.stringify(t))}catch(e){}}
 function startPick(){const v=$('#gamePick').value;if(v&&!v.startsWith('new:')){pick(v);return}G=null;render();$('#out').innerHTML='<div class="panel empty">No games yet. Pick <b>+ New self scout</b> in the Game menu, send a game from the Almanac, or <b>Import game file</b> for a finished game.</div>'}
 fillPicker();
 {const p=new URLSearchParams(location.search).get('game');if(p&&EMB.games[p])pick('emb:'+p);else startPick()}
+cloudInit().then(async ok=>{if(!ok)return;const ids=[...EMB.index.map(g=>g.id),...SAVED().map(g=>g.id)];await Promise.all(ids.map(cloudList));if(G){G=G.local?buildG():G;render()}});
 /* Import a finished game (the file "Download game file" makes, or a published game file). Kept on this device and synced with the staff. */
 $('#impGame').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const j=JSON.parse(await f.text());let list=[];
   if(j.index&&j.games)list=j.index.map(x=>({lab:x.label,g:j.games[x.id]})).filter(x=>x.g);else if(j.staff||j.program)list=[{g:j.staff||j.program}];else if(j.plays)list=[{g:j}];

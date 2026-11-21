@@ -13,3 +13,8 @@ database_name = "kdnce"
 database_id = "89a730a4-8c76-44ff-a857-14560fb1fea3"
 
 # Secrets (set in the dashboard, never in this file): SIGNING_KEY, ADMIN_KEY
+
+# Highlight clips (R2 bucket kdnce-clips)
+[[r2_buckets]]
+binding = "CLIPS"
+bucket_name = "kdnce-clips"
