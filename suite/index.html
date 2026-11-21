@@ -62,7 +62,7 @@ details{margin-top:14px}summary{color:var(--mut);font-size:13px}
 /* One installed app for the staff tools. Every tool runs in its own frame from the same site, so they all share
    one storage area on the device (one glossary, one set of games). Frames stay loaded after you leave them. */
 const PROGRAM='deer-creek';
-const DEFAULT_SERVER=''; // filled in once the Cloudflare Worker is deployed
+const DEFAULT_SERVER='https://kdnce.coachnoahcornell.workers.dev';
 const TOOLS=[
  {id:'almanac',name:'Almanac',desc:'Sideline log, stats, predicted call',src:'../almanac/'},
  {id:'film',name:'Film Room',desc:'Game reports and tagging',src:'../film-room/'},
