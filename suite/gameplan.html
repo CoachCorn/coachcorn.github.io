@@ -161,9 +161,6 @@ function samplePlan(){const cols=[['Jab','Favorite'],['Cross','Motion / formatio
   data.forEach((r,ri)=>r.forEach((v,ci)=>{if(!v)return;const sl=Array.isArray(v)?{ftag:v[0],motion:v[1],concept:v[2],tag:v[3]}:{concept:v};Object.keys(sl).forEach(k=>{if(!sl[k])delete sl[k]});cells[rows[ri].id+'|'+cols[ci].id]={s:sl,n:''}}));
   return{id:uid('b'),name,pers,pd,draw:d,cells}};
  return{id:uid('p'),upd:Date.now(),sample:true,name:'Sample week (edit or delete)',cols,rows,blocks:[
-  mk('Crown LT','—',{box:'',front:'',cov:'',blitz:''},[['MASH SNRS','Z OUT','',''],['LA','HOT S','MIRROR SNRS','MAP G VEGAS'],['BROWN LAP','','','CURL'],['AGGIES','','','']],
-   [{pts:[[165,150],[300,150]],dot:1,col:'#f2b632',arrow:1},{pts:[[456,112],[456,50]],dot:0,col:'#ffffff',arrow:1}]),
-  mk('Zap Joker','—',{box:'',front:'',cov:'Star 53%',blitz:''},[['GANG RAIDER','BEHIND','',''],['MIRROR SNRS','SPRAY','',''],['LANCE CAL','','','WHEEL'],['LASR RCE','','','STANFORD']]),
   mk('Demo formation 1','11',{box:'',front:'',cov:'',blitz:''},[
     ['Inside Zone',['','Jet','Inside Zone',''],['','','Inside Zone','RPO'],['Trips','','Toss Sweep','Bubble']],
     ['Power',['Tight','','Power',''],['','Orbit','Power','Naked'],'Draw'],
