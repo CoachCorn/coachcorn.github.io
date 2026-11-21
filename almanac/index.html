@@ -503,6 +503,7 @@ function glCapture(){if(!glOn())return false;let ch=false;const L=A.lists;
 function glRemoved(k,before,after){if(!glOn()||!GLX_MAP[k])return;const m=GLX_MAP[k],keep=new Set(after.map(GL.U));let ch=false;
  for(const x of before)if(!keep.has(GL.U(x))){const t=GL.find(GLO,m.type,x);if(t)ch=(m.use&&t.uses.length?GL.dropUse(t,m.use):GL.retire(t))||ch}
  if(ch)GL.save(GLO)}
+addEventListener('storage',e=>{if(window.GL&&e.key===GL.key(CONFIG.program)){GLO=GL.load(CONFIG.program)||GLO;glApply();try{localStorage.setItem(KEY,JSON.stringify(A))}catch(x){}renderAll()}});
 function glInit(){if(!window.GL){GLO=null;return}GLO=GL.load(CONFIG.program);if(!GLO){GLO=glSeed();GL.save(GLO)}glApply();glCapture()}
 /* Front codes from the glossary (falls back to the built-in TECH table when there is no glossary). */
 function glFrontCode(name,rush){if(!glOn())return null;const t=String(name||'').toUpperCase().split(/\s+/).filter(x=>x&&x!=='DBL');
@@ -555,7 +556,8 @@ function glEdit(id){const t=id?GL.byId(GLO,id):null;const tv=t?t.type:(glState.t
   const u=ur();if(u&&term.type==='tag'){term.uses=u;if(!u.length)term.status='retired'}
   GL.touch(term);GL.save(GLO);glApply();save();renderAll();toast('Saved '+term.name);glModal()};
  const rb=document.getElementById('ge_r');if(rb)rb.onclick=()=>{t.status==='active'?GL.retire(t):GL.activate(t);t.needsReview=false;GL.touch(t);GL.save(GLO);glApply();save();renderAll();toast((t.status==='active'?'Brought back ':'Retired ')+t.name);glModal()}}
-document.getElementById('glbtn').onclick=()=>{glState={q:'',type:'',review:glOn()&&GL.reviewList(GLO).length>0};glModal()};
+const inShell=(()=>{try{return window.parent!==window&&window.parent.location.origin===location.origin}catch(e){return false}})();
+document.getElementById('glbtn').onclick=()=>{if(inShell){window.parent.postMessage({open:'glossary'},location.origin);return}glState={q:'',type:'',review:glOn()&&GL.reviewList(GLO).length>0};glModal()};
 /* ===== Hudl export: exact column order for the Hudl import ===== */
 const HUDL_HEAD=['PLAY #','ODK','HASH','P & 10','DN','DIST','GN/LS','YARD LN','PERSONNEL','EFF','EXPLOSIVE?','SHOT','PLAY TYPE','RESULT','OFF FORM','FIB?','MOTION','SHIFT','PLAY','TAG','ONE WORD CALL','TARGET','PLAYER','QB NUMBER','RUN CONCEPT FAMILY','RUN R/L','PASS PRO'];
 const HUDL_RES={COMP:'Complete',INC:'Incomplete',RUSH:'Rush',SCRAM:'Scramble',SACK:'Sack',PEN:'Penalty',INT:'Interception',FUM:'Fumble Lost'};
@@ -627,11 +629,19 @@ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))navigator.se
 document.getElementById('modal').onclick=e=>{if(e.target.id==='modal')e.target.classList.remove('show')};
 document.getElementById('exp').onclick=()=>{modal(`<h3 style="margin-top:0">Export ${G().opp}</h3><p class="note">Hudl order (27 columns, header row, one row per offensive play). HASH, PERSONNEL, FIB?, ONE WORD CALL, QB NUMBER and PASS PRO (it is in TAG) are left blank for Film Room or rules to fill.</p>
  <div class="chips"><button class="btn pri" id="e1">Download Hudl CSV</button><button class="btn" id="e2">Copy for Google Sheets</button></div>
- <p class="note" style="margin-top:12px">Other formats</p><div class="chips"><button class="btn" id="e4">Old almanac order (CSV)</button><button class="btn" id="e3">Backup all games (JSON)</button></div>`);
+ <p class="note" style="margin-top:12px">Other formats</p><div class="chips"><button class="btn" id="e4">Old almanac order (CSV)</button><button class="btn" id="e3">Backup all games (JSON)</button><label class="btn" style="display:inline-flex;align-items:center">Restore backup<input type="file" id="e5" accept=".json,application/json" style="display:none"></label></div><p class="note">Restore adds games from a backup file that are not on this device and merges its glossary. Nothing here is deleted.</p>`);
  e1.onclick=()=>dl(G().opp.replace(/\W+/g,'_')+'_hudl.csv',hudlCsv(),'text/csv');
  e2.onclick=()=>{const t=hudlTsv();(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).catch(()=>{const x=document.createElement('textarea');x.value=t;document.body.appendChild(x);x.select();document.execCommand('copy');x.remove()}).finally(()=>toast('Copied'))};
  e4.onclick=()=>dl(G().opp.replace(/\W+/g,'_')+'_almanac.csv',csv(),'text/csv');
- e3.onclick=()=>dl('almanac_backup.json',JSON.stringify(A),'application/json')};
+ e3.onclick=()=>dl('almanac_backup_'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify({almanacBackup:1,almanac:A,glossary:glOn()?GLO:null}),'application/json');
+ e5.onchange=async ev=>{const f=ev.target.files[0];if(!f)return;try{const r=restoreBackup(JSON.parse(await f.text()));modal_close();renderAll();toast(`Restored ${r.games} game${r.games===1?'':'s'}${r.skipped?' ('+r.skipped+' already here)':''}${r.gl?', glossary merged':''}`)}catch(err){toast(err.message||'Restore failed')}}};
+/* Restore: old backups are the bare almanac object; new ones wrap it with the glossary. Games are added, never replaced. */
+function restoreBackup(b){const a=b&&b.almanacBackup?b.almanac:b;if(!a||!Array.isArray(a.games))throw new Error('Not an Almanac backup');
+ let games=0,skipped=0;for(const g of a.games){if(A.games.some(x=>x.id===g.id)){skipped++;continue}A.games.push(g);games++}
+ const L=A.lists,un=(x,y)=>[...x,...(y||[]).filter(v=>!x.some(w=>String(w).toUpperCase()===String(v).toUpperCase()))];
+ if(a.lists)for(const k in a.lists)if(Array.isArray(a.lists[k])&&Array.isArray(L[k]))L[k]=un(L[k],a.lists[k]);
+ let gl=false;if(b.glossary&&glOn()){GL.merge(GLO,b.glossary);GL.save(GLO);glApply();gl=true}
+ save();return{games,skipped,gl}}
 document.getElementById('setup').onclick=()=>{const L=A.lists;const f=(k,t)=>`<div class="lab"><span>${t}</span></div><textarea id="s_${k}">${L[k].join(', ')}</textarea>`;
  modal(`<h3 style="margin-top:0">Setup</h3><p class="note">Comma-separated. These become the buttons.</p>${f('ftags','Formation tags')}${f('motions','Motion / Shift')}${f('formations','Formations')}${f('runs','Run calls')}${f('passes','Pass calls')}${f('owcs','One words')}${f('glfs','Green light formations')}${f('ftags','Formation tags')}${f('tagsRun','Run play tags')}${f('tagsPass','Pass play tags')}${f('targets','Targets (routes)')}${f('passers','Passers (QBs)')}${f('players','Jersey numbers')}<div class="lab"><span>Gameplan plays for ${G().opp} (used for "not called yet"; blank = all run and pass buttons)</span></div><textarea id="s_gp">${(G().gp||[]).join(', ')}</textarea><div class="lab"><span>Film Room link</span></div><input type="text" id="s_fr" style="width:100%" value="${A.fr||FR}">
  <div class="two" style="margin-top:8px"><div><div class="lab">Explosive run</div><input type="number" id="s_er" value="${L.expRun}"></div><div><div class="lab">Explosive pass</div><input type="number" id="s_ep" value="${L.expPass}"></div></div>

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="DC Football">
+<title>Deer Creek Football</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0f1720">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{--bg:#0f1720;--card:#18232f;--line:#2a3948;--tx:#e8eef4;--mut:#8ea0b2;--acc:#3b9cff;--warn:#f2b632}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:15px -apple-system,system-ui,sans-serif;overflow:hidden}
+body{display:flex;flex-direction:column;height:100vh;height:100dvh}
+nav{display:flex;gap:4px;padding:6px 8px;padding-top:max(6px,env(safe-area-inset-top));background:#070c12;border-bottom:1px solid var(--line);overflow-x:auto;flex:none}
+nav button{font:inherit;color:var(--mut);background:transparent;border:1px solid transparent;border-radius:9px;padding:7px 14px;min-height:38px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;font-size:13px;white-space:nowrap;position:relative}
+nav button.on{color:#fff;background:var(--card);border-color:var(--line)}
+nav .dot{position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:var(--warn)}
+nav .sp{flex:1}
+nav .net{font-size:11px;color:var(--mut);align-self:center;padding:0 6px}
+#views{flex:1;position:relative;min-height:0}
+#views iframe,#views .soon{position:absolute;inset:0;width:100%;height:100%;border:0;display:none;background:var(--bg)}
+#views .on{display:block}
+.soon{padding:30px;color:var(--mut)}.soon h2{color:var(--tx);margin-top:0}
+</style></head><body>
+<nav id="nav"></nav>
+<div id="views"></div>
+<script src="../shared/glossary.js"></script>
+<script>
+/* One installed app for the staff tools. Every tool runs in its own frame from the same site, so they all
+   share one storage area on the device (one glossary, one set of games). Frames stay loaded when you switch. */
+const TOOLS=[
+ {id:'almanac',name:'Almanac',src:'../almanac/'},
+ {id:'film',name:'Film Room',src:'../film-room/'},
+ {id:'gameplan',name:'Gameplan',soon:'The gameplan grid is still a mockup. When it is built it opens here and sends its gameplan and best calls to the Almanac.'},
+ {id:'glossary',name:'Glossary',src:'glossary.html'}];
+const nav=document.getElementById('nav'),views=document.getElementById('views'),made={};
+let cur=null;
+function frame(t){if(made[t.id])return made[t.id];let el;
+ if(t.soon){el=document.createElement('div');el.className='soon';el.innerHTML='<h2>'+t.name+'</h2><p>'+t.soon+'</p>'}
+ else{el=document.createElement('iframe');el.src=t.src;el.title=t.name;el.setAttribute('allow','clipboard-write')}
+ views.appendChild(el);return made[t.id]=el}
+function show(id){const t=TOOLS.find(x=>x.id===id)||TOOLS[0];cur=t.id;
+ for(const k in made)made[k].classList.toggle('on',k===t.id);frame(t).classList.add('on');
+ nav.querySelectorAll('[data-t]').forEach(b=>b.classList.toggle('on',b.dataset.t===t.id));
+ try{localStorage.setItem('suite_tab',t.id)}catch(e){}}
+function badge(){const b=nav.querySelector('[data-t=glossary]');if(!b||!window.GL)return;const g=GL.load('deer-creek'),n=g?GL.reviewList(g).length:0;
+ let d=b.querySelector('.dot');if(n&&!d){d=document.createElement('span');d.className='dot';b.appendChild(d)}else if(!n&&d)d.remove();b.title=n?n+' terms to review':''}
+nav.innerHTML=TOOLS.map(t=>`<button data-t="${t.id}">${t.name}</button>`).join('')+'<span class="sp"></span><span class="net" id="net"></span>';
+nav.onclick=e=>{const b=e.target.closest('[data-t]');if(b)show(b.dataset.t)};
+/* A tool can ask the shell to open another tool, e.g. the Almanac's Glossary button. */
+addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||!e.data.open)return;show(e.data.open);
+ if(e.data.open==='glossary'&&made.glossary&&made.glossary.contentWindow)made.glossary.contentWindow.postMessage({glossary:'review'},location.origin)});
+addEventListener('storage',e=>{if(e.key&&e.key.indexOf('glossary_v1_')===0)badge()});
+const net=()=>{document.getElementById('net').textContent=navigator.onLine?'':'Offline'};addEventListener('online',net);addEventListener('offline',net);net();
+let start='almanac';try{start=localStorage.getItem('suite_tab')||'almanac'}catch(e){}
+show(start);frame(TOOLS[0]);badge();setInterval(badge,5000);
+if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script></body></html>

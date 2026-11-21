@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Glossary</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0f1720">
+<style>
+:root{--bg:#0f1720;--card:#18232f;--line:#2a3948;--tx:#e8eef4;--mut:#8ea0b2;--acc:#3b9cff;--ok:#2fbf71;--warn:#f2b632;--bad:#ef5b5b}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px -apple-system,system-ui,sans-serif}
+header{display:flex;gap:8px;align-items:center;padding:8px 12px;background:#0b1118;border-bottom:1px solid var(--line);flex-wrap:wrap;position:sticky;top:0;z-index:3}
+header h1{font-size:16px;margin:0 8px 0 0}
+select,button,input,textarea{font:inherit;color:var(--tx)}
+input[type=text],input[type=search],select,textarea{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px}
+textarea{width:100%;min-height:70px}
+.btn{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 12px;min-height:40px;text-transform:uppercase}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:700}.btn.bad{color:var(--bad)}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{background:#223140;border:1px solid var(--line);border-radius:10px;padding:5px 9px;min-height:36px;font-weight:600;font-size:14px;text-transform:uppercase}
+.chip.on{background:var(--acc);border-color:var(--acc);color:#fff}
+main{padding:10px 12px;max-width:1100px;margin:0 auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{font-size:11px;text-transform:uppercase;color:var(--mut);text-align:left;padding:4px}
+td{padding:7px 4px;border-top:1px solid var(--line);vertical-align:top}
+tr.r{cursor:pointer}tr.r:active{background:#223140}
+.mut{color:var(--mut);font-size:12px}.note{color:var(--mut);font-size:12px}
+.badge{display:inline-block;font-size:10px;font-weight:800;padding:1px 5px;border-radius:5px;margin-left:4px;background:var(--warn);color:#2a1e00}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:10px 0 4px}
+.modal{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:9}
+.modal.show{display:flex}.box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;width:min(640px,94vw);max-height:90vh;overflow:auto}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#000c;padding:10px 16px;border-radius:10px;z-index:20;display:none}
+</style></head><body>
+<header><h1 id="ttl">Glossary</h1><span class="mut" id="meta"></span><span style="flex:1"></span>
+ <button class="btn pri" id="add">+ Add term</button><button class="btn" id="exp">Export</button>
+ <label class="btn" style="display:inline-flex;align-items:center">Import<input type="file" id="imp" accept=".json,application/json" style="display:none"></label></header>
+<main>
+ <input id="q" type="search" placeholder="Search names, aliases, meanings" style="width:100%;font-size:16px">
+ <div class="chips" id="types" style="margin:8px 0"></div>
+ <div id="list"></div>
+</main>
+<div class="modal" id="modal"><div class="box" id="mbox"></div></div><div id="toast"></div>
+<script src="../shared/glossary.js"></script>
+<script>
+/* Standalone glossary editor. Reads and writes the same device copy the Almanac uses (shared/glossary.js).
+   No seeding here: the first open of the Almanac seeds a program's glossary. */
+const PROGRAM=new URLSearchParams(location.search).get('program')||'deer-creek';
+const TYPES=[['formation','Formations'],['ftag','Formation tags'],['motion','Motion / Shift'],['tag','Play tags'],['run','Run concepts'],['pass','Pass concepts'],['oneword','One words'],['glf','Green light'],['route','Routes'],['front','Fronts'],['frontmod','Front tags'],['coverage','Coverages'],['shell','Shells']];
+const DEF_SIDE=t=>['front','frontmod','coverage','shell'].includes(t)?'D':'O';
+const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const $=id=>document.getElementById(id);
+let G=null,S={q:'',type:'',review:false};
+function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',2200)}
+function load(){G=window.GL?GL.load(PROGRAM):null}
+function commit(t){if(t)GL.touch(t);GL.save(G);render()}
+function render(){
+ if(!window.GL){$('list').innerHTML='<p class="note">The glossary code did not load. Open this once with signal.</p>';return}
+ if(!G){$('list').innerHTML='<p class="note">No glossary on this device yet for '+esc(PROGRAM)+'. Open the Almanac once; it builds the glossary from its lists.</p>';$('meta').textContent='';return}
+ $('ttl').textContent='Glossary · '+G.name;$('meta').textContent='rev '+G.rev+' · '+G.terms.length+' terms';
+ const rv=GL.reviewList(G).length,q=GL.U(S.q);
+ $('types').innerHTML=`<button class="chip ${S.review?'on':''}" data-rv="1" style="${rv?'border-color:var(--warn)':''}">Review (${rv})</button><button class="chip ${!S.type&&!S.review?'on':''}" data-t="">All</button>`+TYPES.map(([k,l])=>`<button class="chip ${S.type===k?'on':''}" data-t="${k}">${l}</button>`).join('');
+ const list=G.terms.filter(t=>(!S.type||t.type===S.type)&&(!S.review||t.needsReview)&&(!q||[t.name,...t.aliases,t.meaning.text||'',t.code||''].some(x=>GL.U(x).includes(q))))
+  .sort((a,b)=>(a.status===b.status?0:a.status==='active'?-1:1)||a.type.localeCompare(b.type)||a.name.localeCompare(b.name));
+ const tl=t=>(TYPES.find(x=>x[0]===t)||[t,t])[1];
+ $('list').innerHTML=`<table><thead><tr><th>Term</th><th>Type</th><th>Meaning</th></tr></thead><tbody>${list.map(t=>`<tr class="r" data-id="${esc(t.id)}" style="${t.status==='retired'?'opacity:.45':''}"><td><b>${esc(t.name)}</b>${t.code?' <span class="mut">'+esc(t.code)+(t.package?' '+t.package:'')+'</span>':''}${t.needsReview?'<span class="badge">REVIEW</span>':''}${t.status==='retired'?' <span class="mut">retired</span>':''}${t.aliases.length?'<div class="mut">also '+esc(t.aliases.join(', '))+'</div>':''}</td><td class="mut">${esc(tl(t.type))}${t.uses.length?' · '+t.uses.join('/'):''}</td><td>${esc(t.meaning.text||'')||'<span class="mut">no meaning yet</span>'}</td></tr>`).join('')||'<tr><td colspan="3" class="mut">Nothing matches.</td></tr>'}</tbody></table>`;
+ document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{S.type=b.dataset.t;S.review=false;render()});
+ document.querySelector('[data-rv]').onclick=()=>{S.review=!S.review;render()};
+ document.querySelectorAll('tr.r').forEach(r=>r.onclick=()=>edit(r.dataset.id))}
+function modal(h){$('mbox').innerHTML=h;$('modal').classList.add('show')}
+function close(){$('modal').classList.remove('show')}
+$('modal').onclick=e=>{if(e.target.id==='modal')close()};
+function edit(id){const t=id?GL.byId(G,id):null,tv=t?t.type:(S.type||'tag'),isTag=!t||t.type==='tag';
+ modal(`<h3 style="margin-top:0">${t?'Edit '+esc(t.name):'New term'}</h3>
+ <div class="lab">Name</div><input type="text" id="e_n" style="width:100%" value="${t?esc(t.name):''}">
+ <div class="lab">Type</div><select id="e_t" style="width:100%" ${t?'disabled':''}>${TYPES.map(([k,l])=>`<option value="${k}" ${k===tv?'selected':''}>${l}</option>`).join('')}</select>
+ ${isTag?`<div class="lab">Used on (play tags only)</div><div class="chips"><label class="chip"><input type="checkbox" id="e_ur" ${!t||t.uses.includes('run')?'checked':''}> Run</label><label class="chip"><input type="checkbox" id="e_up" ${!t||t.uses.includes('pass')?'checked':''}> Pass</label></div>`:''}
+ <div class="lab">Also called (aliases, commas)</div><input type="text" id="e_a" style="width:100%" value="${t?esc(t.aliases.join(', ')):''}">
+ <div class="lab">Meaning</div><textarea id="e_m">${t?esc(t.meaning.text||''):''}</textarea>
+ ${t&&t.code!=null?`<div class="lab">Technique code</div><input type="text" id="e_c" style="width:100%" value="${esc(t.code)}">`:''}
+ ${t&&t.type==='coverage'?`<div class="lab">Means (coarse tags)</div><div class="chips">${G.terms.filter(x=>x.type==='shell'&&x.status==='active').map(x=>`<label class="chip"><input type="checkbox" class="e_mp" value="${esc(x.id)}" ${(t.links.maps_to||[]).includes(x.id)?'checked':''}> ${esc(x.name)}</label>`).join('')}</div>`:''}
+ ${t?`<p class="note">id ${esc(t.id)} · added ${esc(t.added||'')} (${esc(t.source||'')})${t.history.length>1?' · '+t.history.length+' versions: '+t.history.map(h=>esc(h.since+' '+h.name)).join(' → '):''}</p>`:''}
+ <p style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px"><button class="btn pri" id="e_s">${t&&t.needsReview?'Approve and save':'Save'}</button>${t?`<button class="btn ${t.status==='active'?'bad':''}" id="e_r">${t.status==='active'?'Retire':'Bring back'}</button>`:''}<button class="btn" id="e_x">Cancel</button></p>`);
+ $('e_x').onclick=close;
+ const uses=()=>{const r=$('e_ur');return r?[r.checked&&'run',$('e_up').checked&&'pass'].filter(Boolean):null};
+ $('e_s').onclick=()=>{load();let n=$('e_n').value.trim();if(!n){toast('Give it a name');return}
+  const al=$('e_a').value.split(',').map(x=>x.trim()).filter(Boolean),mt=$('e_m').value;let term=t&&GL.byId(G,t.id);const old=term?term.name:null;
+  if(!term){const ty=$('e_t').value;const ex=GL.find(G,ty,n);if(ex){close();toast(n+' is already in the glossary');edit(ex.id);return}
+   n=ty==='formation'?n.toLowerCase().replace(/\b\w/g,m=>m.toUpperCase()):n.toUpperCase();
+   term=GL.add(G,{type:ty,name:n,side:DEF_SIDE(ty),source:'coach',uses:ty==='tag'?(uses()||['run','pass']):[]}).term}
+  else GL.rename(G,term,n);
+  term.aliases=[...new Set([...al,...(old&&GL.U(old)!==GL.U(n)?[old]:[])])].filter(x=>GL.U(x)!==GL.U(term.name));
+  GL.setMeaning(term,mt);term.needsReview=false;
+  if($('e_c'))term.code=$('e_c').value.trim();
+  const mp=[...document.querySelectorAll('.e_mp')];if(mp.length){term.links.maps_to=mp.filter(x=>x.checked).map(x=>x.value)}
+  const u=uses();if(u&&term.type==='tag'){term.uses=u;if(!u.length)term.status='retired'}
+  commit(term);close();toast('Saved '+term.name)};
+ const rb=$('e_r');if(rb)rb.onclick=()=>{load();const x=GL.byId(G,t.id);x.status==='active'?GL.retire(x):GL.activate(x);x.needsReview=false;commit(x);close();toast((x.status==='active'?'Brought back ':'Retired ')+x.name)}}
+$('q').oninput=e=>{S.q=e.target.value;render()};
+$('add').onclick=()=>{if(G)edit(null)};
+$('exp').onclick=()=>{if(!G)return;const b=new Blob([JSON.stringify(G,null,1)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='glossary-'+G.program+'-rev'+G.rev+'.json';document.body.appendChild(a);a.click();a.remove()};
+$('imp').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{load();const inc=JSON.parse(await f.text());if(!G){G=GL.migrate(inc);GL.save(G);render();toast('Glossary loaded');return}
+ const r=GL.merge(G,inc);GL.save(G);render();toast(`Imported: ${r.added} new, ${r.updated} updated${r.clashes.length?', '+r.clashes.length+' name clashes skipped':''}`)}catch(err){toast(err.message||'Import failed')}e.target.value=''};
+/* Another tab (the Almanac) changed the glossary: reload it. */
+addEventListener('storage',e=>{if(window.GL&&e.key===GL.key(PROGRAM)){load();render()}});
+addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.glossary==='review'){S.review=true;load();render()}});
+load();if(G&&GL.reviewList(G).length)S.review=true;render();
+</script></body></html>
