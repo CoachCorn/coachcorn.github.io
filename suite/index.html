@@ -148,7 +148,7 @@ function renderHome(){const s=SUITESYNC.status(),n=reviewCount(),ai=almInfo(),ng
  const desc=t=>t.id==='almanac'&&ai&&!ai.demo?`${esc(ai.opp)} · ${ai.n} play${ai.n===1?'':'s'}${ai.scout?' · scout loaded':''}`:t.desc;
  $('tiles').innerHTML=(SIDE==='D'?DTOOLS:TOOLS).map(t=>{const[c,svg]=IC[t.id];return`<button class="tile ${t.soon?'soon':''}" data-t="${t.id}"><span class="ic" style="background:${c}22;color:${c}">${svg}</span><span class="tx"><b>${t.name}${t.soon?'<span class="tag">SOON</span>':''}</b><span class="d">${desc(t)}</span></span><span class="go">›</span>${t.id==='glossary'&&n?`<span class="dot">${n}</span>`:''}</button>`}).join('');
  const ago=s.last?Math.round((Date.now()-s.last)/60000):null,cls=!s.signedIn?'':s.busy?'busy':s.error?'bad':'ok';
- const txt=s.signedIn?(s.busy?'Syncing…':s.error?esc(s.error):'Synced '+(ago===0?'just now':ago+' min ago'))+(navigator.onLine?'':' · offline'):'This iPad only · not syncing';
+ const txt=s.signedIn?(s.busy?'Syncing…':s.error?esc(s.error):'Synced '+(ago===0?'just now':ago+' min ago'))+(navigator.onLine?'':' · offline'):'This device only · not syncing';
  $('syncline').innerHTML=`<span class="side"><button data-side="O" class="${SIDE==='O'?'on':''}">Offense</button><button data-side="D" class="${SIDE==='D'?'on':''}">Defense</button></span><span class="sd ${cls}"></span><span>${txt}</span><button id="syncbtn">${s.signedIn?'Sync':'Sign in'}</button>`;
  $('syncbtn').onclick=signInModal;
  document.querySelectorAll('[data-side]').forEach(b=>b.onclick=()=>setSide(b.dataset.side))}
@@ -172,9 +172,9 @@ function pwToggle(id){const i=$(id);if(!i||i.dataset.pw)return;i.dataset.pw=1;co
  b.onclick=()=>{const show=i.type==='password';i.type=show?'text':'password';b.textContent=show?'Hide':'Show';i.focus()};w.appendChild(b)}
 function signInModal(){const s=SUITESYNC.status();
  if(s.signedIn){modal(`<h3 style="margin-top:0">Sync · ${esc(s.name||s.program)}</h3><p class="note">Server ${esc(s.url)}</p>
-  <p style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn pri" id="sn">Sync now</button><button class="btn" id="so">Sign out this iPad</button><button class="btn" id="sx">Close</button></p>`);
+  <p style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn pri" id="sn">Sync now</button><button class="btn" id="so">Sign out this device</button><button class="btn" id="sx">Close</button></p>`);
   $('sn').onclick=()=>{SUITESYNC.syncNow();closeM()};$('so').onclick=()=>{SUITESYNC.signOut();closeM();renderHome()};$('sx').onclick=closeM;return}
- modal(`<h3 style="margin-top:0">Sign in to sync</h3><p class="note">Signing in keeps this iPad's glossary and games in step with the rest of the staff. Everything still works offline.</p>
+ modal(`<h3 style="margin-top:0">Sign in to sync</h3><p class="note">Signing in keeps this device's glossary and games in step with the rest of the staff. Everything still works offline.</p>
  <div class="lab">Server address</div><input id="su" value="${esc(s.url||DEFAULT_SERVER)}" placeholder="https://coach-suite.….workers.dev" autocapitalize="off" autocorrect="off">
  <div class="lab">Program</div><input id="sp" value="${esc(s.program||PROGRAM)}" autocapitalize="off">
  <div class="lab">Staff passcode</div><input id="sc" type="password" autocapitalize="off" autocorrect="off" spellcheck="false">

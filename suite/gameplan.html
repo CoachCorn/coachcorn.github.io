@@ -268,7 +268,7 @@ $('scout').onclick=()=>{const p=plan();if(!p)return toast('Start a plan first');
   ${G.map(g=>`<option value="alm:${esc(g.id)}" ${src==='alm:'+g.id?'selected':''}>Almanac · ${esc(g.opp)} · ${esc(g.scout.name)} (${g.scout.rows.length} plays)</option>`).join('')}
   ${own?`<option value="own" ${src==='own'?'selected':''}>Loaded here · ${esc(own.name)} (${own.rows.length} plays)</option>`:''}<option value="none" ${src==='none'?'selected':''}>None</option></select>
  <div class="lab">Load a scout file here</div><input type="file" id="sc_file" accept=".xlsx,.xlsm,.csv,text/csv" style="width:100%;font-size:14px"><div id="sc_load"></div>
- <div class="note" style="margin-top:6px">A scout loaded here stays on this iPad. A scout loaded in the Almanac syncs with the game.</div>
+ <div class="note" style="margin-top:6px">A scout loaded here stays on this device. A scout loaded in the Almanac syncs with the game.</div>
  <div class="row"><button class="btn pri" id="sc_ok">Save</button><button class="btn" id="sc_x">Close</button></div>`;
  $('modal').classList.add('show');$('mbox').onclick=null;$('mbox').onkeydown=null;
  $('sc_x').onclick=()=>$('modal').classList.remove('show');
