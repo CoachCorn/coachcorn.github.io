@@ -118,9 +118,10 @@ function touch(p){p.upd=Date.now();writeStore()}
 const OLK=['LT','LG','C','RG','RT'],SK=['Q','X','Z','M','H','Y','F','A','B','T'];
 const COLS=['#ffffff','#ef5b5b','#5aa9ff','#f2b632','#2fbf71','#c58bff'];
 const TC={Q:'#ffffff',X:'#5aa9ff',Z:'#5aa9ff',M:'#f2b632',H:'#2fbf71',Y:'#c58bff',F:'#5ad1c8',A:'#ff9bd0',B:'#b0b8c4',T:'#ef7b5b'};
-/* The drawing is the whole field width: 160 ft (high school), 4.4 px per foot. Hashes are 53'4" from each sideline, so the left hash sits where the center lines up.
+/* The drawing is the whole field width: 160 ft (high school), 4.4 px per foot. The left hash sits where the center lines up (53'4" from the sideline).
+   Noah asked for the hashes drawn farther apart than real: HASHR puts the right hash 66 ft from the left one (real is 53'4"). Change the 66 to change it.
    Numbers are 6 ft tall: top 9 yards (27 ft) from the sideline, bottom 21 ft. */
-const PXFT=4.4,YD=3*PXFT,LOS=110,VW=Math.round(160*PXFT),VH=250,HASHX=Math.round(53.333*PXFT),NB=Math.round(21*PXFT),NT=Math.round(27*PXFT);
+const PXFT=4.4,YD=3*PXFT,LOS=110,VW=Math.round(160*PXFT),VH=250,HASHX=Math.round(53.333*PXFT),HASHR=HASHX+Math.round(66*PXFT),NB=Math.round(21*PXFT),NT=Math.round(27*PXFT);
 function baseDraw(){const t={},put=(k,x,y,on)=>t[k]={x,y,on};
  put('X',30,114,1);put('Z',456,112,1);put('M',165,150,1);put('Q',235,168,1);put('T',210,205,1);put('H',385,128,1);
  put('Y',395,112,0);put('F',430,150,0);put('A',300,190,0);put('B',260,205,0);
@@ -136,7 +137,7 @@ function svgOf(d,sel,cur){const n=++svgN,used=new Set();
  for(const [x0,x1] of [[NB,NT],[VW-NT,VW-NB]]){s+=`<rect x="${x0}" y="0" width="${x1-x0}" height="${VH}" fill="#ffffff0d"/><line x1="${x0}" x2="${x0}" y1="0" y2="${VH}" stroke="#ffffff33" stroke-dasharray="3 4"/><line x1="${x1}" x2="${x1}" y1="0" y2="${VH}" stroke="#ffffff33" stroke-dasharray="3 4"/>`}
  s+=`<line x1="1" x2="1" y1="0" y2="${VH}" stroke="#ffffff77" stroke-width="2"/><line x1="${VW-1}" x2="${VW-1}" y1="0" y2="${VH}" stroke="#ffffff77" stroke-width="2"/>`;
  // hash marks, a tick every yard, longer every 5
- for(const hx of [HASHX,VW-HASHX])for(let k=-9;k<=12;k++){const y=LOS+k*YD;if(y<3||y>VH-2)continue;const w=k%5===0?18:9;s+=`<line x1="${hx-w/2}" x2="${hx+w/2}" y1="${y}" y2="${y}" stroke="#ffffff66" stroke-width="1.4"/>`}
+ for(const hx of [HASHX,HASHR])for(let k=-9;k<=12;k++){const y=LOS+k*YD;if(y<3||y>VH-2)continue;const w=k%5===0?18:9;s+=`<line x1="${hx-w/2}" x2="${hx+w/2}" y1="${y}" y2="${y}" stroke="#ffffff66" stroke-width="1.4"/>`}
  // yard numerals (6 ft tall), both read bottom to top: 4 on the bottom, 0 on top
  for(const [cx,rot] of [[(NB+NT)/2,-90],[VW-(NB+NT)/2,-90]])s+=`<text x="${cx}" y="${LOS}" transform="rotate(${rot} ${cx} ${LOS})" fill="#ffffff26" font-size="36" font-weight="700" font-family="sans-serif" text-anchor="middle" dominant-baseline="central" letter-spacing="3">40</text>`;
  s+=`<line x1="0" x2="${VW}" y1="${LOS}" y2="${LOS}" stroke="#ffffff55" stroke-dasharray="6 5"/>`;
