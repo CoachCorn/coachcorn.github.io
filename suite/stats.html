@@ -46,7 +46,7 @@ tr.click{cursor:pointer}tr.click:active{background:#223140}
 <script>
 /* Stats + schedule. Reads the Almanac's games from this device (kept in step by sync) and the program schedule.
    Efficiency: 1st down 4+ (or the distance if shorter), 2nd down half the distance (rounded up), 3rd/4th convert, TD always.
-   Explosive: the Almanac's own thresholds (Setup > Explosive run / pass), so these numbers match its Stats screen. */
+   Explosive: the program's thresholds (Almanac > Setup > Explosive run / pass; default 15+ on any play). */
 const $=id=>document.getElementById(id);
 const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const prog=()=>{try{return(JSON.parse(localStorage.getItem('suite_sync'))||{}).program||'deer-creek'}catch(e){return'deer-creek'}};
@@ -63,7 +63,7 @@ function gameYear(g,S){const r=S.rows.find(x=>x.game===g.id||(!x.game&&U(x.opp)=
 function rowFor(g,S){return S.rows.find(x=>x.game===g.id)||S.rows.find(x=>!x.game&&U(x.opp)===U(g.opp))}
 function plays(gs){return gs.flatMap(g=>(g.plays||[]).filter(p=>p.k==='p'&&p.result!=='PEN').map(p=>Object.assign({_g:g.id},p)))}
 function eff(p){if(p.td)return 1;const g=+p.gain||0,n=+p.dist||10;if(p.down===1)return g>=(n>=10?4:n)?1:0;if(p.down===2)return g>=Math.ceil(n/2)?1:0;return g>=n?1:0}
-function expl(p,L){const t=p.ptype==='run'?(L.expRun||12):(L.expPass||16);return(+p.gain||0)>=t?1:0}
+function expl(p,L){const t=p.ptype==='run'?(L.expRun||15):(L.expPass||15);return(+p.gain||0)>=t?1:0}
 function summ(P,L){const n=P.length,y=P.reduce((a,p)=>a+(+p.gain||0),0),e=P.reduce((a,p)=>a+eff(p),0),x=P.reduce((a,p)=>a+expl(p,L),0),r=P.filter(p=>p.ptype==='run').length;
  return{n,ypp:n?y/n:0,eff:n?e/n:0,exp:n?x/n:0,run:n?r/n:0,yds:y,to:P.filter(p=>p.result==='INT'||p.result==='FUM').length,td:P.filter(p=>p.td).length}}
 const pct=v=>Math.round(v*100)+'%',f1=v=>(Math.round(v*10)/10).toFixed(1);
@@ -138,7 +138,7 @@ function viewSplits(){const gs=V.game?realGames(A()).filter(g=>g.id===V.game):ga
  const split=(title,key)=>{const m={};for(const p of P){const k=key(p);if(!k)continue;(m[k]=m[k]||[]).push(p)}
   const rows=Object.entries(m).sort((a,b)=>b[1].length-a[1].length).map(([k,a])=>{const s=summ(a,L);return[esc(k),s.n,delta(s.ypp,all.ypp,false,s.n),delta(s.eff,all.eff,true,s.n),delta(s.exp,all.exp,true,s.n)]});
   return`<h3>${title}</h3>`+tbl(['','Plays','Yds/play','Eff','Exp'],rows)};
- return`<p class="note">Compared with the ${V.season} average (${f1(all.ypp)} yds/play, ${pct(all.eff)} efficient, ${pct(all.exp)} explosive). Fewer than 3 plays shows no +/–.</p>`+
+ const L2=A().lists||{};return`<p class="note">Explosive = ${(L2.expRun||15)===(L2.expPass||15)?(L2.expRun||15)+'+ yards on any play':(L2.expRun||15)+'+ run, '+(L2.expPass||15)+'+ pass'} (change in Almanac › Setup). Compared with the ${V.season} average (${f1(all.ypp)} yds/play, ${pct(all.eff)} efficient, ${pct(all.exp)} explosive). Fewer than 3 plays shows no +/–.</p>`+
   split('By call (one word or concept)',p=>p.owc||p.call)+split('By formation',p=>p.formation?(p.formation+(p.ftag?' '+p.ftag:'')):null)+split('By down and distance',bucket)+split('By field zone',p=>zone(p.f))+split('Run / pass',p=>p.ptype==='run'?'Run':'Pass')}
 /* ---------- render ---------- */
 function render(){hdr();let h;

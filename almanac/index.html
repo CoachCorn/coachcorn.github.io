@@ -129,7 +129,7 @@ const DEF={
  tagsPass:['X','Z','BRONZE','GOLD','BLACK','BROWN','FLIP','POKER','WHEEL','FIRE','FLAME','GO','TRAIL','COP','FLOP','MILLY','ROCK','BANANA','HAIL','PUMP','FLEA','LATE','SNAP','CHOICE','SLIDE','TUNNEL','DRAW','PICK','CUT','PUNCH','SURF','SLING','CURL','TOAD','THROWBACK','STOP','BT','SOLID','MIRROR','SHORT','FOLLOW','SNUZ','PULSE','POP','HOLLER','MAIL','BOOT','SWEEP','READ','LOOK','S','LASER','ROCKET','DRIP','LEAK','ARROW','BULL','YELL','GREY','YELLOW'],
  targets:['HITCH','SLANT','OUT','CURL','DIG','POST','CORNER','GO','SEAM','FLAT','WHEEL','CROSS','STICK','SCREEN','SAIL','BUBBLE'],
  passers:['9','12'],players:['0','2','3','4','5','8','9','11','12','13','14','15','30','33','48'],
- expRun:12,expPass:16
+ expRun:15,expPass:15
 };
 const RS={GH:['TROJANS','STATE','CAROLINA','PANTHER','ALTER STEELER'],BUCK:['TEXAS','VEGAS','RAIDER','G VEGAS','G RAIDER','GANG VEGAS','GANG RAIDER'],IZ:['SOONERS','WASHINGTON','COMMANDER','PHILLY','EAGLE'],GT:['HOUSTON','PITT','STEELER','CLEV','BROWNS'],POWER:['LA','CHARGER','RAVEN'],JET:['BRUINS','H RAIDER','Y VEGAS','X RAIDER','Z VEGAS']};
 /* Concept families: pairs are the Left/Right versions of one concept (shown boxed together on the button grid), FAM folds them in the report. */
@@ -169,6 +169,7 @@ function load(){try{A=JSON.parse(localStorage.getItem(KEY))}catch(e){A=null}
  if(A.v<12){if(!A.lists.passers)A.lists.passers=['9','12'];A.v=12}
  if(A.v<13){const L=A.lists,add=(k,a)=>{L[k]=L[k]||[];for(const x of a)if(!L[k].some(y=>String(y).toUpperCase()===x))L[k].push(x)};const T=['BOOT', 'SWEEP', 'READ', 'LOOK', 'S', 'LASER', 'ROCKET', 'DRIP', 'LEAK', 'ARROW', 'BULL', 'YELL', 'GREY', 'YELLOW'];add('tagsRun',T);add('tagsPass',T);add('motions',['AIRPLANE','BUMP']);add('ftags',['LITE','HEAVY']);A.v=13}
  if(A.v<14){for(const g of A.games)(g.plays||[]).forEach((p,k)=>{if(!p.pid){p.pid='o'+k;p.ts=k}});A.v=14}
+ if(A.v<15){const L=A.lists;if(L.expRun==12||L.expRun==null)L.expRun=15;if(L.expPass==16||L.expPass==null)L.expPass=15;A.v=15}
  try{glInit()}catch(e){GLO=null}
  if(!A.games.length)buildDemo(true);
  if(!A.cur||!A.games.find(g=>g.id===A.cur))A.cur=A.games[0].id;save()}
@@ -269,7 +270,7 @@ function summary(){const P=plays(),pen=P.filter(p=>p.result!=='PEN');const E=pen
  const pc=(a,b)=>b?Math.round(100*a/b)+'%':'–';
  return{n:pen.length,eff:pc(E,pen.length),exp:pc(X,pen.length),fd:hit+'/'+dr.length,dr}}
 function renderLog(){const g=G(),s=summary();
- let h=`<div class="dclose"><button class="btn" id="logclose">Close log</button></div><div class="tiles"><div class="tile"><b>${s.n}</b><span>Plays</span></div><div class="tile"><b>${s.eff}</b><span>Efficient (50)</span></div><div class="tile"><b>${s.exp}</b><span>Explosive (12)</span></div><div class="tile"><b>${s.fd}</b><span>2FDOS drives</span></div></div>`;
+ let h=`<div class="dclose"><button class="btn" id="logclose">Close log</button></div><div class="tiles"><div class="tile"><b>${s.n}</b><span>Plays</span></div><div class="tile"><b>${s.eff}</b><span>Efficient (50)</span></div><div class="tile"><b>${s.exp}</b><span>Explosive (${A.lists.expRun===A.lists.expPass?A.lists.expRun+"+":A.lists.expRun+"/"+A.lists.expPass})</span></div><div class="tile"><b>${s.fd}</b><span>2FDOS drives</span></div></div>`;
  let dn=1;h+=`<div class="drive"><span>Drive 1</span></div>`;
  g.plays.forEach((p,i)=>{if(p.k==='q'){dn++;h+=`<div class="half">END Q${p.n}</div><div class="drive"><span>Drive ${dn}</span></div>`;return}if(p.k==='h'){dn++;h+=`<div class="half">HALFTIME</div><div class="drive"><span>Drive ${dn}</span></div>`;return}if(p.k==='d'){dn++;h+=`<div class="drive"><span>Drive ${dn}</span></div>`;return}
   const E=eff(p),X=expl(p),r=RESULTS.find(x=>x[0]===p.result);
@@ -653,14 +654,14 @@ function restoreBackup(b){const a=b&&b.almanacBackup?b.almanac:b;if(!a||!Array.i
  save();return{games,skipped,gl}}
 document.getElementById('setup').onclick=()=>{const L=A.lists;const f=(k,t)=>`<div class="lab"><span>${t}</span></div><textarea id="s_${k}">${L[k].join(', ')}</textarea>`;
  modal(`<h3 style="margin-top:0">Setup</h3><p class="note">Comma-separated. These become the buttons.</p>${f('ftags','Formation tags')}${f('motions','Motion / Shift')}${f('formations','Formations')}${f('runs','Run calls')}${f('passes','Pass calls')}${f('owcs','One words')}${f('glfs','Green light formations')}${f('ftags','Formation tags')}${f('tagsRun','Run play tags')}${f('tagsPass','Pass play tags')}${f('targets','Targets (routes)')}${f('passers','Passers (QBs)')}${f('players','Jersey numbers')}<div class="lab"><span>Gameplan plays for ${G().opp} (used for "not called yet"; blank = all run and pass buttons)</span></div><textarea id="s_gp">${(G().gp||[]).join(', ')}</textarea><div class="lab"><span>Film Room link</span></div><input type="text" id="s_fr" style="width:100%" value="${A.fr||FR}">
- <div class="two" style="margin-top:8px"><div><div class="lab">Explosive run</div><input type="number" id="s_er" value="${L.expRun}"></div><div><div class="lab">Explosive pass</div><input type="number" id="s_ep" value="${L.expPass}"></div></div>
+ <div class="two" style="margin-top:8px"><div><div class="lab">Explosive run (yards)</div><input type="number" id="s_er" value="${L.expRun}"></div><div><div class="lab">Explosive pass (yards)</div><input type="number" id="s_ep" value="${L.expPass}"></div></div>
  <div class="lab" style="margin-top:12px"><span>Games on this device</span></div><div id="gmlist">${A.games.map(g=>`<div class="gmrow" style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)"><div style="flex:1;min-width:0"><b>${esc2(g.opp)}</b>${g.id===A.cur?' <span class="note">(open)</span>':''}<div class="note">${g.plays.filter(x=>x.k==='p').length} plays</div></div><button class="btn bad" data-delg="${g.id}">Delete</button></div>`).join('')}</div>
  <button class="btn bad" id="skeep" style="margin-top:8px;width:100%">Delete all games except ${esc2(G().opp)}</button>
  <div class="two" style="margin-top:10px"><button class="btn pri" id="ssave">Save</button></div><button class="btn" id="sdemo" style="margin-top:8px">Add demo game</button>`);
  const afterDel=()=>{if(!A.games.length)newGame('Game 1',true);if(!A.games.find(g=>g.id===A.cur))A.cur=A.games[0].id;edit=null;d=freshDraft(lastNext());save();modal_close();renderAll()};
  document.getElementById('gmlist').onclick=e=>{const b=e.target.closest('[data-delg]');if(!b)return;const g=A.games.find(x=>x.id===b.dataset.delg);if(g)arm(b,'Tap again to delete',()=>{A.games=A.games.filter(x=>x.id!==g.id);afterDel()})};
  document.getElementById('skeep').onclick=()=>{const n=A.games.length-1;if(n<1){toast('This is the only game');return}arm(document.getElementById('skeep'),'Tap again: delete '+n+' other game'+(n>1?'s':''),()=>{A.games=A.games.filter(g=>g.id===A.cur);afterDel()})};
- ssave.onclick=()=>{const before={};for(const k in GLX_MAP)before[k]=[...(L[k]||[])];for(const k of['ftags','motions','formations','runs','passes','owcs','glfs','tagsRun','tagsPass','targets','passers','players'])L[k]=document.getElementById('s_'+k).value.split(',').map(s=>s.trim()).filter(Boolean);G().gp=document.getElementById('s_gp').value.split(',').map(s=>s.trim()).filter(Boolean);A.fr=document.getElementById('s_fr').value.trim()||FR;L.expRun=+s_er.value||12;L.expPass=+s_ep.value||16;for(const k in before)glRemoved(k,before[k],L[k]||[]);save();modal_close();renderAll()};
+ ssave.onclick=()=>{const before={};for(const k in GLX_MAP)before[k]=[...(L[k]||[])];for(const k of['ftags','motions','formations','runs','passes','owcs','glfs','tagsRun','tagsPass','targets','passers','players'])L[k]=document.getElementById('s_'+k).value.split(',').map(s=>s.trim()).filter(Boolean);G().gp=document.getElementById('s_gp').value.split(',').map(s=>s.trim()).filter(Boolean);A.fr=document.getElementById('s_fr').value.trim()||FR;L.expRun=+s_er.value||15;L.expPass=+s_ep.value||15;for(const k in before)glRemoved(k,before[k],L[k]||[]);save();modal_close();renderAll()};
  sdemo.onclick=()=>{modal_close();buildDemo(false)};
 };
 function buildDemo(quiet){
