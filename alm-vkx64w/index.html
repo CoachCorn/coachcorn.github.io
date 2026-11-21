@@ -628,7 +628,8 @@ function copyText(t){return(navigator.clipboard?navigator.clipboard.writeText(t)
 // Copy first, inside the tap (iPhone/iPad only allow clipboard writes during the tap), then let the coach open Film Room with a second tap.
 function copyNow(t){let ok=false;try{const x=document.createElement('textarea');x.value=t;x.setAttribute('readonly','');x.style.position='fixed';x.style.opacity='0';document.body.appendChild(x);x.select();x.setSelectionRange(0,t.length);ok=document.execCommand('copy');x.remove()}catch(e){}
   if(navigator.clipboard)navigator.clipboard.writeText(t).catch(()=>{});return ok}
-document.getElementById('send').onclick=()=>{const t='ALMANAC\t'+G().opp+'\t'+(G().program||CONFIG.program)+'\n'+tsv();const ok=copyNow(t);const n=rows().filter(r=>r.length>3).length-1;
+document.getElementById('send').onclick=()=>{const t='ALMANAC\t'+G().opp+'\t'+(G().program||CONFIG.program)+'\n'+tsv();
+  if(inShell){window.parent.postMessage({toFilm:t},location.origin);toast('Sent '+G().opp+' to the Film Room');return}const ok=copyNow(t);const n=rows().filter(r=>r.length>3).length-1;
   modal(`<h3 style="margin-top:0">${ok?'Copied ✓':'Copy this game'}</h3><p class="note">${n} plays from ${G().opp}. ${ok?'':'Tap the box, Select All, Copy. '}Then open Film Room, pick or start the game, and tap <b>Paste from Almanac app</b>. If Film Room shows a paste box, press and hold in it and tap Paste.</p>
   <textarea readonly style="width:100%;min-height:90px;font-size:12px" onclick="this.select();this.setSelectionRange(0,this.value.length)">${t.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</textarea>
   <p style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn" href="${A.fr||FR}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;display:inline-flex;align-items:center">Open Film Room</a><button class="btn" onclick="modal_close()">Done</button></p>`)};

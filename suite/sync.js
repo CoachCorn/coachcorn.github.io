@@ -95,14 +95,42 @@
    const p=await call('PUT','/doc',{key:'schedule',baseRev:r.data.rev,body:m,device:device()});if(p.status===200){s.schRev=p.data.rev;s.schH=mh;return}if(p.status!==409)return}}
  function dispatchSch(){document.querySelectorAll('iframe').forEach(f=>{try{f.contentWindow.postMessage({schedule:'changed'},location.origin)}catch(e){}})}
 
+ /* --- Film Room: one document per game (newest save wins); finished games too; deletions stick --- */
+ const J=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}};
+ function filmLocal(){const out=new Map(),list=J('fr:games',[]),pub=J('fr:pub',{index:[],games:{}});
+  for(const g of list){const st=J('fr:game:'+g.id,null);if(st)out.set('film/'+g.id,{upd:+(localStorage.getItem('fr:upd:'+g.id)||0),body:{meta:g,state:st}})}
+  const pu=+(localStorage.getItem('fr:upd:pub')||0);for(const x of pub.index){const g=pub.games[x.id];if(g)out.set('film/pub-'+x.id,{upd:pu,body:{pub:x,game:g}})}
+  return out}
+ function filmWrite(key,body,upd){const id=key.slice(5);
+  if(id.startsWith('pub-')){const pub=J('fr:pub',{index:[],games:{}}),gid=id.slice(4);
+   if(body.deleted){pub.index=pub.index.filter(x=>x.id!==gid);delete pub.games[gid]}else{pub.games[gid]=body.game;if(!pub.index.some(x=>x.id===gid))pub.index.push(body.pub||{id:gid,label:gid})}
+   localStorage.setItem('fr:pub',JSON.stringify(pub));return}
+  let list=J('fr:games',[]);
+  if(body.deleted){list=list.filter(g=>g.id!==id);localStorage.removeItem('fr:game:'+id);localStorage.removeItem('fr:upd:'+id)}
+  else{localStorage.setItem('fr:game:'+id,JSON.stringify(body.state));localStorage.setItem('fr:upd:'+id,String(upd||Date.now()));const i=list.findIndex(g=>g.id===id);if(i>=0)list[i]=body.meta;else list.push(body.meta)}
+  localStorage.setItem('fr:games',JSON.stringify(list))}
+ async function syncFilm(s,list){s.film=s.film||{};const loc=filmLocal(),dead=new Set(J('fr:deleted',[]).map(i=>'film/'+i));let wrote=false;
+  for(const k of dead){const sv=list.find(d=>d.key===k);const m=s.film[k];if(sv&&!(m&&m.gone&&m.rev===sv.rev)){const r=await call('PUT','/doc',{key:k,baseRev:sv.rev,body:{deleted:true,upd:Date.now()},device:device()});if(r.status===200)s.film[k]={rev:r.data.rev,gone:true}}}
+  for(const [k,v] of loc){if(dead.has(k))continue;const sv=list.find(d=>d.key===k),m=s.film[k];
+   if(!sv){const r=await call('PUT','/doc',{key:k,baseRev:0,body:Object.assign({upd:v.upd},v.body),device:device()});if(r.status===200)s.film[k]={rev:r.data.rev,upd:v.upd};continue}
+   if(m&&m.rev===sv.rev){if(v.upd>(m.upd||0)){const r=await call('PUT','/doc',{key:k,baseRev:sv.rev,body:Object.assign({upd:v.upd},v.body),device:device()});if(r.status===200)s.film[k]={rev:r.data.rev,upd:v.upd}}continue}
+   const r=await call('GET','/doc?key='+encodeURIComponent(k));if(r.status!==200||!r.data.body)continue;const b=r.data.body;
+   if(b.deleted){filmWrite(k,b);wrote=true;s.film[k]={rev:r.data.rev,gone:true};continue}
+   if((b.upd||0)>=v.upd){filmWrite(k,b,b.upd);wrote=true;s.film[k]={rev:r.data.rev,upd:b.upd||0}}
+   else{const p=await call('PUT','/doc',{key:k,baseRev:r.data.rev,body:Object.assign({upd:v.upd},v.body),device:device()});if(p.status===200)s.film[k]={rev:p.data.rev,upd:v.upd}}}
+  for(const d of list){if(!d.key.startsWith('film/')||loc.has(d.key)||dead.has(d.key))continue;const m=s.film[d.key];if(m&&m.rev===d.rev)continue;
+   const r=await call('GET','/doc?key='+encodeURIComponent(d.key));if(r.status!==200||!r.data.body)continue;const b=r.data.body;
+   s.film[d.key]={rev:r.data.rev,upd:b.upd||0,gone:!!b.deleted};if(!b.deleted){filmWrite(d.key,b,b.upd);wrote=true}}
+  if(wrote){const f=document.querySelector('iframe[title="Film Room"]');try{f&&f.contentWindow.postMessage({film:'reload'},location.origin)}catch(e){}}}
+
  async function syncNow(){const s0=st();if(busy||!s0.token||!(s0.exp>Date.now())||!navigator.onLine)return emit();busy=true;emit();
   try{const s=st();const lr=await call('GET','/docs');if(lr.status!==200)throw new Error(lr.data.error||'Server error');
-   const list=lr.data.docs||[];await syncGlossary(s,list);await syncGames(s,list);await syncSchedule(s,list);
-   const x=st();Object.assign(x,{glRev:s.glRev,glSig:s.glSig,games:s.games,schRev:s.schRev,schH:s.schH,last:Date.now(),error:null});put(x)}
+   const list=lr.data.docs||[];await syncGlossary(s,list);await syncGames(s,list);await syncSchedule(s,list);await syncFilm(s,list);
+   const x=st();Object.assign(x,{glRev:s.glRev,glSig:s.glSig,games:s.games,schRev:s.schRev,schH:s.schH,film:s.film,last:Date.now(),error:null});put(x)}
   catch(e){const x=st();x.error=e.message||'Sync failed';put(x)}
   finally{busy=false;emit()}}
  function soon(ms=4000){clearTimeout(timer);timer=setTimeout(syncNow,ms)}
- function start(){addEventListener('online',()=>soon(1000));addEventListener('storage',e=>{if(e.key===ALM||(e.key&&(e.key.indexOf('glossary_v1_')===0||e.key.indexOf('schedule_v1_')===0)))soon()});
+ function start(){addEventListener('online',()=>soon(1000));addEventListener('storage',e=>{if(e.key===ALM||(e.key&&(e.key.indexOf('glossary_v1_')===0||e.key.indexOf('schedule_v1_')===0||e.key.indexOf('fr:')===0)))soon()});
   setInterval(()=>soon(0),60000);soon(3000)}
  root.SUITESYNC={mergeGame,mergeRows,status,login,setup,signOut,syncNow,start,onChange:f=>listeners.push(f)};
 })(window);

@@ -1,0 +1,904 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script>(function(){var p=location.pathname;if(!/\/$/.test(p)&&!/\.html?$/.test(p)){var b=document.createElement("base");b.href=p+"/";document.head.appendChild(b);}})();</script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Film Room - Staff View</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;600;700&display=swap">
+<style>
+:root{--bg:#ECF0EC;--panel:#FFFFFF;--panel2:#F4F7F4;--ink:#13201A;--soft:#51635A;--line:#D2DBD4;--accent:#1D6B44;--accent-ink:#FFFFFF;--miss:#C9852A;--bad:#B5432F;--track:#E3E9E4;--sel:#DCEBE1;--display:'Barlow Condensed','Arial Narrow',Arial,sans-serif;--body:'Public Sans',system-ui,Arial,sans-serif}
+@media (prefers-color-scheme:dark){:root{--bg:#0E1611;--panel:#16221B;--panel2:#1C2A22;--ink:#E8EFEA;--soft:#9DB0A5;--line:#2B3C32;--accent:#5CC38A;--accent-ink:#0E1611;--miss:#E8A93A;--bad:#E07A62;--track:#24362B;--sel:#21402E;color-scheme:dark}}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45;padding-inline:clamp(14px,4vw,48px);padding-block:28px 56px}
+.wrap{max-width:1500px;margin-inline:auto;display:flex;flex-direction:column;gap:22px}
+h1{font-family:var(--display);font-size:clamp(38px,7vw,60px);line-height:1;font-weight:700;text-transform:uppercase}
+h2{font-family:var(--display);font-size:26px;text-transform:uppercase;font-weight:700;line-height:1.1}
+h3{font-family:var(--display);font-size:20px;text-transform:uppercase;font-weight:700}
+.meta{font-size:13px;color:var(--soft);letter-spacing:.06em;text-transform:uppercase;font-weight:600}
+.sub{color:var(--soft);max-width:80ch}
+.bar{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center}
+.bar label{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--soft)}
+input,select,button,textarea{font:600 15px var(--body);padding:8px 12px;border:1.5px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px}
+textarea{font-weight:400;width:100%;min-height:110px;resize:vertical;font-size:14px}
+button{cursor:pointer} button.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)} button:disabled{opacity:.45;cursor:default}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--soft);font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+label.f input,label.f select{width:100%}
+label.c{display:flex;gap:6px;align-items:center;font-size:14px;color:var(--soft)}
+.tabs{display:flex;gap:6px;border-bottom:2px solid var(--line);flex-wrap:wrap}
+.tabs button{border:none;border-radius:8px 8px 0 0;background:transparent;font-family:var(--display);font-size:20px;text-transform:uppercase;letter-spacing:.02em;padding:10px 16px;color:var(--soft)}
+.tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+.seg{display:inline-flex;border:1.5px solid var(--line);border-radius:8px;overflow:hidden;flex-wrap:wrap}
+.seg button{border:none;border-radius:0;padding:7px 11px;font-size:14px}
+.seg button[aria-pressed="true"],.seg button.on{background:var(--accent);color:var(--accent-ink)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:12px}
+.tile{background:var(--panel);border:1.5px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.tile .k{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--soft)}
+.tile .v{font-family:var(--display);font-size:36px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.tile .d{font-size:13px;color:var(--soft)}
+.hit{color:var(--accent)} .miss{color:var(--miss)} .badc{color:var(--bad)}
+.panel{background:var(--panel);border:1.5px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:12px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:16px}
+.tablewrap{overflow:auto;border:1.5px solid var(--line);border-radius:10px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--soft);background:var(--panel2);position:sticky;top:0;z-index:1}
+td.n,th.n{text-align:right}
+tr.flag td{background:color-mix(in srgb,var(--miss) 12%,transparent)}
+tr.half td{background:var(--panel2);font-weight:700;font-family:var(--display);text-transform:uppercase;font-size:15px}
+tr.play{cursor:pointer} tr.play:hover td{background:var(--panel2)} tr.play.sel td{background:var(--sel)}
+tr.play.skip td{color:var(--soft);text-decoration:line-through} tr.drive td{border-top:2.5px solid var(--soft)}
+tr.flag td.fl{color:var(--miss);font-weight:700}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:700;border:1.5px solid var(--line)}
+.pill.td,.pill.hi{border-color:var(--accent);color:var(--accent)} .pill.bad{border-color:var(--bad);color:var(--bad)} .pill.lo{border-color:var(--miss);color:var(--miss)} .pill.coach{border-color:var(--ink);color:var(--ink)}
+.score{display:flex;gap:18px;align-items:baseline;flex-wrap:wrap}
+.score .big{font-family:var(--display);font-size:clamp(48px,9vw,84px);font-weight:700;line-height:1}
+.why{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px}
+.why .panel .num{font-family:var(--display);font-size:28px;font-weight:700;color:var(--bad)}
+.clips{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,560px),1fr));gap:18px}
+.clip{background:var(--panel);border:1.5px solid var(--line);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+.clip video,.clip .novid{width:100%;aspect-ratio:16/9;background:#000;display:block}
+.clip .novid{display:flex;align-items:center;justify-content:center;color:#9aa;font-size:14px}
+.clip .cap{padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.vwrap{position:relative;width:100%;aspect-ratio:16/9;background:#000;cursor:pointer}.vwrap img{width:100%;height:100%;object-fit:cover;display:block}.vwrap .vplay{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:18px;padding:12px 22px;background:var(--accent);color:var(--accent-ink);border:none;border-radius:999px}
+.clip.good{border-color:var(--accent)} .clip.bad{border-color:var(--bad)}
+.notes{font-size:13px;color:var(--soft);display:flex;flex-direction:column;gap:4px;padding-left:18px}
+.notes li{list-style:disc}
+.badge{font:700 11px var(--body);letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:6px;background:var(--panel2);border:1.5px solid var(--line);color:var(--soft)}
+.drop{border:2px dashed var(--line);border-radius:10px;padding:16px;text-align:center;color:var(--soft);display:flex;flex-direction:column;gap:10px;align-items:center}
+.drop.over{border-color:var(--accent);color:var(--ink)}
+.ok{color:var(--accent);font-weight:700}
+.tagger{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(360px,1fr);gap:16px;align-items:start}
+@media (max-width:1000px){.tagger{grid-template-columns:1fr}}
+.detail{position:sticky;top:10px;max-height:calc(100vh - 20px);overflow:auto}
+.detail video{width:100%;background:#000;border-radius:8px;aspect-ratio:16/9}
+.frames{display:grid;grid-template-columns:repeat(4,1fr);gap:4px} .frames img{width:100%;border-radius:4px;cursor:zoom-in;display:block}
+.calc{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;background:var(--panel2);border-radius:8px;padding:10px}
+.calc div{font-size:11px;color:var(--soft);font-weight:700;text-transform:uppercase} .calc b{display:block;font-family:var(--display);font-size:24px;color:var(--ink)}
+.flags{color:var(--miss);font-size:13px;font-weight:600}
+.note{background:var(--panel2);border-radius:8px;padding:10px;font-size:13px;color:var(--soft)}
+details.setup>summary{cursor:pointer;font-family:var(--display);font-size:22px;text-transform:uppercase;font-weight:700;list-style:none}
+details.setup>summary::before{content:'▸ ';color:var(--soft)} details.setup[open]>summary::before{content:'▾ '}
+#zoom{position:fixed;inset:0;background:#000d;display:none;align-items:center;justify-content:center;z-index:9} #zoom img{max-width:96vw;max-height:94vh}
+#toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:8px;display:none;z-index:10;font-weight:600}
+.empty{padding:36px 16px;text-align:center;color:var(--soft)}
+kbd{border:1px solid var(--line);border-radius:4px;padding:0 4px;font-size:11px;background:var(--panel)}
+[hidden]{display:none!important}
+body.opp .selfonly{display:none!important} body:not(.opp) .opponly{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:8px">
+    <div class="meta">Deer Creek Football · Offense <span class="badge">Staff view</span> <span class="badge" id="kindBadge">Self scout</span></div>
+    <h1>Film Room</h1>
+    <div class="bar"><label>Game <select id="gamePick"></select></label><button id="mgBtn">Manage games</button><label class="btn" style="display:inline-flex;align-items:center;font:600 15px var(--body);padding:8px 12px;border:1.5px solid var(--line);border-radius:8px;cursor:pointer">Import game file<input type="file" id="impGame" accept=".json,application/json" hidden></label><span class="meta" id="hdrStats"></span></div>
+    <div class="panel" id="mgPanel" hidden></div>
+  </header>
+  <nav class="tabs" role="tablist" id="tabs"></nav>
+  <main id="out" aria-live="polite"></main>
+
+  <!-- tagging workspace (new games) -->
+  <section id="tw" hidden style="display:flex;flex-direction:column;gap:16px">
+    <details class="setup panel" id="setupBox" open><summary>Game setup</summary>
+      <div class="grid">
+        <label class="f">Game name<input id="game" placeholder="DC v. Union"></label>
+        <label class="f"><span class="selfonly">Opponent</span><span class="opponly">Defense we're scouting</span><input id="opp" placeholder="Union"></label>
+        <label class="f opponly">Offense on this film<input id="offTeam" placeholder="Edmond Memorial"></label>
+        <label class="f"><span class="selfonly">Deer Creek jersey</span><span class="opponly">Offense jersey on film</span><input id="ourJersey" placeholder="white"></label>
+        <label class="f"><span class="selfonly">Opponent jersey</span><span class="opponly">Defense jersey on film</span><input id="oppJersey" placeholder="red"></label>
+        <label class="f selfonly">Final: Deer Creek<input id="scoreUs" type="number" min="0"></label>
+        <label class="f selfonly">Final: Opponent<input id="scoreThem" type="number" min="0"></label>
+        <label class="f selfonly">QB numbers<input id="qbs" value="3, 9, 12"></label>
+        <label class="f selfonly">RB numbers<input id="rbs" value="4, 33"></label>
+        <label class="f">Efficiency goal %<input id="goalEff" type="number" value="50"></label>
+        <label class="f">Explosive goal %<input id="goalExp" type="number" value="12"></label>
+        <label class="f">Explosive run (yds)<input id="expRun" type="number" value="15"></label>
+        <label class="f">Explosive pass (yds)<input id="expPass" type="number" value="15"></label>
+      </div>
+      <div class="grid2">
+        <div class="drop" id="dropClips"><b>Clips: drop the Hudl zip or camcorder clips</b>
+          <div class="bar" style="justify-content:center"><button id="pickZip">Choose zip</button><button id="pickFiles">Choose clips</button><button id="pickFolder">Choose folder</button></div>
+          <span class="sub" style="font-size:13px">"Wide - Clip 001.mp4", "Tight - Clip 001.mp4"… are grouped by clip number. Drop the whole game: clips where Deer Creek isn't on offense are skipped automatically (set the Deer Creek and Opponent jersey colors above). Clips stay on this computer; only still frames go to Claude.</span><span id="clipStatus" class="ok"></span></div>
+        <div class="drop selfonly" id="dropAlm"><b>Almanac (optional, Friday night): .xlsx or .csv</b>
+          <div class="bar" style="justify-content:center"><button id="pickAlm">Choose file</button><button id="pasteAlm" class="pri">Paste from Almanac app</button></div>
+          <span class="sub" style="font-size:13px">Google Sheets: File › Download › Excel or CSV. Without it the tagger runs film only (opponent scout mode).</span><span id="almStatus" class="ok"></span></div>
+      </div>
+      <input type="file" id="fZip" accept=".zip" hidden><input type="file" id="fFiles" accept="video/*,.mp4,.mov,.m4v,.mts,.m2ts" multiple hidden><input type="file" id="fFolder" webkitdirectory multiple hidden><input type="file" id="fAlm" accept=".xlsx,.xls,.csv" hidden>
+      <label class="f selfonly">Roster (number then name, one per line; saved with each game)<textarea id="roster" placeholder="2 First Last"></textarea></label>
+      <div class="bar"><button id="clearGame">Delete this game</button><button id="dlJson" class="selfonly">Download game file for the public site</button></div>
+    </details>
+    <div class="bar">
+      <button class="pri" id="aiAll" disabled>AI tag untagged plays</button><button id="aiStop" hidden>Stop</button>
+      <label class="c">Model <select id="tier"><option value="complex">Most capable</option><option value="default">Balanced</option></select></label>
+      <span id="aiStatus" class="sub" style="font-size:14px"></span><span style="flex:1"></span>
+      <span class="meta">Plays <b id="sPlays">0</b> · Need review <b id="sReview">0</b> · Almanac <b id="sAlm">none</b> · <span id="aiAvail"></span></span>
+      <label class="c"><input type="checkbox" id="onlyReview"> Review queue only</label>
+    </div>
+    <div class="tagger">
+      <div class="tablewrap" style="max-height:calc(100vh - 40px)" id="tableWrap"><div class="empty">Load clips in Game setup.</div></div>
+      <div class="panel detail" id="detail"><div class="empty">Pick a play.</div></div>
+    </div>
+  </section>
+</div>
+<div id="zoom"><img alt=""></div>
+<div id="toast"></div>
+<script id="embedded" type="application/json">{"index":[],"games":{}}</script>
+<script>
+/* ================= basics ================= */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pct=(n,d)=>d?Math.round(100*n/d):0;
+const ylTxt=v=>v==null||v===''?'':(v>0?'+'+v:String(v));
+function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display='none',2800)}
+const natCmp=(a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'});
+const ANGLES=['Wide','Tight','End Zone'];
+// Camcorder .MTS / .M2TS (AVCHD) files: browsers can't play them, so each one is re-wrapped into MP4 in the page when it is opened (video is kept as is, no re-encode; AC-3 audio is dropped, AAC audio is kept).
+const isTs=n=>/\.(mts|m2ts)$/i.test(n);
+async function tsToMp4(src){
+  if(typeof muxjs==='undefined')await new Promise((ok,no)=>{const s=document.createElement('script');s.src='mux.min.js';s.onload=ok;s.onerror=()=>no(new Error('converter not available'));document.head.appendChild(s)});
+  const buf=src instanceof Blob?await src.arrayBuffer():src;
+  return new Promise((res,rej)=>{const t=new muxjs.mp4.Transmuxer({keepOriginalTimestamps:false});const parts=[];let init=false;
+    t.on('data',s=>{if(!init){init=true;parts.push(s.initSegment)}parts.push(s.data)});
+    t.on('done',()=>{if(!init)return rej(new Error('no video found in that .MTS file'));let n=0;parts.forEach(p=>n+=p.byteLength);const out=new Uint8Array(n);let o=0;parts.forEach(p=>{out.set(p,o);o+=p.byteLength});res(new Blob([out],{type:'video/mp4'}))});
+    try{t.push(new Uint8Array(buf));t.flush()}catch(e){rej(e)}})}
+const RESULTS=['Rush','Complete','Incomplete','Sack','Scramble','Interception','Fumble','Penalty','Timeout'];
+// yard line: negative = DC's own half, positive = opponent's half, 50 = midfield. pos = yards to the goal line.
+const pos=y=>y==null?null:(y<0?100+y:y);           // -13 -> 87 to go ; +22 -> 22 to go
+const fromPos=p=>p>=50?(p===50?50:-(100-p)):p;      // inverse
+const S={plays:[],alm:[],sel:-1,sample:null,imgMax:0,aiCtl:null,tab:'load',half:'full',drv:{}};
+const CFG=()=>({kind:KIND(),offTeam:(($('#offTeam')||{}).value||'').trim(),game:$('#game').value.trim(),opp:$('#opp').value.trim(),our:$('#ourJersey').value.trim(),their:$('#oppJersey').value.trim(),
+  us:$('#scoreUs').value,them:$('#scoreThem').value,qbs:nums($('#qbs').value),rbs:nums($('#rbs').value),
+  goalEff:+$('#goalEff').value||50,goalExp:+$('#goalExp').value||12,expRun:+$('#expRun').value||15,expPass:+$('#expPass').value||15});
+const nums=s=>s.split(/[^0-9]+/).filter(Boolean);
+function rosterMap(){const m={};$('#roster').value.split('\n').forEach(l=>{const x=l.trim().match(/^#?(\d+)\s+(.+)$/);if(x)m[x[1]]=x[2].trim()});return m}
+const LS=()=>'fr:game:'+CUR;
+
+/* ================= loading clips ================= */
+function angleOf(s){s=s.toLowerCase();if(/end ?zone|\bez\b|endzone/.test(s))return 'End Zone';if(/tight/.test(s))return 'Tight';return 'Wide'}
+function newPlay(n){return {n,angles:{},view:'Wide',film:{},yl:null,hash:'',type:'',result:'',td:false,nd:false,h2:false,gainOverride:'',skip:false,almRow:null,
+  conf:'',src:'',note:'',star:false,carrier:'',ballEnd:null,box:'',mof:'',cov:'',press:null}}
+function groupClips(entries){
+  const parsed=entries.map((e,i)=>{const m=e.name.match(/^(.*?)[\s_-]*clip[\s_-]*(\d+)/i);return {...e,angle:angleOf(m?m[1]:e.name),num:m?+m[2]:i+1}});
+  const by=new Map();parsed.forEach(p=>{if(!by.has(p.num))by.set(p.num,[]);by.get(p.num).push(p)});
+  return [...by.keys()].sort((a,b)=>a-b).map(k=>{const pl=newPlay(k);by.get(k).forEach(x=>{if(!pl.angles[x.angle])pl.angles[x.angle]={name:x.name,get:x.get,url:null,dur:null}});
+    pl.view=pl.angles.Wide?'Wide':Object.keys(pl.angles)[0];return pl});
+}
+async function loadZip(file){toast('Reading zip…');const zip=await JSZip.loadAsync(file);
+  const v=Object.values(zip.files).filter(f=>!f.dir&&/\.(mp4|mov|m4v|mts|m2ts)$/i.test(f.name)&&!/__MACOSX/.test(f.name));
+  attach(groupClips(v.map(f=>({name:f.name.split('/').pop(),get:()=>f.async('arraybuffer').then(ab=>isTs(f.name)?tsToMp4(ab):new Blob([ab],{type:'video/mp4'}))}))))}
+function loadFiles(list){const v=[...list].filter(f=>/\.(mp4|mov|m4v|mts|m2ts)$/i.test(f.name));if(!v.length){toast('No video files found');return}
+  attach(groupClips(v.map(f=>({name:f.name,get:async()=>isTs(f.name)?await tsToMp4(f):f}))))}
+function attach(plays){if(!plays.length){toast('No clips found');return}
+  S.plays=plays;mergeSaved();const n=plays.reduce((a,p)=>a+Object.keys(p.angles).length,0);
+  $('#clipStatus').textContent=`${plays.length} plays loaded (${n} clips across angles)`;
+  refresh();$('#aiAll').disabled=!S.sample;toast(plays.length+' plays loaded')}
+async function ensureUrl(a){if(a&&!a.url){a.url=URL.createObjectURL(await a.get())}return a}
+function freeFar(i){S.plays.forEach((q,k)=>{if(Math.abs(k-i)>6)Object.values(q.angles).forEach(a=>{if(a.url&&!a.keep){URL.revokeObjectURL(a.url);a.url=null}})})}
+$('#pickZip').onclick=()=>$('#fZip').click();$('#pickFiles').onclick=()=>$('#fFiles').click();$('#pickFolder').onclick=()=>$('#fFolder').click();
+$('#fZip').onchange=e=>e.target.files[0]&&loadZip(e.target.files[0]).catch(()=>toast("Couldn't open that zip"));
+$('#fFiles').onchange=e=>loadFiles(e.target.files);$('#fFolder').onchange=e=>loadFiles(e.target.files);
+function dropper(el,fn){el.ondragover=e=>{e.preventDefault();el.classList.add('over')};el.ondragleave=()=>el.classList.remove('over');el.ondrop=e=>{e.preventDefault();el.classList.remove('over');fn([...e.dataTransfer.files])}}
+dropper($('#dropClips'),fs=>{const z=fs.find(f=>/\.zip$/i.test(f.name));z?loadZip(z).catch(()=>toast("Couldn't open that zip")):loadFiles(fs)});
+
+/* ================= almanac ================= */
+$('#pickAlm').onclick=()=>$('#fAlm').click();
+function loadAlmText(txt){try{const rows=txt.replace(/\r/g,'').split('\n').map(l=>l.split('\t'));let name='';if(rows[0]&&String(rows[0][0]).trim().toUpperCase()==='ALMANAC'){name=(rows[0][1]||'').trim();rows.shift()}
+  S.alm=parseAlm(rows);if(name){if(!$('#opp').value)$('#opp').value=name;if(!$('#game').value)$('#game').value='DC v. '+name}
+  $('#almStatus').textContent=`${S.alm.length} plays read from the Almanac app (${S.alm.filter(a=>a.nd).length} drives)`;save();refresh();toast('Almanac loaded');return true}catch(e){toast("Couldn't read that: "+e.message);return false}}
+$('#pasteAlm').onclick=async()=>{let t='';try{t=await navigator.clipboard.readText()}catch(e){}
+  if(t&&/(^|\n)(ALMANAC\t[^\n]*\n)?\s*(DOWN|DN)\t/i.test(t)&&loadAlmText(t))return;
+  let box=$('#almPaste');if(!box){box=document.createElement('textarea');box.id='almPaste';box.placeholder='Paste the almanac here, then tap Load';box.style.minHeight='70px';const b=document.createElement('button');b.textContent='Load pasted almanac';b.id='almPasteGo';b.className='pri';$('#almStatus').before(box,b);b.onclick=()=>{if(loadAlmText(box.value)){box.remove();b.remove()}}}box.focus()};
+$('#fAlm').onchange=e=>e.target.files[0]&&loadAlm(e.target.files[0]);
+dropper($('#dropAlm'),fs=>fs[0]&&loadAlm(fs[0]));
+async function loadAlm(file){
+  try{
+    if(typeof XLSX==='undefined')throw new Error('reader not loaded');
+    const wb=XLSX.read(await file.arrayBuffer(),{type:'array'});
+    const tabs=wb.SheetNames.map(n=>({n,rows:XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:false,defval:''})})).filter(t=>t.rows.some(r=>r.some(c=>/^(DOWN|DN)$/.test(String(c).trim().toUpperCase()))));
+    if(!tabs.length)throw new Error('no tab has a DOWN column');
+    const want=($('#opp').value||'').trim().toLowerCase();
+    const pickT=tabs.find(t=>want&&t.n.toLowerCase().includes(want))||tabs[0];
+    const rows=pickT.rows; if(tabs.length>1)toast(`Read tab "${pickT.n}" (${tabs.length} tabs). Set Opponent first to pick another tab.`);
+    S.alm=parseAlm(rows);
+    $('#almStatus').textContent=`${S.alm.length} plays read from "${file.name}" (${S.alm.filter(a=>a.nd).length} drives)`;
+    save();refresh();
+  }catch(e){toast("Couldn't read that almanac ("+e.message+")")}
+}
+function parseAlm(rows){
+  let hi=rows.findIndex(r=>r.some(c=>/^(DOWN|DN)$/.test(String(c).trim().toUpperCase())));
+  if(hi<0){ // pasted without the header row: use the standard almanac column order
+    const looks=rows.filter(r=>/^[1-4]$/.test(String(r[0]||'').trim())&&/^\d+$/.test(String(r[1]||'').trim())).length;
+    if(looks<3)throw new Error("that isn't almanac rows. Copy from the DOWN header row down, or use Send to Film Room in the Almanac app");
+    rows=[['DOWN','DISTANCE','JUMBO Y/N','SHIFT','MOTION','PLAY TAG','RUN CALL','PASS CALL','RGS Y/N','SHOT Y/N','RESULT','PLAYER','YARD LINE'],...rows];hi=0;}
+  const H=rows[hi].map(c=>String(c).trim().toUpperCase().replace(/^DN$/,'DOWN'));const col=n=>H.indexOf(n);
+  const C={dn:col('DOWN'),dist:col('DISTANCE'),motion:col('MOTION'),tag:col('PLAY TAG'),run:col('RUN CALL'),pass:col('PASS CALL'),result:col('RESULT'),player:col('PLAYER'),yl:col('YARD LINE')};
+  const out=[];let nd=true,h2=false;
+  for(const r of rows.slice(hi+1)){
+    const g=k=>C[k]>=0?String(r[C[k]]??'').trim():'';
+    if(r.some(c=>String(c).trim().toUpperCase()==='NEW DRIVE')){nd=true;continue}
+    if(r.some(c=>/^HALF ?TIME$/.test(String(c).trim().toUpperCase()))){nd=true;h2=true;continue}
+    const dn=parseInt(g('dn')),ylRaw=g('yl').replace(/^-+/,'-'),yl=parseInt(ylRaw);
+    const any=g('run')||g('pass')||g('result');
+    if(!any&&isNaN(dn))continue;
+    out.push({i:out.length+1,dn:isNaN(dn)?null:dn,dist:parseInt(g('dist'))||null,motion:g('motion').toUpperCase(),tag:g('tag').toUpperCase(),run:g('run').toUpperCase(),pass:g('pass').toUpperCase(),
+      result:g('result').toUpperCase(),player:g('player').replace(/[^0-9]/g,''),yl:isNaN(yl)?null:yl,nd,h2});
+    nd=false;h2=false;
+  }
+  return out;
+}
+
+/* ================= align almanac rows to clips (sequence alignment on the spot) ================= */
+function align(){
+  const live=S.plays.filter(p=>!p.skip&&p.result!=='Timeout');
+  S.plays.forEach(p=>p._alm=null);
+  if(!S.alm.length)return;
+  const A=S.alm, n=live.length, m=A.length, GAP=6;
+  const cost=(p,a)=>{ if(a.dn==null)return 9; const fy=p.film.yl; if(fy==null||a.yl==null)return 3;
+    const d=Math.abs(pos(fy)-pos(a.yl)), d2=Math.abs(pos(-fy)-pos(a.yl))+2; return Math.min(Math.min(d,d2),25)/2.5 };
+  // anchors: coach-set almanac rows split the problem into segments
+  const anchors=[];live.forEach((p,i)=>{if(p.almRow){const j=A.findIndex(a=>a.i===+p.almRow);if(j>=0)anchors.push([i,j])}});
+  const seg=(i0,i1,j0,j1)=>{ // align live[i0..i1) with A[j0..j1)
+    const N=i1-i0,M=j1-j0,D=Array.from({length:N+1},()=>new Float64Array(M+1)),B=Array.from({length:N+1},()=>new Int8Array(M+1));
+    for(let i=1;i<=N;i++){D[i][0]=i*GAP;B[i][0]=1} for(let j=1;j<=M;j++){D[0][j]=j*GAP;B[0][j]=2}
+    for(let i=1;i<=N;i++)for(let j=1;j<=M;j++){const a=D[i-1][j-1]+cost(live[i0+i-1],A[j0+j-1]),b=D[i-1][j]+GAP,c=D[i][j-1]+GAP;
+      if(a<=b&&a<=c){D[i][j]=a;B[i][j]=0}else if(b<=c){D[i][j]=b;B[i][j]=1}else{D[i][j]=c;B[i][j]=2}}
+    let i=N,j=M;while(i>0||j>0){const t=B[i][j];if(i>0&&j>0&&t===0){live[i0+i-1]._alm=A[j0+j-1];i--;j--}else if(i>0&&(j===0||t===1))i--;else j--}
+  };
+  let pi=0,pj=0;
+  for(const [ai,aj] of anchors){ if(ai<pi||aj<pj)continue; seg(pi,ai,pj,aj); live[ai]._alm=A[aj]; pi=ai+1; pj=aj+1; }
+  seg(pi,n,pj,m);
+}
+
+/* ================= reconciliation + engine ================= */
+const isEff=(dn,dist,g)=>dn===1&&dist>=10?g>=4:dn===2?g>=dist/2:g>=dist;
+function compute(){
+  align();
+  const c=CFG(), QB=new Set(c.qbs), RB=new Set(c.rbs);
+  const live=S.plays.filter(p=>!p.skip);
+  let down=null,dist=null,half=1;
+  live.forEach((p,k)=>{
+    const o={dn:null,dist:null,yl:null,gn:null,eff:'',exp:'',type:'',result:'',td:false,flags:[],drive:false,call:'',player:'',half:1};
+    const a=p._alm;
+    if(p.h2||(a&&a.h2))half=2; o.half=half;
+    let nx=null;for(let q=k+1;q<live.length;q++){if(live[q].result!=='Timeout'){nx=live[q];break}}
+    if(p.result==='Timeout'){o.result='Timeout';o.gn=0;o.hash=p.hash;o.yl=p.yl;o.flags=[];p.calc=o;return} // filled from the next snap below
+    if(a){ // ---------- Friday night: almanac supplies DN, DIST, spot, call, player
+      o.yl=a.yl; o.dn=a.dn; o.dist=a.dist; o.drive=a.nd; o.call=[a.motion,a.tag,a.run||a.pass].filter(Boolean).join(' '); o.player=a.player;
+      if(p.yl!=null&&a.yl!=null&&Math.abs(pos(p.yl)-pos(a.yl))>=3)o.flags.push(`Spot: film ${ylTxt(p.yl)} vs almanac ${ylTxt(a.yl)}`);
+      if(p.yl==null&&a.yl==null)o.flags.push('No spot');
+      const nA=nx&&nx._alm;
+      let gn=null; const rNum=parseInt(a.result);
+      if(nA&&!nA.nd&&nA.yl!=null&&a.yl!=null)gn=pos(a.yl)-pos(nA.yl);
+      else if(!isNaN(rNum))gn=rNum;
+      else if(p.ballEnd!=null&&a.yl!=null)gn=pos(a.yl)-pos(p.ballEnd);
+      const R=a.result, td=/TD/.test(R)||p.td;
+      let type='',res='';
+      if(R==='PENALTY'){res='Penalty'}
+      else if(a.run){type='Run';
+        if(R==='INC')res='Incomplete';
+        else if(QB.has(a.player)&&gn!=null&&gn<0&&R)res='Sack';
+        else if(a.player&&!QB.has(a.player)&&!RB.has(a.player))res='Complete';
+        else res='Rush'}
+      else if(a.pass){type='Pass';
+        if(R==='INC')res='Incomplete';
+        else if(QB.has(a.player)){res=gn!=null&&gn<=0?'Sack':'Scramble';o.player=''+a.player}
+        else if(R)res='Complete';
+        else if(nA&&!nA.nd&&nA.yl===a.yl)res='Incomplete';
+        else if(a.player&&gn)res='Complete';
+        else res=p.result||'Complete'}
+      else { if(R==='INC'){type='Pass';res='Incomplete'} else {type=p.type;res=p.result} }
+      if(res==='Complete'&&QB.has(a.player)){o.player='';o.flags.push('Receiver not recorded')}
+      if(res==='Incomplete')gn=0;
+      if(!R&&type&&res!=='Incomplete')o.flags.push('Almanac result blank');
+      if(p.result&&p.src==='human'){res=p.result} // coach override wins
+      else if(p.result&&res&&p.result!==res&&p.conf)o.flags.push(`Film read ${p.result}`);
+      if(p.type&&p.src==='human')type=p.type;
+      o.type=type;o.result=res;o.td=td;o.gn=gn;
+      down=null;
+    } else { // ---------- opponent scout: film only, chains from the spots
+      o.yl=p.yl;
+      const valid=o.yl!=null&&o.yl>=-50&&o.yl<=50&&o.yl!==0;
+      if(!valid){o.flags.push('Spot missing');p.calc=o;down=null;return}
+      const ytg=pos(o.yl);
+      if(p.nd||down===null){o.drive=true;down=1;dist=Math.min(10,ytg)}
+      o.dn=down;o.dist=dist;o.type=p.type;o.result=p.result;o.td=p.td;
+      if(p.film.down&&p.film.down!==down)o.flags.push(`Down box shows ${p.film.down}`);
+      const nxt=nx&&!nx.nd&&nx.yl!=null?nx:null, r=p.result;
+      let gn=null;
+      if(p.td)gn=ytg; else if(r==='Incomplete'||r==='Interception')gn=0;
+      else if(nxt)gn=ytg-pos(nxt.yl); else if(p.ballEnd!=null)gn=ytg-pos(p.ballEnd);
+      else o.flags.push('Last snap of the drive: enter the gain');
+      if(r==='Incomplete'&&nxt&&pos(nxt.yl)!==ytg)o.flags.push('Ball moved after an incompletion');
+      o.gn=gn;
+      // advance chains
+      if(gn==null||p.td||r==='Interception'||r==='Fumble')down=null;
+      else if(r==='Penalty'){ if(gn>=dist){down=1;dist=Math.min(10,ytg-gn)} else dist-=gn }
+      else if(gn>=dist){down=1;dist=Math.min(10,ytg-gn)}
+      else if(down>=4){down=null}
+      else{down++;dist-=gn}
+    }
+    if(p.gainOverride!==''&&isFinite(+p.gainOverride))o.gn=+p.gainOverride;
+    o.hash=p.hash; if(!p.hash)o.flags.push('Hash missing'); else if(p.hash==='M'&&p.conf)o.flags.push('Hash M: verify');
+    if(o.result&&o.result!=='Penalty'&&o.gn!=null&&o.dn){
+      o.eff=isEff(o.dn,o.dist,o.gn)?'Y':'N';
+      const thr=(o.result==='Complete')?c.expPass:c.expRun;
+      o.exp=(o.result==='Rush'||o.result==='Complete')&&o.gn>=thr?'YES':'';
+    }
+    if(o.result==='Sack'&&o.gn>0)o.flags.push('Sack with a gain?');
+    if(o.gn!=null&&!o.td&&o.yl!=null&&o.gn>=pos(o.yl))o.flags.push('Gain reaches the goal line: TD?');
+    if(p.conf==='low')o.flags.push('AI low confidence');
+    if(p.note&&p.conf)o.note=p.note;
+    p.calc=o;
+  });
+  S.plays.filter(p=>p.skip).forEach(p=>p.calc=null);
+  live.forEach((p,k)=>{if(p.calc.result!=='Timeout')return;const n=live.slice(k+1).find(q=>q.calc&&q.calc.result!=='Timeout');
+    if(n){const c=p.calc;c.yl=n.calc.yl??c.yl;c.dn=n.calc.dn;c.dist=n.calc.dist;c.hash=c.hash||n.calc.hash;c.half=n.calc.half}});
+}
+function needsReview(p){return !p.skip&&p.src!=='human'&&p.calc&&p.calc.flags.length>0}
+
+/* ================= tag table ================= */
+function renderTable(){
+  const ps=S.plays;if(!ps.length){$('#tableWrap').innerHTML='<div class="empty">Load clips on the Load tab.</div>';return}
+  const only=$('#onlyReview').checked;
+  let h='<table><thead><tr><th class="n">Clip</th><th class="n">Yd ln</th><th>Hash</th><th class="n">Dn</th><th class="n">Dist</th><th class="n">Gn</th><th>Type</th><th>Result</th><th>Eff</th><th>Exp</th>'+(OPP()?'<th>Box</th><th>MOF</th><th>Cov</th><th class="n">Rush</th>':'<th>Call</th><th>Plyr</th>')+'<th>Src</th><th></th></tr></thead><tbody>';
+  ps.forEach((p,i)=>{const c=p.calc||{};const rev=needsReview(p);if(only&&!rev&&i!==S.sel)return;
+    const cls=['play'];if(i===S.sel)cls.push('sel');if(p.skip)cls.push('skip');if(c.drive)cls.push('drive');if(rev)cls.push('flag');
+    const src=p.src==='human'?'<span class="pill coach">coach</span>':p.conf?`<span class="pill ${p.conf==='low'?'lo':'hi'}">AI ${p.conf}</span>`:'';
+    h+=`<tr class="${cls.join(' ')}" data-i="${i}"><td class="n">${p.n}${p.h2?' <span class="pill">2H</span>':''}</td><td class="n">${ylTxt(c.yl)}</td><td>${esc(p.hash)}</td><td class="n">${c.dn??''}</td><td class="n">${c.dist??''}</td><td class="n">${c.gn??''}</td>
+    <td>${p.skip?'Skip':esc(c.type||'')}</td><td>${esc((c.result||'')+(c.td?', TD':''))}</td><td>${c.eff||''}</td><td>${c.exp?'<span class="pill hi">YES</span>':''}</td>${OPP()?`<td>${esc(p.box)}</td><td>${esc(p.mof)}</td><td>${esc(p.cov)}</td><td class="n">${p.press??''}</td>`:`<td>${esc(c.call||'')}</td><td>${c.player?'#'+esc(c.player):''}</td>`}<td>${src}</td><td class="fl">${rev?'⚑':''}</td></tr>`});
+  $('#tableWrap').innerHTML=h+'</tbody></table>';
+}
+$('#tableWrap').onclick=e=>{const tr=e.target.closest('tr.play');tr&&select(+tr.dataset.i)};
+$('#onlyReview').onchange=renderTable;
+
+/* ================= detail ================= */
+async function select(i){if(i<0||i>=S.plays.length)return;S.sel=i;renderTable();
+  const row=document.querySelector(`tr[data-i="${i}"]`);row&&row.scrollIntoView({block:'nearest'});
+  renderDetail();const p=S.plays[i],a=p.angles[p.view];if(a&&!a.url){try{await ensureUrl(a)}catch(e){}if(S.sel===i)renderDetail()}freeFar(i)}
+function seg(f,opts,val){return `<div class="seg" data-f="${f}">${opts.map(o=>`<button class="${o===val?'on':''}" data-v="${o}">${o}</button>`).join('')}</div>`}
+function renderDetail(){const i=S.sel,p=S.plays[i];if(!p)return;const c=p.calc||{},a=p.angles[p.view];
+  const tabs=`<div class="seg" id="angTabs">${ANGLES.map(n=>`<button data-a="${n}" class="${p.view===n?'on':''}" ${p.angles[n]?'':'disabled'}>${n}</button>`).join('')}</div>`;
+  const vid=a&&a.url?`<video src="${a.url}" controls autoplay muted loop playsinline></video>`:'<div class="empty">Loading clip…</div>';
+  const fr=p._frames?`<div class="frames">${p._frames.map(f=>`<img src="${f.u}" title="${esc(f.label)}">`).join('')}</div>`:'';
+  const almOpts=S.alm.length?`<label class="f">Almanac row<select id="almRow"><option value="">Auto${p._alm?' (row '+p._alm.i+')':' (none)'}</option>${S.alm.map(r=>`<option value="${r.i}" ${+p.almRow===r.i?'selected':''}>${r.i}: ${r.dn??'-'}&${r.dist??'-'} ${esc(r.run||r.pass)} ${esc(r.result)} @${ylTxt(r.yl)}</option>`).join('')}</select></label>`:'';
+  $('#detail').innerHTML=`<div class="bar"><h3>Clip ${p.n}</h3><span style="flex:1"></span><button id="prev">◀</button><button id="next">▶</button><button id="aiOne" ${S.sample?'':'disabled'}>AI tag this play</button></div>
+  ${tabs}${vid}${fr}
+  <div class="grid" style="grid-template-columns:repeat(3,1fr)">
+   <label class="f">Film spot (− own / + opp)<input id="yl" type="number" min="-50" max="50" value="${p.yl??''}"></label>
+   <label class="f">Gain override<input id="gov" type="number" placeholder="${c.gn??'auto'}" value="${p.gainOverride??''}"></label>
+   <label class="f">Ball end spot<input id="be" type="number" min="-50" max="50" value="${p.ballEnd??''}"></label>
+  </div>
+  <div class="bar"><span class="meta">Hash</span>${seg('hash',['L','M','R'],p.hash)}<span class="meta">Type</span>${seg('type',['Run','Pass'],p.type)}</div>
+  <div>${seg('result',RESULTS,p.result)}</div>
+  <div class="bar"><label class="c"><input type="checkbox" id="td" ${p.td?'checked':''}>TD</label><label class="c"><input type="checkbox" id="nd" ${p.nd?'checked':''}>New drive</label>
+   <label class="c"><input type="checkbox" id="h2" ${p.h2?'checked':''}>2nd half starts here</label><label class="c"><input type="checkbox" id="skip" ${p.skip?'checked':''}>Not a snap (skip)</label>
+   <label class="c"><input type="checkbox" id="star" ${p.star?'checked':''}>Turned the tide</label></div>
+  ${OPP()?defEditor(p):almOpts}
+  <div class="calc"><div>Down<b>${c.dn??'–'}</b></div><div>Dist<b>${c.dist??'–'}</b></div><div>GN/LS<b>${c.gn??'–'}</b></div><div>Eff<b>${c.eff||'–'}</b></div><div>Expl<b>${c.exp||'NO'}</b></div></div>
+  ${c.call?`<div class="note"><b>Almanac:</b> ${esc(c.call)}${c.player?' · #'+esc(c.player):''} · ${esc(p._alm?p._alm.result:'')}</div>`:''}
+  ${c.flags&&c.flags.length?`<div class="flags">⚑ ${c.flags.map(esc).join('<br>⚑ ')}</div>`:''}
+  ${p.note?`<div class="note"><b>AI note:</b> ${esc(p.note)}</div>`:''}
+  <div class="bar"><button class="pri" id="ok">Looks right ✓ (Enter)</button></div>
+  <div class="note">Keys: <kbd>↑</kbd><kbd>↓</kbd> play · <kbd>L</kbd><kbd>M</kbd><kbd>R</kbd> hash · <kbd>U</kbd> run <kbd>P</kbd> pass · <kbd>1</kbd>–<kbd>9</kbd> result · <kbd>T</kbd> TD · <kbd>D</kbd> new drive · <kbd>Space</kbd> play/pause. With an almanac, down, distance and spot come from it; the film supplies hash and checks the spot.</div>`;
+  $('#prev').onclick=()=>select(i-1);$('#next').onclick=()=>select(i+1);$('#aiOne').onclick=()=>aiTag([i]);
+  $$('#angTabs button').forEach(b=>b.onclick=async()=>{p.view=b.dataset.a;await ensureUrl(p.angles[p.view]).catch(()=>{});renderDetail()});
+  $('#ok').onclick=()=>{p.src='human';refresh();select(i+1)};
+  const num=v=>v===''?null:+v;
+  $('#yl').onchange=e=>edit({yl:num(e.target.value)});$('#gov').onchange=e=>edit({gainOverride:e.target.value});$('#be').onchange=e=>edit({ballEnd:num(e.target.value)});
+  ['td','nd','h2','skip','star'].forEach(k=>$('#'+k).onchange=e=>edit({[k]:e.target.checked},k==='star'));
+  const ar=$('#almRow');if(ar)ar.onchange=e=>edit({almRow:e.target.value?+e.target.value:null},true);
+  $$('#detail .seg[data-f]').forEach(s=>s.onclick=e=>{const v=e.target.dataset.v;if(!v)return;const f=s.dataset.f;edit({[f]:p[f]===v?'':v})});
+  $$('#detail .frames img').forEach(im=>im.onclick=()=>{$('#zoom img').src=im.src;$('#zoom').style.display='flex'});
+}
+function edit(ch,keepSrc){const p=S.plays[S.sel];Object.assign(p,ch);if(!keepSrc)p.src='human';refresh();renderDetail()}
+$('#zoom').onclick=()=>$('#zoom').style.display='none';
+document.addEventListener('keydown',e=>{if(TAB!=='tagger'||!G||!G.local||e.target.matches('input,select,textarea')||S.sel<0)return;const p=S.plays[S.sel],k=e.key.toLowerCase();
+  if(k==='arrowdown'){e.preventDefault();select(S.sel+1)}else if(k==='arrowup'){e.preventDefault();select(S.sel-1)}
+  else if('lmr'.includes(k)&&k.length===1)edit({hash:k.toUpperCase()});else if(k==='u')edit({type:'Run'});else if(k==='p')edit({type:'Pass'});
+  else if(/^[1-9]$/.test(k))edit({result:RESULTS[+k-1]});else if(k==='t')edit({td:!p.td});else if(k==='d')edit({nd:!p.nd});
+  else if(k==='enter'){p.src='human';refresh();select(S.sel+1)}
+  else if(k===' '){const v=$('#detail video');if(v){e.preventDefault();v.paused?v.play():v.pause()}}});
+
+/* ================= frames ================= */
+// grab frames at the given times (seconds; negative = from the end). crop = top portion zoomed (down box, chains, far sideline).
+function grab(url,specs){return new Promise(res=>{const v=document.createElement('video');v.muted=true;v.preload='auto';v.playsInline=true;v.src=url;
+  const out=[];let k=0,done=false;const fin=()=>{if(done)return;done=true;res({frames:out,dur:v.duration||0})};v.onerror=fin;
+  v.onloadedmetadata=()=>{const d=v.duration||0;if(!d){fin();return}const vw=v.videoWidth||1280,vh=v.videoHeight||720;
+    const list=(typeof specs==='function'?specs(d):specs).map(s=>({...s,t:Math.max(0.05,Math.min(d-0.05,s.t<0?d+s.t:s.t))}));
+    const step=()=>{if(k>=list.length){fin();return}v.currentTime=list[k].t};
+    v.onseeked=()=>{const s=list[k];const cv=document.createElement('canvas');
+      if(s.crop){const sh=Math.round(vh*0.5);cv.width=Math.min(1280,vw);cv.height=Math.round(cv.width*sh/vw);cv.getContext('2d').drawImage(v,0,0,vw,sh,0,0,cv.width,cv.height)}
+      else{cv.width=Math.min(1024,vw);cv.height=Math.round(cv.width*vh/vw);cv.getContext('2d').drawImage(v,0,0,cv.width,cv.height)}
+      cv.toBlob(b=>{out.push({...s,blob:b});k++;step()},'image/jpeg',0.82)};
+    step()};setTimeout(fin,30000)})}
+async function presnapSet(p){ // call A: spot + hash
+  const out=[];
+  for(const ang of ['Wide','Tight','End Zone']){const a=p.angles[ang];if(!a)continue;await ensureUrl(a);a.keep=true;
+    const specs=ang==='End Zone'?[{t:0.2,label:'End Zone pre-snap'}]:[{t:0.2,label:ang+' pre-snap'},{t:0.2,crop:true,label:ang+' pre-snap ZOOM (top half: far sideline, down box, chains)'}];
+    const g=await grab(a.url,specs);a.dur=g.dur;out.push(...g.frames.map(f=>({...f,angle:ang})))}
+  return out.slice(0,Math.min(6,S.imgMax||6));
+}
+async function playSet(p){ // call B: Wide + Tight at 2 frames per second
+  const angs=['Wide','Tight'].filter(x=>p.angles[x]);if(!angs.length)angs.push(Object.keys(p.angles)[0]);
+  const budget=Math.max(4,Math.min(24,(S.imgMax||20)));const per=Math.floor(budget/angs.length);const out=[];
+  for(const ang of angs){const a=p.angles[ang];await ensureUrl(a);a.keep=true;
+    const g=await grab(a.url,d=>{const n=Math.max(2,Math.min(per,Math.round(d*2)));const ts=[];for(let j=0;j<n;j++)ts.push({t:0.1+j*(d-0.2)/(n-1),label:''});return ts.map(t=>({...t,label:`${ang} ${t.t.toFixed(1)}s`}))});
+    a.dur=g.dur;out.push(...g.frames.map(f=>({...f,angle:ang})))}
+  return out;
+}
+
+/* ================= AI reading (tested method: separate questions, independent per snap) ================= */
+function promptA(frames){const c=CFG();return `You are reading ONE pre-snap moment of a high school football play. ${frames.length} images: ${frames.map((f,i)=>`#${i+1} ${f.label}`).join('; ')}.
+Offense: ${OFFN()} in ${c.our||'?'} jerseys. Defense: ${c.opp||'opponent'} in ${c.their||'?'} jerseys. Both end zones may carry the same paint, so do NOT use end zone paint to decide direction.
+Answer only these questions. Read this snap on its own.
+1. direction: which way is the offense going, toward "screen_left" or "screen_right"? Use the QB and backfield: they line up behind the ball, on the side the offense is coming FROM.
+2. yard_number: the yard line of the ball at the snap, 1-50. Spot sources in this order: (a) the down box (tall pole with a number) on the far sideline marks the line of scrimmage; (b) the chains (two poles 10 yds apart) where the back pole or front pole lines up; (c) the side official at the line; (d) the ball between painted lines. Spot the BALL, not the linemen. If the ball is within half a yard of a line, it is ON that line. Count from the nearest painted 5-yard lines and the 50; don't trust the slanted numbers alone.
+3. ball_side: is the ball on the "screen_left" or "screen_right" half of the field (relative to the 50)? Answer "mid" only if it is on the 50.
+4. hash: where is the ball relative to the two hash rows, from the camera: "near" (camera-side hash), "far", or "middle" (clearly between the rows).
+5. down_box: the number shown on the down box if you can read it (1-4), else null.
+6. scoreboard: if a scoreboard is readable, {"down":n,"to_go":n,"ball_on":n}, else null.
+7. no_snap: true if this is not an offensive snap (kickoff, punt, PAT kick, timeout, dead time).
+8. possession: who has the ball on this snap. "ours" = the ${c.our||'?'} jerseys are the offense (QB behind the line with the ball); "theirs" = the ${c.their||'?'} jerseys are the offense (our defense is on the field); "kick" = kickoff, punt, field goal or PAT kick formation; "none" = no live play (timeout, dead time). Decide by jersey color and formation, never by field position.
+Reply with only JSON: {"direction":"screen_right","possession":"ours","yard_number":35,"ball_side":"screen_left","hash":"near","down_box":2,"scoreboard":null,"no_snap":false,"spot_source":"down box|chains|official|lines","confidence":"high|med|low","note":"<12 words>"}`}
+function promptB(frames){const c=CFG();return `You are reading ONE high school football play. ${frames.length} frames in time order from ${[...new Set(frames.map(f=>f.angle))].join(' and ')} (2 per second): ${frames.map((f,i)=>`#${i+1} ${f.label}`).join('; ')}.
+Wide = high on the sideline, whole field. Tight = same sideline, zoomed on the ball. Offense: ${OFFN()} in ${c.our||'?'}. Defense: ${c.opp||'opponent'} in ${c.their||'?'}.
+Answer only these questions:
+1. snap: is there an offensive snap in these frames? (false for kickoff, punt, PAT kick, timeout, players standing around)
+2. play_type: "Run" or "Pass". Watch the QB's arm in the first second after the snap: cocking back and releasing (even a quick flip on a screen) = Pass; low forward hand-off motion = Run. Check whether the line pass-sets. A QB who drops then runs is a Pass (scramble).
+3. result: one of Rush, Complete, Incomplete, Sack, Scramble, Interception, Fumble, Penalty. Incomplete = ball hits the ground or official waves it off. Sack = QB downed behind the line on a pass. Scramble = QB runs after a pass drop. Penalty only if a flag is down and the play is blown dead (white-hat official waving arms over his head = dead-ball foul).
+4. carrier: jersey number of the ball carrier or receiver if readable, else "".
+5. end_yard_number: yard line (1-50) where the ball carrier went down or the ball was spotted, else null; end_side: "screen_left" or "screen_right" half for that spot.
+6. td: true only if the ball carrier is in the end zone with the ball (official's arms straight up confirms).
+7. flag: true if a penalty flag is visible.
+Reply with only JSON: {"snap":true,"play_type":"Pass","result":"Complete","carrier":"2","end_yard_number":40,"end_side":"screen_right","td":false,"flag":false,"confidence":"high|med|low","note":"<12 words>"}`}
+const signed=(num,side,dir)=>{if(!num)return null;num=Math.max(1,Math.min(50,Math.round(num)));if(num===50||side==='mid')return 50;return side===dir?num:-num};
+async function aiTag(idx){
+  if(!S.sample){toast('AI tagging is not available in this view');return}
+  const ctl=new AbortController();S.aiCtl=ctl;$('#aiStop').hidden=false;$('#aiAll').disabled=true;let done=0;
+  for(const i of idx){if(ctl.signal.aborted)break;const p=S.plays[i];
+    $('#aiStatus').textContent=`Reading clip ${p.n} (${done+1}/${idx.length})…`;
+    try{
+      const fa=await presnapSet(p);let A0=null;
+      if(!OPP()&&fa.length){A0=await S.sample.json(promptA(fa),{modelTier:$('#tier').value,signal:ctl.signal,images:fa.map(f=>f.blob)});
+        const poss=String(A0.possession||'').toLowerCase();
+        if(['theirs','kick','none'].includes(poss)&&A0.confidence!=='low'){
+          Object.assign(p,{skip:true,conf:A0.confidence||'med',src:'ai',note:'Auto-skipped: '+({theirs:'other team has the ball (our defense)',kick:'kick / special teams',none:'no live play'}[poss])+(A0.note?' · '+A0.note:'')});
+          p._frames=fa.map(f=>({label:f.label,u:URL.createObjectURL(f.blob)}));done++;refresh();if(S.sel===i)renderDetail();continue}}
+      const fb=await playSet(p);
+      if(!fa.length&&!fb.length){p.conf='low';p.note="Couldn't pull frames";continue}
+      p._frames=[...fa,...fb].map(f=>({label:f.label,u:URL.createObjectURL(f.blob)}));
+      const opt={modelTier:$('#tier').value,signal:ctl.signal};
+      const fc=OPP()?await defSet(p):[];if(fc.length)p._frames.push(...fc.map(f=>({label:f.label,u:URL.createObjectURL(f.blob)})));
+      const [A,B,Cd]=await Promise.all([(A0||S.sample.json(promptA(fa),{...opt,images:fa.map(f=>f.blob)})),S.sample.json(promptB(fb),{...opt,images:fb.map(f=>f.blob)}),fc.length?S.sample.json(promptC(fc),{...opt,images:fc.map(f=>f.blob)}):null]);
+      if(p.src==='human')continue;
+      const dir=A.direction==='screen_left'?'screen_left':'screen_right';
+      const hash=A.hash==='middle'?'M':A.hash==='near'?(dir==='screen_right'?'R':'L'):A.hash==='far'?(dir==='screen_right'?'L':'R'):'';
+      const sb=A.scoreboard&&A.scoreboard.down?A.scoreboard:null;
+      const noSnap=(A.no_snap&&B.snap===false);
+      const confs=[A.confidence,B.confidence];const conf=confs.includes('low')?'low':confs.includes('med')?'med':'high';
+      Object.assign(p,{yl:signed(+A.yard_number,A.ball_side,dir),hash,type:noSnap?'':['Run','Pass'].includes(B.play_type)?B.play_type:'',result:noSnap?'Timeout':RESULTS.includes(B.result)?B.result:'',
+        td:!!B.td,ballEnd:signed(+B.end_yard_number,B.end_side,dir),carrier:String(B.carrier||''),conf,src:'ai',
+        note:[A.note,B.note,A.spot_source?'spot: '+A.spot_source:'',B.flag?'flag on the play':''].filter(Boolean).join(' · ').slice(0,200),
+        film:{dir,down:sb?+sb.down:(+A.down_box||null),sb}});
+      if(Cd)applyDef(p,Cd);
+      done++;
+    }catch(e){if(e&&e.code==='cancelled')break;
+      if(e&&['not_granted','sampling_disabled','not_declared','capability_disabled','capability_removed','images_unavailable'].includes(e.code)){toast('AI tagging is not allowed in this view');S.sample=null;break}
+      if(e&&e.code==='rate_limited'){toast('Hit the usage limit; try again later');break}
+      p.conf='low';p.note='AI read failed ('+((e&&e.code)||'error')+')'}
+    refresh();if(S.sel===i)renderDetail();
+  }
+  {const sk=S.plays.filter(p=>p.skip&&p.src==='ai').length;$('#aiStatus').textContent=done?`Read ${done} play${done>1?'s':''}${sk?`; ${sk} skipped as not our offense (untick "Not a snap" on any it got wrong)`:''}. Work the review queue.`:''}$('#aiStop').hidden=true;$('#aiAll').disabled=!S.sample;S.aiCtl=null;refresh();if(S.sel>=0)renderDetail();
+}
+$('#aiAll').onclick=()=>aiTag(S.plays.map((p,i)=>i).filter(i=>!S.plays[i].conf&&S.plays[i].src!=='human'&&!S.plays[i].skip));
+$('#aiStop').onclick=()=>S.aiCtl&&S.aiCtl.abort();
+
+
+/* ================= Opponent scout (their defense) ================= */
+function KIND(){return S.kind||'self'}
+function OPP(){return KIND()==='opp'}
+function OFFN(){return OPP()?(CFG().offTeam||'the offense on film'):'Deer Creek'}
+const BOXES=['31','32','33','34','41','42','43','44','51','52','53'],MOFS=['0-high','1-high','2-high','3-high'],COVS=['Man','Zone'],RUSH=['3','4','5','6','7','8'];
+function defEditor(p){return `<div class="panel" style="padding:10px;gap:8px;background:var(--panel2)"><span class="meta">Defense (${esc(CFG().opp||'team we are scouting')})</span>
+  <div class="bar"><span class="meta">Box</span>${seg('box',BOXES,p.box)}</div>
+  <div class="bar"><span class="meta">MOF</span>${seg('mof',MOFS,p.mof)}<span class="meta">Cov</span>${seg('cov',COVS,p.cov)}</div>
+  <div class="bar"><span class="meta">Rushers</span>${seg('press',RUSH,p.press==null?'':String(p.press))}</div></div>`}
+async function defSet(p){ // End Zone is best for box and safeties; Wide shows the whole secondary after the snap
+  const out=[],cap=Math.max(4,Math.min(10,S.imgMax||10));
+  const ez=p.angles['End Zone'],w=p.angles.Wide||p.angles.Tight;
+  if(ez){await ensureUrl(ez);const g=await grab(ez.url,[{t:0.2,label:'End Zone pre-snap'},{t:1.0,label:'End Zone 1.0s'},{t:1.5,label:'End Zone 1.5s'},{t:2.0,label:'End Zone 2.0s'},{t:2.5,label:'End Zone 2.5s'}]);out.push(...g.frames.map(f=>({...f,angle:'End Zone'})))}
+  if(w){await ensureUrl(w);const g=await grab(w.url,[{t:0.2,label:'Wide pre-snap'},{t:1.0,label:'Wide 1.0s'},{t:1.5,label:'Wide 1.5s'},{t:2.0,label:'Wide 2.0s'},{t:2.5,label:'Wide 2.5s'}]);out.push(...g.frames.map(f=>({...f,angle:'Wide'})))}
+  return out.slice(0,cap)}
+function promptC(frames){const c=CFG();return `You are reading the DEFENSE on ONE high school football snap. ${frames.length} images: ${frames.map((f,i)=>`#${i+1} ${f.label}`).join('; ')}. The snap is usually in the first 1-2 seconds of the clip.
+Defense: ${c.opp||'the defense'} in ${c.their||'?'} jerseys. Offense: ${OFFN()} in ${c.our||'?'} jerseys. End Zone = camera behind one end; Wide = high on the sideline.
+Answer only these four questions, using these exact rules:
+1. box: the front's shape as two digits, DOWN then BACKERS (e.g. "42" = 4 down, 2 backers; "34" = 3 down, 4 backers).
+   - Box edge = the tight end. On a side with no TE, the box edge is a ghost TE spot about 2 yards outside the offensive tackle.
+   - DOWN = every defender on the line of scrimmage INSIDE the box edge, hand down OR standing up. A defender head-up on the TE counts as down.
+   - BACKERS = defenders on the line of scrimmage OUTSIDE the box edge, plus defenders off the ball inside the box about 3-7 yards deep.
+   - Do NOT count an apex/nickel/overhang defender off the ball over a slot receiver, or anyone 8+ yards deep.
+2. mof: deep safeties at about 10+ yards at the snap: "0-high", "1-high" (middle closed), "2-high" (middle open) or "3-high". If they rotate at the snap, answer what they play AFTER the snap.
+3. coverage: "Man" if defenders turn and run with receivers and follow them across the field; "Zone" if defenders drop to areas with eyes on the QB. Use the post-snap frames.
+4. rushers: how many defenders cross the line of scrimmage after the snap (count on run plays too).
+Reply with only JSON: {"box":"42","mof":"1-high","coverage":"Zone","rushers":4,"confidence":"high|med|low","note":"<12 words>"}`}
+function applyDef(p,C){const b=String(C.box||'').replace(/\D/g,'').slice(0,2);p.box=/^\d\d$/.test(b)?b:'';p.mof=MOFS.includes(C.mof)?C.mof:'';p.cov=COVS.includes(C.coverage)?C.coverage:'';
+  const r=parseInt(C.rushers);p.press=isFinite(r)&&r>=2&&r<=11?String(r):null;if(C.confidence==='low')p.conf='low';if(C.note)p.note=(p.note?p.note+' · ':'')+'D: '+C.note}
+
+/* ---------- opponent scout pages ---------- */
+function oppPlays(){compute();return S.plays.filter(p=>p.calc&&!p.skip&&p.calc.result&&!/Timeout/.test(p.calc.result)).map(p=>({p,...p.calc,box:p.box,mof:p.mof,cov:p.cov,press:p.press==null||p.press===''?null:+p.press}))}
+const share=(arr,f)=>{const m={};arr.forEach(x=>{const k=f(x);if(k==null||k==='')return;m[k]=(m[k]||0)+1});return Object.entries(m).sort((a,b)=>b[1]-a[1])};
+function lookTable(title,rows,key,label){const T=rows.length;const g=share(rows,key);
+  return `<div class="panel"><h3>${title}</h3><div class="tablewrap"><table><thead><tr><th>${label}</th><th class="n">Snaps</th><th class="n">%</th><th class="n">Yds/play allowed</th><th class="n">Eff allowed</th><th class="n">Expl allowed</th></tr></thead><tbody>${g.map(([k,n])=>{const r=rows.filter(x=>String(key(x))===k),e=r.filter(x=>x.eff);
+    return `<tr><td><b>${esc(k)}</b></td><td class="n">${n}</td><td class="n">${pct(n,T)}%</td><td class="n">${(r.reduce((a,x)=>a+(x.gn||0),0)/n).toFixed(1)}</td><td class="n">${e.length?pct(e.filter(x=>x.eff==='Y').length,e.length)+'%':''}</td><td class="n">${r.filter(x=>x.exp).length||''}</td></tr>`}).join('')||'<tr><td colspan="6" class="sub">Not tagged yet</td></tr>'}</tbody></table></div></div>`}
+function renderOppOverview(){const P=oppPlays();if(!P.length)return `<div class="panel empty">No plays tagged yet. Open <b>Film Tagger</b> to load their film.</div>`;
+  const c=CFG(),top=(f)=>{const s=share(P,f)[0];return s?[s[0],pct(s[1],P.filter(x=>f(x)!=null&&f(x)!=='').length)]:['–',0]};
+  const pr=P.filter(x=>x.press!=null),avgR=pr.length?(pr.reduce((a,x)=>a+x.press,0)/pr.length).toFixed(1):'–',five=pct(pr.filter(x=>x.press>=5).length,pr.length);
+  const tb=top(x=>x.box),tm=top(x=>x.mof),man=pct(P.filter(x=>x.cov==='Man').length,P.filter(x=>x.cov).length);
+  const eff=P.filter(x=>x.eff),eA=pct(eff.filter(x=>x.eff==='Y').length,eff.length),xA=pct(P.filter(x=>x.exp).length,P.filter(x=>x.result!=='Penalty').length);
+  const mx=share(P.filter(x=>x.mof&&x.cov),x=>x.mof+' '+x.cov);
+  return `<section style="display:flex;flex-direction:column;gap:20px">
+  <div class="panel"><div class="score"><span class="big" style="font-size:clamp(38px,6vw,60px)">${esc(c.opp||'Opponent')} defense</span></div>
+  <p class="sub">${P.length} snaps vs ${esc(OFFN())}. Box = down linemen then backers; MOF = deep safeties at the snap; rushers = defenders who cross the line, on every play. ${S.plays.filter(needsReview).length?`<b class="miss">${S.plays.filter(needsReview).length} plays still need review.</b>`:''} Film only: down and distance are worked out from the spots, so check them before trusting the situational splits.</p></div>
+  <div class="tiles">${tile('Top box',tb[0],tb[1]+'% of snaps')}${tile('Top shell',tm[0],tm[1]+'% of snaps')}${tile('Man',man+'%',(100-man)+'% zone')}${tile('Avg rushers',avgR,five+'% send 5+')}${tile('Eff allowed',eA+'%','our goal is 50%',eA>=c.goalEff?'hit':'miss')}${tile('Explosive allowed',xA+'%','our goal is 12%',xA>=c.goalExp?'hit':'miss')}</div>
+  <div class="grid2">${lookTable('Box',P,x=>x.box,'Box')}${lookTable('Middle of the field',P,x=>x.mof,'Shell')}</div>
+  <div class="grid2">${lookTable('Man / zone',P,x=>x.cov,'Coverage')}${lookTable('Pressure',P,x=>x.press==null?null:x.press+(x.press>=5?' (pressure)':''),'Rushers')}</div>
+  <div class="panel"><h3>Shell + coverage</h3><div class="bar">${mx.map(([k,n])=>`<span class="badge" style="font-size:13px">${esc(k)}: ${n} (${pct(n,P.length)}%)</span>`).join('')||'<span class="sub">Not tagged yet</span>'}</div><p class="sub" style="font-size:13px">1-high Man ≈ Cover 1, 1-high Zone ≈ Cover 3, 2-high Zone ≈ Cover 2/4, 0-high Man ≈ Cover 0.</p></div></section>`}
+function bucket(x){if(!x.dn)return null;if(x.dn===1)return '1st down';const d=x.dist,l=d<=3?'short (1-3)':d<=6?'medium (4-6)':'long (7+)';return `${['','','2nd','3rd','4th'][x.dn]} & ${l}`}
+function zone(x){if(x.yl==null)return null;const t=pos(x.yl);return t>=80?'Backed up (own 1-20)':t>=50?'Own territory (own 21-50)':t>20?'Opponent territory (49-21)':'Red zone (20-in)'}
+function sitTable(title,P,key,order){const rows=order.map(k=>[k,P.filter(x=>key(x)===k)]).filter(r=>r[1].length);
+  const pc=(r,f)=>{const d=r.filter(x=>f(x)!=null&&f(x)!=='');return d.length?d:null};
+  return `<div class="panel"><h3>${title}</h3><div class="tablewrap"><table><thead><tr><th>Situation</th><th class="n">Snaps</th><th>Top box</th><th class="n">0-hi</th><th class="n">1-hi</th><th class="n">2-hi</th><th class="n">3-hi</th><th class="n">Man</th><th class="n">Avg rush</th><th class="n">5+ rush</th><th class="n">Eff allowed</th></tr></thead><tbody>${rows.map(([k,r])=>{
+    const m=r.filter(x=>x.mof),cv=r.filter(x=>x.cov),pr=r.filter(x=>x.press!=null),e=r.filter(x=>x.eff),tb=share(r,x=>x.box)[0];
+    const mp=h=>m.length?pct(m.filter(x=>x.mof===h).length,m.length)+'%':'';
+    return `<tr><td><b>${esc(k)}</b></td><td class="n">${r.length}</td><td>${tb?esc(tb[0])+' <span class="sub">('+pct(tb[1],r.filter(x=>x.box).length)+'%)</span>':''}</td><td class="n">${mp('0-high')}</td><td class="n">${mp('1-high')}</td><td class="n">${mp('2-high')}</td><td class="n">${mp('3-high')}</td><td class="n">${cv.length?pct(cv.filter(x=>x.cov==='Man').length,cv.length)+'%':''}</td><td class="n">${pr.length?(pr.reduce((a,x)=>a+x.press,0)/pr.length).toFixed(1):''}</td><td class="n">${pr.length?pct(pr.filter(x=>x.press>=5).length,pr.length)+'%':''}</td><td class="n">${e.length?pct(e.filter(x=>x.eff==='Y').length,e.length)+'%':''}</td></tr>`}).join('')||'<tr><td colspan="11" class="sub">Not tagged yet</td></tr>'}</tbody></table></div></div>`}
+function renderOppSituation(){const P=oppPlays();if(!P.length)return `<div class="panel empty">No plays tagged yet.</div>`;
+  const B=['1st down','2nd & short (1-3)','2nd & medium (4-6)','2nd & long (7+)','3rd & short (1-3)','3rd & medium (4-6)','3rd & long (7+)','4th & short (1-3)','4th & medium (4-6)','4th & long (7+)'];
+  const Z=['Backed up (own 1-20)','Own territory (own 21-50)','Opponent territory (49-21)','Red zone (20-in)'];
+  return `<section style="display:flex;flex-direction:column;gap:20px">${sitTable('By down and distance',P,bucket,B)}${sitTable('By field zone (offense\'s view)',P,zone,Z)}${sitTable('By hash (offense\'s view)',P,x=>x.hash?{L:'Left hash',M:'Middle',R:'Right hash'}[x.hash]:null,['Left hash','Middle','Right hash'])}${sitTable('Vs run / pass',P,x=>x.type||null,['Run','Pass'])}
+  <p class="sub" style="font-size:13px">Percent columns use only snaps where that field is tagged.</p></section>`}
+function renderOppHurt(){const P=oppPlays();if(!P.length)return `<div class="panel empty">No plays tagged yet.</div>`;
+  const look=x=>[x.box,x.mof,x.cov,x.press!=null?x.press+' rush':''].filter(Boolean).join(' · ')||'Look not tagged';
+  const ex=P.filter(x=>x.exp).sort((a,b)=>b.gn-a.gn);
+  const L=share(P.filter(x=>x.box&&x.mof),x=>x.box+' · '+x.mof+(x.cov?' '+x.cov:''));
+  const lk=L.map(([k,n])=>{const r=P.filter(x=>x.box+' · '+x.mof+(x.cov?' '+x.cov:'')===k),e=r.filter(x=>x.eff);return {k,n,ypp:r.reduce((a,x)=>a+(x.gn||0),0)/n,eff:e.length?pct(e.filter(x=>x.eff==='Y').length,e.length):null,ex:r.filter(x=>x.exp).length,run:r.filter(x=>x.type==='Run'),pass:r.filter(x=>x.type==='Pass')}});
+  const ypp=a=>a.length?(a.reduce((s,x)=>s+(x.gn||0),0)/a.length).toFixed(1):'';
+  return `<section style="display:flex;flex-direction:column;gap:20px">
+  <div class="panel"><h3>What worked against each look</h3><div class="tablewrap"><table><thead><tr><th>Look (box · shell coverage)</th><th class="n">Snaps</th><th class="n">Yds/play</th><th class="n">Eff allowed</th><th class="n">Expl</th><th class="n">Run yds/play (n)</th><th class="n">Pass yds/play (n)</th></tr></thead><tbody>${lk.map(o=>`<tr><td><b>${esc(o.k)}</b></td><td class="n">${o.n}</td><td class="n">${o.ypp.toFixed(1)}</td><td class="n ${o.eff!=null&&o.eff>=50?'hit':''}">${o.eff??''}${o.eff!=null?'%':''}</td><td class="n">${o.ex||''}</td><td class="n">${ypp(o.run)} (${o.run.length})</td><td class="n">${ypp(o.pass)} (${o.pass.length})</td></tr>`).join('')||'<tr><td colspan="7" class="sub">Tag box and MOF to fill this in</td></tr>'}</tbody></table></div><p class="sub" style="font-size:13px">Green = offenses were efficient 50%+ of the time against that look.</p></div>
+  <h2>Explosives they gave up (${ex.length})</h2><div class="clips">${ex.map(x=>{const a=x.p.angles.Wide||x.p.angles.Tight||Object.values(x.p.angles)[0];const t={url:a&&a.url?a.url+'#t=0.1':'',_p:x.p};
+    return `<div class="clip bad">${vid(t)}<div class="cap"><strong>${x.gn}-yd ${x.type==='Pass'||/^Complete/.test(x.result)?'pass':'run'}${x.td?', TD':''}</strong><span class="meta">Clip ${x.p.n} · ${x.dn?['','1st','2nd','3rd','4th'][x.dn]+' & '+x.dist:''} at ${ylTxt(x.yl)}</span><span class="sub" style="font-size:14px">Their look: ${esc(look(x))}</span></div></div>`}).join('')||'<p class="sub">None tagged.</p>'}</div></section>`}
+async function hydrateOpp(){for(const x of oppPlays().filter(x=>x.exp)){const a=x.p.angles.Wide||x.p.angles.Tight||Object.values(x.p.angles)[0];if(a){try{await ensureUrl(a);a.keep=true}catch(e){}}}}
+
+/* ================= Film Room ================= */
+let G=null, TAB='result', HALF='full', FILTER={half:'all',type:'all',flagged:false}, CUR=null;
+/* KDNCE: finished (published) games live on this device and sync privately with the program, never in this public page. */
+const PUBK='fr:pub';const EMB=(()=>{try{const x=JSON.parse(localStorage.getItem(PUBK));if(x&&x.index&&x.games)return x}catch(e){}return {index:[],games:{}}})();
+function savePub(){try{localStorage.setItem(PUBK,JSON.stringify(EMB));localStorage.setItem('fr:upd:pub',String(Date.now()))}catch(e){}}
+const CB=()=>G.clipBase||`clips/${G.id}/`;
+const vsrc=t=>t.url?t.url:(t.file?`${CB()}${t.file}#t=0.1`:'');
+const vposter=t=>t.poster&&!t.url?`poster="${CB()}${t.poster}"`:'';
+const vid=t=>t.url?`<video controls preload="metadata" playsinline src="${t.url}"></video>`:t.file?`<div class="vwrap" data-file="${CB()}${t.file}" data-poster="${t.poster?CB()+t.poster:''}"><img alt=""><button class="vplay">▶ Play</button></div>`:`<div class="novid">Load this game's clips in Film Tagger › Game setup to watch</div>`;
+// The artifact only lets video play from blob: URLs, so published clips are fetched from the page's own files and played as blobs.
+const BLOBS={};async function blobUrl(u){if(!BLOBS[u]){const r=await fetch(u);if(!r.ok)throw new Error(r.status);BLOBS[u]=URL.createObjectURL(await r.blob())}return BLOBS[u]}
+function wireVids(){$$('.vwrap').forEach(w=>{const pst=w.dataset.poster;if(pst)blobUrl(pst).then(u=>{w.querySelector('img').src=u}).catch(()=>{});
+  w.onclick=async()=>{const b=w.querySelector('.vplay');b.textContent='Loading…';try{const u=await blobUrl(w.dataset.file);const v=document.createElement('video');v.controls=true;v.playsInline=true;v.src=u;w.replaceWith(v);v.play().catch(()=>{})}catch(e){b.textContent="Couldn't load clip"}}})}
+const SAVED=()=>{try{return JSON.parse(localStorage.getItem('fr:games')||'[]')}catch(e){return []}};
+function setSaved(list){try{localStorage.setItem('fr:games',JSON.stringify(list))}catch(e){}}
+function fillPicker(){const sv=SAVED();
+  $('#gamePick').innerHTML=(EMB.index.length||SAVED().length?'':'<option value="">Choose a game…</option>')+EMB.index.map(g=>`<option value="emb:${g.id}">${esc(g.label)}</option>`).join('')+sv.map(g=>`<option value="loc:${g.id}">${esc(g.label)}</option>`).join('')+'<option value="new:self">+ New self scout (our offense)…</option><option value="new:opp">+ New opponent scout (their defense)…</option>';
+  if(CUR&&sv.some(g=>g.id===CUR))$('#gamePick').value='loc:'+CUR;}
+$('#gamePick').onchange=()=>{if($('#gamePick').value)pick($('#gamePick').value)};
+/* ---- manage games: delete saved test games (published games like Union stay) ---- */
+$('#mgBtn').onclick=()=>{const P=$('#mgPanel');if(!P.hidden){P.hidden=true;return}renderMg();P.hidden=false};
+function renderMg(){const sv=SAVED(),P=$('#mgPanel');
+  P.innerHTML=`<h3>Games on this device</h3>${EMB.index.length?`<div class="sub">Finished games: ${EMB.index.map(g=>`${esc(g.label)} <button data-pubdel="${esc(g.id)}" style="font-size:12px;padding:2px 8px">Remove</button>`).join(' · ')}</div>`:''}`+
+    (sv.length?sv.map(g=>`<div class="bar" style="justify-content:space-between;border-bottom:1px solid var(--line);padding:6px 0"><span>${esc(g.label)}</span><button data-mgdel="${esc(g.id)}">Delete</button></div>`).join('')+`<div class="bar"><button id="mgAll">Delete all ${sv.length} saved game${sv.length>1?'s':''} (keep published games)</button></div>`:'<div class="sub">No saved test games.</div>');
+  P.onclick=e=>{const pd=e.target.closest('[data-pubdel]');if(pd){if(!pd.dataset.arm){pd.dataset.arm=1;pd.textContent='Tap again';return}const id=pd.dataset.pubdel;EMB.index=EMB.index.filter(g=>g.id!==id);delete EMB.games[id];tombstone(['pub-'+id]);savePub();fillPicker();renderMg();if(G&&G.id===id){G=null;startPick()}return}
+    const b=e.target.closest('[data-mgdel],#mgAll');if(!b)return;
+    if(!b.dataset.arm){b.dataset.arm=1;b.dataset.t=b.textContent;b.textContent='Click again to delete';setTimeout(()=>{if(b.isConnected){delete b.dataset.arm;b.textContent=b.dataset.t}},3000);return}
+    mgRemove(b.id==='mgAll'?SAVED().map(g=>g.id):[b.dataset.mgdel])}}
+function mgRemove(ids){if(!ids.length)return;
+  tombstone(ids);ids.forEach(id=>{try{localStorage.removeItem('fr:game:'+id)}catch(e){}});setSaved(SAVED().filter(g=>!ids.includes(g.id)));
+  if(CUR&&ids.includes(CUR)){CUR=null;fillPicker();startPick()}else fillPicker();
+  renderMg();toast(ids.length>1?'Deleted '+ids.length+' games':'Game deleted')}
+const TABSETS={self:[['result','Game Result &amp; Why'],['fiftytwelve','50 / 12'],['stats','Stats'],['tagger','Film Tagger'],['hudl','Export to Hudl']],
+  opp:[['overview','Their Defense'],['situation','By Situation'],['hurt','What Hurt Them'],['tagger','Film Tagger'],['hudl','Export to Hudl']]};
+function setTabs(){const set=TABSETS[G&&G.kind==='opp'?'opp':'self'];if(!set.some(t=>t[0]===TAB))TAB=set[0][0];
+  $('#tabs').innerHTML=set.map(([k,l])=>`<button role="tab" data-tab="${k}" aria-selected="${k===TAB}">${l}</button>`).join('');
+  $$('#tabs button').forEach(b=>b.onclick=()=>{TAB=b.dataset.tab;render()});
+  document.body.classList.toggle('opp',!!(G&&G.kind==='opp'));$('#kindBadge').textContent=G&&G.kind==='opp'?'Opponent scout · their defense':'Self scout';}
+function pick(v){
+  if(v.startsWith('new:')){const kind=v.slice(4),id='g'+Date.now().toString(36);const sv=SAVED();sv.push({id,kind,label:kind==='opp'?'Opp scout: new':'New game'});setSaved(sv);openLocal(id,true,kind);fillPicker();$('#gamePick').value='loc:'+id;TAB='tagger';render();return}
+  if(v.startsWith('emb:')){CUR=null;S.kind='self';G=EMB.games[v.slice(4)];render();return}
+  openLocal(v.slice(4));render();
+}
+function openLocal(id,fresh,kind){CUR=id;S.kind=kind||(SAVED().find(g=>g.id===id)||{}).kind||'self';S.plays=[];S.alm=[];S.sel=-1;S.drv={};S.summary='';S.tideOff=[];
+  $('#clipStatus').textContent='';$('#almStatus').textContent='';
+  let s=null;try{s=JSON.parse(localStorage.getItem(LS())||'null')}catch(e){}
+  const c=(s&&s.cfg)||{};const set=(k,v)=>{$('#'+k).value=v??''};
+  set('game',c.game);set('opp',c.opp);set('offTeam',c.offTeam);set('ourJersey',c.our);set('oppJersey',c.their);set('scoreUs',c.us);set('scoreThem',c.them);
+  if(c.qbs)set('qbs',c.qbs.join(', '));if(c.rbs)set('rbs',c.rbs.join(', '));['goalEff','goalExp','expRun','expPass'].forEach(k=>{if(c[k])set(k,c[k])});
+  if(s&&s.roster)$('#roster').value=s.roster;
+  if(s){if(s.kind)S.kind=s.kind;S.alm=s.alm||[];S.drv=s.drv||{};S.summary=s.summary||'';S.tideOff=s.tideOff||[];
+    S.plays=(s.plays||[]).map(t=>{const p=newPlay(t.n);TAGK.forEach(k=>{if(t[k]!==undefined)p[k]=t[k]});return p});
+    if(S.alm.length)$('#almStatus').textContent=`${S.alm.length} almanac plays saved`;
+    if(S.plays.length)$('#clipStatus').textContent=`${S.plays.length} plays saved. Load the clips again to watch film or run AI tagging.`}
+  $('#setupBox').open=fresh||!S.plays.length;
+  G=buildG();
+}
+const TAGK=['yl','hash','type','result','td','nd','h2','gainOverride','skip','almRow','conf','src','note','star','carrier','ballEnd','film','box','mof','cov','press'];
+function mergeSaved(){ // new clips loaded: keep saved tags by clip number
+  let s=null;try{s=JSON.parse(localStorage.getItem(LS())||'null')}catch(e){} if(!s||!s.plays)return;
+  const by=new Map(s.plays.map(p=>[p.n,p]));let k=0;S.plays.forEach(p=>{const t=by.get(p.n);if(t){TAGK.forEach(x=>{if(t[x]!==undefined)p[x]=t[x]});k++}});if(k)toast('Kept saved tags for '+k+' plays')}
+function save(){if(!CUR)return;try{localStorage.setItem('fr:upd:'+CUR,String(Date.now()));localStorage.setItem(LS(),JSON.stringify({kind:KIND(),cfg:CFG(),roster:$('#roster').value,alm:S.alm,drv:S.drv,summary:S.summary,tideOff:S.tideOff,
+  plays:S.plays.map(p=>{const o={n:p.n};TAGK.forEach(k=>o[k]=p[k]);return o})}));
+  const c=CFG(),sv=SAVED(),e=sv.find(g=>g.id===CUR);if(e){const lab=OPP()?'Opp scout: '+(c.opp||c.game||'new')+(c.offTeam?' vs '+c.offTeam:''):(c.game||c.opp||'New game')+(c.us!==''&&c.them!==''?` (${+c.us>+c.them?'W':+c.us<+c.them?'L':'T'} ${c.us}-${c.them})`:' (in progress)');
+    if(e.label!==lab){e.label=lab;setSaved(sv);const o=$('#gamePick').querySelector(`option[value="loc:${CUR}"]`);if(o)o.textContent=lab}}}catch(e){}}
+['game','opp','offTeam','ourJersey','oppJersey','scoreUs','scoreThem','qbs','rbs','goalEff','goalExp','expRun','expPass','roster'].forEach(id=>$('#'+id).addEventListener('change',()=>refresh()));
+$('#clearGame').onclick=()=>{const b=$('#clearGame');if(!b.dataset.arm){b.dataset.arm=1;b.textContent='Click again to delete';setTimeout(()=>{delete b.dataset.arm;b.textContent='Delete this game'},3000);return}
+  tombstone([CUR]);try{localStorage.removeItem(LS())}catch(e){}setSaved(SAVED().filter(g=>g.id!==CUR));CUR=null;fillPicker();startPick()};
+$('#dlJson').onclick=()=>{const g=buildG();const prog=JSON.parse(JSON.stringify(g,(k,v)=>k==='url'?undefined:v));prog.view='program';delete prog.local;
+  prog.plays.forEach(p=>['call','motion','tag','flags','hudl'].forEach(k=>delete p[k]));saveFile((CFG().game||'game')+' film-room.json',JSON.stringify({program:prog,staff:{...prog,view:'staff',plays:g.plays}}),'application/json')};
+
+function refresh(){compute();save();G=buildG();
+  $('#sPlays').textContent=S.plays.length;$('#sReview').textContent=S.plays.filter(needsReview).length;$('#sAlm').textContent=S.alm.length?S.alm.length+' rows':'none';
+  if(TAB==='tagger')renderTable(); else render(true);}
+
+function needsReview(p){return !p.skip&&p.src!=='human'&&p.calc&&p.calc.flags.length>0}
+
+/* ---------- build a Film Room game from the tags ---------- */
+function buildG(){compute();const c=CFG(),R=rosterMap(),QB=new Set(c.qbs);
+  const live=S.plays.filter(p=>p.calc&&!p.skip);
+  const plays=live.map(p=>{const x=p.calc;const who=x.player||p.carrier||'';return {clip:p.n,half:x.half,yl:x.yl,hash:x.hash||'',dn:x.dn,dist:x.dist,gn:x.gn,eff:x.eff,expl:x.exp?'YES':(x.eff?'NO':''),
+    type:x.type||'',result:(x.result||'')+(x.td&&x.result?', TD':''),call:x.call||'',player:who,playerName:R[who]||'',flags:x.flags,_p:p,_td:x.td}});
+  // drives
+  const drives=[];let cur=null;
+  plays.forEach(x=>{if(x.result==='Timeout'){if(cur)cur.pl.push(x);return}const d0=x._p.calc.drive;if(d0||!cur){cur={n:drives.length+1,half:x.half,pl:[]};drives.push(cur)}cur.pl.push(x)});
+  drives.forEach(d=>{const sn=d.pl.filter(x=>x.result!=='Timeout'),pl=sn.filter(x=>x.result!=='Penalty'),last=sn[sn.length-1]||{};
+    d.clips=`${d.pl[0].clip}-${d.pl[d.pl.length-1].clip}`;d.start=sn[0]?sn[0].yl:null;d.plays=pl.length;d.yards=sn.reduce((a,x)=>a+(x.gn||0),0);
+    d.effN=pl.filter(x=>x.eff==='Y').length;d.effD=pl.filter(x=>x.eff).length;d.expl=pl.filter(x=>x.expl==='YES').length;
+    const auto=last._td?'TD':/Interception/.test(last.result)?'INT':/Fumble/.test(last.result)?'Fumble':last.dn===4?'Downs':'Punt';d.auto=auto;d.result=S.drv[d.n]||auto});
+  const dOf=clip=>drives.find(d=>d.pl.some(x=>x.clip===clip));
+  plays.forEach(x=>x._d=dOf(x.clip));
+  const stats={};['h1','h2','full'].forEach(h=>{const P=plays.filter(x=>h==='full'||x.half===(h==='h1'?1:2));stats[h]=statBlock(P,R,QB)});
+  const byDown={};['h1','h2','full'].forEach(h=>{byDown[h]=[1,2,3,4].map(dn=>{const r=plays.filter(x=>x.dn===dn&&x.eff&&(h==='full'||x.half===(h==='h1'?1:2)));return {dn,n:r.filter(x=>x.eff==='Y').length,d:r.length}})});
+  const tag=x=>`${x.dn?['','1st','2nd','3rd','4th'][x.dn]+' and '+x.dist:''} at ${ylTxt(x.yl)}`;
+  const urlOf=p=>{const a=p.angles.Wide||p.angles.Tight||Object.values(p.angles)[0];return a&&a.url?a.url+'#t=0.1':''};
+  const explosives=plays.filter(x=>x.expl==='YES').map(x=>({clip:x.clip,half:x.half,url:urlOf(x._p),_p:x._p,title:playTitle(x,R,QB),when:`Drive ${x._d?x._d.n:''} · ${tag(x)}`,note:x.call?x.call:''}));
+  const turningPoints=autoTide(plays,R,QB).map(t=>({...t,url:urlOf(t._p)}));
+  const us=c.us!==''?+c.us:null,them=c.them!==''?+c.them:null,res=us==null||them==null?'':us>them?'W':us<them?'L':'T';
+  const s=stats.full,ef=pct(s.effN,s.effD),ex=pct(s.explN,s.explD);
+  const summary=S.summary||(plays.length?`${us!=null?`Deer Creek ${us}, ${c.opp||'opponent'} ${them}. `:''}Offense: ${s.snaps} snaps, ${s.yards} yards, ${ef}% efficient (goal ${c.goalEff}%), ${ex}% explosive (goal ${c.goalExp}%), ${s.third} on 3rd down. ${drives.filter(d=>d.result==='TD').length} TD drives in ${drives.length}.`:'No plays tagged yet. Open Film Tagger to load clips.');
+  const nRev=S.plays.filter(needsReview).length;
+  return {id:CUR,local:true,kind:KIND(),view:'staff',title:c.game||('Deer Creek vs '+(c.opp||'opponent')),opponent:c.opp||'Opponent',final:{us:us??'–',them:them??'–',result:res},
+    scoreTimeline:us!=null?[{when:'Final',us,them}]:[],goals:{eff:c.goalEff,expl:c.goalExp},plays,drives,stats,byDown,explosives,turningPoints,summary,
+    why:autoWhy(plays,drives,s,c,R,QB),notes:[S.alm.length?'Tags: film plus almanac (down, distance and spot from the almanac; hash and checks from film).':'Tags: film only (opponent scout mode); down and distance are worked out from the spots.',
+      nRev?`${nRev} plays still flagged for review in Film Tagger.`:'Review queue is clear.','"Plays that turned the tide" are picked automatically; tick or untick "Turned the tide" on a play to change them.'],accuracy:null};
+}
+function statBlock(P,R,QB){const sn=P.filter(x=>x.result&&x.result!=='Timeout'),pl=sn.filter(x=>x.result!=='Penalty'),pen=sn.filter(x=>x.result==='Penalty');
+  const isR=x=>/^Rush|^Scramble/.test(x.result),isC=x=>/^Complete/.test(x.result),isA=x=>/^(Complete|Incomplete|Interception)/.test(x.result),isS=x=>x.result==='Sack';
+  const ru={},re={};pl.forEach(x=>{const w=x.player;if(!w)return;if(isR(x)){const r=ru[w]=ru[w]||{num:w,name:R[w]||'',car:0,yds:0,long:null};r.car++;r.yds+=x.gn||0;r.long=Math.max(r.long??-99,x.gn||0)}
+    if(isC(x)){const r=re[w]=re[w]||{num:w,name:R[w]||'',rec:0,yds:0,long:null,td:0};r.rec++;r.yds+=x.gn||0;r.long=Math.max(r.long??-99,x.gn||0);if(x._td)r.td++}});
+  const cm=pl.filter(isC),sk=pl.filter(isS),pass=pl.filter(x=>x.type==='Pass'),run=pl.filter(x=>x.type==='Run');
+  const third=pl.filter(x=>x.dn===3&&x.eff),fourth=pl.filter(x=>x.dn===4&&x.eff),yds=pl.reduce((a,x)=>a+(x.gn||0),0);
+  return {snaps:pl.length,yards:yds,ypp:pl.length?+(yds/pl.length).toFixed(1):0,runs:run.length,runYds:run.reduce((a,x)=>a+(x.gn||0),0),passCalls:pass.length,passCallYds:pass.reduce((a,x)=>a+(x.gn||0),0),
+    effN:pl.filter(x=>x.eff==='Y').length,effD:pl.filter(x=>x.eff).length,explN:pl.filter(x=>x.expl==='YES').length,explD:pl.length,
+    third:`${third.filter(x=>x.eff==='Y').length}/${third.length}`,fourth:`${fourth.filter(x=>x.eff==='Y').length}/${fourth.length}`,
+    penalties:pen.length,penYdsFor:pen.filter(x=>x.gn>0).reduce((a,x)=>a+x.gn,0),penYdsAgainst:pen.filter(x=>x.gn<0).reduce((a,x)=>a+x.gn,0),
+    passing:{cmp:cm.length,att:pl.filter(isA).length,yds:cm.reduce((a,x)=>a+(x.gn||0),0),td:cm.filter(x=>x._td).length,sacks:sk.length,sackYds:sk.reduce((a,x)=>a+(x.gn||0),0)},
+    sackList:sk.map(x=>({clip:x.clip,qb:x.player||'?',name:R[x.player]||'',yds:x.gn})),
+    rushing:Object.values(ru).sort((a,b)=>b.yds-a.yds),receiving:Object.values(re).sort((a,b)=>b.yds-a.yds)}}
+function playTitle(x,R,QB){const w=x.player,nm=w?`#${w}${R[w]?' '+R[w]:''}`:'';const g=x.gn;
+  if(x.result==='Sack')return `${['','1st','2nd','3rd','4th'][x.dn]||''} and ${x.dist} sack, ${g}${nm?' ('+nm+')':''}`;
+  if(/^Complete/.test(x.result))return `${g}-yd ${x._td?'TD catch':x.type==='Run'?'RPO catch':'catch'}${nm?', '+nm:''}`;
+  if(/^(Rush|Scramble)/.test(x.result))return `${g}-yd ${x._td?'TD run':QB.has(w)?(x.result==='Scramble'?'scramble':'QB run'):'run'}${nm?', '+nm:''}`;
+  if(/Interception/.test(x.result))return 'Interception';if(/Fumble/.test(x.result))return `Fumble${g!=null?', '+g:''}`;
+  if(x.result==='Incomplete'&&x.dn>=3)return `${['','1st','2nd','3rd','4th'][x.dn]} and ${x.dist} incomplete`;return `${x.result} ${g??''}`}
+// "Turned the tide": score every snap for how much it swung the drive, keep the top 5 (coach ticks/unticks override).
+function autoTide(plays,R,QB){
+  const sc=x=>{if(!x.result||x.result==='Penalty'||x.result==='Timeout')return 0;const g=x.gn||0,d=x._d;let s=0;
+    if(x._td)s+=25+Math.min(g,60)/3;
+    else if(x.expl==='YES')s+=10+g/2;
+    if(/Interception|Fumble/.test(x.result))s+=30;
+    if(x.result==='Sack')s+=10+Math.abs(g)+(x.dn>=3?8:0);
+    if(x.dn===4&&x.eff==='N')s+=24;
+    if(x.dn===3&&x.eff==='N'&&d&&d.pl.filter(y=>y.result!=='Timeout').slice(-1)[0]===x)s+=8+(pos(x.yl)<=40?10:0);
+    if(g<=-5&&x.result!=='Sack')s+=6;
+    return s};
+  const off=new Set(S.tideOff||[]);
+  const isBad=x=>x.result==='Sack'||/Interception|Fumble/.test(x.result)||x.eff==='N'||(x.gn||0)<0;
+  const ranked=plays.map(x=>({x,s:sc(x)})).filter(o=>o.s>=12&&!off.has(o.x.clip)).sort((a,b)=>b.s-a.s);
+  let L=[],nb=0,ng=0;for(const o of ranked){if(L.length>=5)break;const bad=isBad(o.x);if(bad&&nb>=3||!bad&&ng>=2)continue;bad?nb++:ng++;L.push(o.x)}
+  for(const o of ranked){if(L.length>=5)break;if(!L.includes(o.x))L.push(o.x)}
+  plays.filter(x=>x._p.star&&!L.includes(x)).forEach(x=>L.push(x));
+  return L.sort((a,b)=>a.clip-b.clip).map(x=>{const bad=x.result==='Sack'||/Interception|Fumble/.test(x.result)||x.eff==='N'||(x.gn||0)<0;
+    return {clip:x.clip,_p:x._p,title:playTitle(x,R,QB),when:`Drive ${x._d?x._d.n:''} · ${x.dn?['','1st','2nd','3rd','4th'][x.dn]+' and '+x.dist:''} at ${ylTxt(x.yl)}${x._d&&x._d.pl.filter(y=>y.result!=='Timeout').slice(-1)[0]===x?', ends drive ('+x._d.result+')':''}`,tone:bad?'bad':'good'}})}
+function autoWhy(plays,D,s,c,R,QB){const W=[],pl=plays.filter(x=>x.result&&!/Penalty|Timeout/.test(x.result));if(!pl.length)return W;
+  const ef=pct(s.effN,s.effD),ex=pct(s.explN,s.explD);
+  W.push({head:ef>=c.goalEff?'Stayed on schedule':'Off schedule',num:`${ef}% efficient`,body:`${s.effN} of ${s.effD} plays were efficient against a ${c.goalEff}% goal. 3rd down: ${s.third}.`});
+  const big=pl.filter(x=>x.expl==='YES').sort((a,b)=>b.gn-a.gn)[0];
+  W.push({head:'Explosives',num:`${s.explN} plays (${ex}%)`,body:`Goal is ${c.goalExp}%. ${big?'Biggest: '+playTitle(big,R,QB)+'.':'None this game.'}`});
+  const neg=pl.filter(x=>(x.gn||0)<0);if(s.passing.sacks||neg.length)W.push({head:'Negative plays',num:`${s.passing.sacks} sacks, ${s.passing.sackYds} yds`,body:`${neg.length} snaps lost yardage in all.`});
+  const stall=D.filter(d=>['Punt','Downs'].includes(d.result)&&d.pl.some(x=>x.yl!=null&&x.yl>0));
+  if(stall.length)W.push({head:'Stalled in plus territory',num:`${stall.length} drive${stall.length>1?'s':''}`,body:`Reached the opponent's side and ended in a punt or on downs: drive ${stall.map(d=>d.n).join(', ')}.`});
+  W.push({head:'Finishing drives',num:`${D.filter(d=>d.result==='TD').length} TD / ${D.length} drives`,body:`${D.filter(d=>d.result==='Punt').length} punts, ${D.filter(d=>d.result==='Downs').length} on downs, ${D.filter(d=>['INT','Fumble'].includes(d.result)).length} turnovers.`});
+  return W}
+
+/* ---------- rendering (same layout as the program site) ---------- */
+async function render(soft){
+  setTabs();
+  $('#tw').hidden=!(TAB==='tagger'&&G&&G.local);
+  if(TAB==='tagger'&&G&&G.local){$('#out').innerHTML='';renderTable();return}
+  if(G&&G.local&&!soft)await(G.kind==='opp'?hydrateOpp():hydrate());
+  $('#out').innerHTML=!G?'':({result:renderResult,fiftytwelve:render5012,stats:renderStats,tagger:renderTaggerRO,hudl:renderHudl,overview:renderOppOverview,situation:renderOppSituation,hurt:renderOppHurt}[TAB])();wire();wireVids();
+  $('#hdrStats').textContent=G&&G.local?`${S.plays.length} clips · ${S.plays.filter(needsReview).length} need review`:'';
+}
+async function hydrate(){ // make clip URLs for the clips this tab shows
+  const want=TAB==='result'?G.turningPoints:TAB==='fiftytwelve'?G.explosives:[];
+  for(const t of want){const p=t._p;const a=p&&(p.angles.Wide||p.angles.Tight||Object.values(p.angles)[0]);if(a){try{await ensureUrl(a);a.keep=true;t.url=a.url+'#t=0.1'}catch(e){}}}}
+function wire(){
+  $$('[data-half]').forEach(b=>b.onclick=()=>{HALF=b.dataset.half;render()});
+  const f=k=>{const el=$('#f_'+k);if(el)el.onchange=()=>{FILTER[k]=el.type==='checkbox'?el.checked:el.value;render()}};['half','type','flagged'].forEach(f);
+  $$('select[data-drv]').forEach(sl=>sl.onchange=()=>{S.drv[sl.dataset.drv]=sl.value;refresh()});
+  $$('[data-tideoff]').forEach(b=>b.onclick=()=>{const c=+b.dataset.tideoff;S.tideOff=[...(S.tideOff||[]),c];const p=S.plays.find(q=>q.n===c);if(p)p.star=false;refresh();render()});
+  const aw=$('#aiWhy');if(aw)aw.onclick=draftWhy;
+  const hs=$('#hStart');if(hs)wireHudl();
+}
+function tile(k,v,d,cls=''){return `<div class="tile"><span class="k">${k}</span><span class="v ${cls}">${v}</span>${d?`<span class="d">${d}</span>`:''}</div>`}
+function renderResult(){
+  const f=G.final, s=G.stats.full;
+  if(G.local&&!G.plays.length)return `<div class="panel empty">No plays tagged yet. Open <b>Film Tagger</b> to load clips and tag this game.</div>`;
+  return `<section style="display:flex;flex-direction:column;gap:20px">
+  <div class="panel"><div class="score"><span class="big">${f.result||''} ${f.us}-${f.them}</span><h2>${esc(G.title)}</h2></div><p class="sub">${esc(G.summary)}</p>
+  ${G.local?`<div class="bar"><button id="aiWhy" ${S.sample?'':'disabled'}>${S.summary?'Rewrite':'Write'} the summary with Claude</button>${S.summary?'<span class="meta">Written by Claude from the tags</span>':''}</div>`:''}
+  <div class="bar">${G.scoreTimeline.map(t=>`<span class="badge">${esc(t.when)}: DC ${t.us}, ${esc(G.opponent)} ${t.them}</span>`).join('')}</div></div>
+  <div class="tiles">${tile('Efficiency',pct(s.effN,s.effD)+'%','Goal '+G.goals.eff+'%',pct(s.effN,s.effD)>=G.goals.eff?'hit':'miss')}${tile('Explosive',pct(s.explN,s.explD)+'%','Goal '+G.goals.expl+'%',pct(s.explN,s.explD)>=G.goals.expl?'hit':'miss')}${tile('3rd down',s.third)}${tile('Yards / play',s.ypp)}${tile('Sacks',s.passing.sacks,s.passing.sackYds+' yds')}${tile('TD drives',G.drives.filter(d=>d.result==='TD').length+' / '+G.drives.length)}</div>
+  <h2>Why</h2><div class="why">${G.why.map(w=>`<div class="panel"><h3>${esc(w.head)}</h3><div class="num">${esc(w.num)}</div><p>${esc(w.body)}</p></div>`).join('')}</div>
+  <h2>Plays that turned the tide</h2><div class="clips">${G.turningPoints.map(t=>`<div class="clip ${t.tone}">${vid(t)}<div class="cap"><strong>${esc(t.title)}</strong><span class="meta">Clip ${t.clip} · ${esc(t.when)}</span>${G.local?`<button data-tideoff="${t.clip}" style="align-self:flex-start;font-size:13px;padding:4px 10px;margin-top:4px">Remove</button>`:''}</div></div>`).join('')}</div>
+  <ul class="notes">${G.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul></section>`;
+}
+function render5012(){
+  if(G.local&&!G.plays.length)return `<div class="panel empty">No plays tagged yet.</div>`;
+  const s=G.stats[HALF], e=pct(s.effN,s.effD), x=pct(s.explN,s.explD);
+  const seg=['h1','h2','full'].map(h=>`<button data-half="${h}" aria-pressed="${HALF===h}">${{h1:'1st half',h2:'2nd half',full:'Full game'}[h]}</button>`).join('');
+  const inH=d=>HALF==='full'||(HALF==='h1'?d.half===1:d.half===2);
+  const meter=(v,goal,label,n,d)=>`<div class="panel"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap"><h3>${label}</h3><span class="meta">${n}/${d} · goal ${goal}%</span></div><div style="font-family:var(--display);font-size:64px;font-weight:700;line-height:1" class="${v>=goal?'hit':'miss'}">${v}%</div><div style="position:relative;height:14px;background:var(--track);border-radius:7px"><div style="position:absolute;inset:0 auto 0 0;width:${Math.min(100,v*(label==='Explosive'?4:1))}%;background:${v>=goal?'var(--accent)':'var(--miss)'};border-radius:7px"></div><div title="Goal" style="position:absolute;top:-4px;bottom:-4px;left:${goal*(label==='Explosive'?4:1)}%;width:3px;background:var(--ink)"></div></div><span class="sub" style="font-size:13px">${v>=goal?'Met the goal':'Short of the goal by '+(goal-v)+' points'}${label==='Explosive'?' (bar scaled to 25%)':''}</span></div>`;
+  const bd=G.byDown[HALF].filter(r=>r.d).map(r=>`<tr><td>${['','1st','2nd','3rd','4th'][r.dn]} down</td><td class="n">${r.n}/${r.d}</td><td class="n ${pct(r.n,r.d)>=G.goals.eff?'hit':'miss'}">${pct(r.n,r.d)}%</td></tr>`).join('');
+  const RES=['TD','FG','Punt','Downs','INT','Fumble','End of half','End of game','Missed FG','Safety'];
+  const resCell=d=>G.local?`<select data-drv="${d.n}" style="padding:4px 8px;font-size:13px">${RES.map(o=>`<option ${o===d.result?'selected':''}>${o}</option>`).join('')}</select>`:(d.result==='TD'?'<span class="pill td">TD</span>':(d.result==='Punt'||d.result==='Downs')?`<span class="pill bad">${d.result}</span>`:esc(d.result));
+  const dr=G.drives.filter(inH).map(d=>`<tr><td class="n">${d.n}</td><td>${d.half===1?'1st':'2nd'}</td><td class="n">${ylTxt(d.start)}</td><td class="n">${d.plays}</td><td class="n">${d.yards}</td><td class="n ${d.effD&&pct(d.effN,d.effD)>=G.goals.eff?'hit':'miss'}">${d.effD?pct(d.effN,d.effD)+'%':''}</td><td class="n">${d.expl||''}</td><td>${resCell(d)}</td></tr>`).join('');
+  const ex=G.explosives.filter(inH);
+  return `<section style="display:flex;flex-direction:column;gap:20px"><div class="seg">${seg}</div>
+  <div class="grid2">${meter(e,G.goals.eff,'Efficiency',s.effN,s.effD)}${meter(x,G.goals.expl,'Explosive',s.explN,s.explD)}</div>
+  <div class="grid2"><div class="panel"><h3>Drive results</h3><div class="tablewrap"><table><thead><tr><th class="n">#</th><th>Half</th><th class="n">Start</th><th class="n">Plays</th><th class="n">Yds</th><th class="n">Eff</th><th class="n">Expl</th><th>Result</th></tr></thead><tbody>${dr}</tbody></table></div>${G.local?'<p class="sub" style="font-size:13px">Results are guessed from the last snap; change any that are wrong (end of half, FG, etc.).</p>':''}</div>
+  <div class="panel"><h3>Efficiency by down</h3><div class="tablewrap"><table><thead><tr><th>Down</th><th class="n">Eff</th><th class="n">Rate</th></tr></thead><tbody>${bd}</tbody></table></div><p class="sub" style="font-size:13px">Efficient: 1st and 10 gains 4+, 2nd down gains half the distance, 3rd and 4th down convert.</p></div></div>
+  <h2>Explosive plays (${ex.length})</h2><div class="clips">${ex.map(t=>`<div class="clip good">${vid(t)}<div class="cap"><strong>${esc(t.title)}</strong><span class="meta">Clip ${t.clip} · ${esc(t.when)}</span>${t.note?`<span class="sub" style="font-size:13px">${esc(t.note)}</span>`:''}</div></div>`).join('')}</div></section>`;
+}
+function renderStats(){
+  if(G.local&&!G.plays.length)return `<div class="panel empty">No plays tagged yet.</div>`;
+  const s=G.stats[HALF]; const p=s.passing;
+  const seg=['h1','h2','full'].map(h=>`<button data-half="${h}" aria-pressed="${HALF===h}">${{h1:'1st half',h2:'2nd half',full:'Full game'}[h]}</button>`).join('');
+  const rush=s.rushing.map(r=>`<tr><td>#${esc(r.num)} ${esc(r.name)}</td><td class="n">${r.car}</td><td class="n">${r.yds}</td><td class="n">${r.car?(r.yds/r.car).toFixed(1):''}</td><td class="n">${r.long??''}</td></tr>`).join('');
+  const rec=s.receiving.map(r=>`<tr><td>${r.num==='?'?'':'#'+esc(r.num)+' '}${esc(r.name)}</td><td class="n">${r.rec}</td><td class="n">${r.yds}</td><td class="n">${r.long??''}</td><td class="n">${r.td||''}</td></tr>`).join('');
+  const sk=s.sackList.map(x=>`<tr><td>Clip ${x.clip}</td><td>#${x.qb} ${esc(x.name)}</td><td class="n">${x.yds}</td></tr>`).join('');
+  const e=pct(s.effN,s.effD), x=pct(s.explN,s.explD);
+  return `<section style="display:flex;flex-direction:column;gap:20px"><div class="seg">${seg}</div>
+  <div class="tiles">${tile('Efficiency',e+'%',`${s.effN}/${s.effD} · goal ${G.goals.eff}%`,e>=G.goals.eff?'hit':'miss')}${tile('Explosive',x+'%',`${s.explN}/${s.explD} · goal ${G.goals.expl}%`,x>=G.goals.expl?'hit':'miss')}${tile('Snaps',s.snaps)}${tile('Yards',s.yards,s.ypp+' per play')}${tile('Run',s.runs,s.runYds+' yds')}${tile('Pass calls',s.passCalls,s.passCallYds+' yds')}${tile('3rd down',s.third)}${tile('4th down',s.fourth)}${tile('Penalties',s.penalties,`DC ${s.penYdsAgainst} · opp +${s.penYdsFor}`)}</div>
+  <div class="grid2">
+   <div class="panel"><h3>Passing (team)</h3><p style="font-family:var(--display);font-size:30px;font-weight:700">${p.cmp}/${p.att}, ${p.yds} yds, ${p.td} TD</p><p class="sub">Sacked ${p.sacks} time${p.sacks===1?"":"s"} for ${p.sackYds} yds. Passer per throw isn't recorded in the almanac.</p>${sk?`<div class="tablewrap"><table><thead><tr><th>Sack</th><th>QB</th><th class="n">Yds</th></tr></thead><tbody>${sk}</tbody></table></div>`:''}</div>
+   <div class="panel"><h3>Rushing</h3><div class="tablewrap"><table><thead><tr><th>Player</th><th class="n">Car</th><th class="n">Yds</th><th class="n">Avg</th><th class="n">Long</th></tr></thead><tbody>${rush}</tbody></table></div><p class="sub">Includes QB keeps and scrambles.</p></div>
+   <div class="panel"><h3>Receiving</h3><div class="tablewrap"><table><thead><tr><th>Player</th><th class="n">Rec</th><th class="n">Yds</th><th class="n">Long</th><th class="n">TD</th></tr></thead><tbody>${rec}</tbody></table></div><p class="sub">Includes RPOs that were thrown.</p></div>
+  </div></section>`;
+}
+function renderTaggerRO(){ // finished games (published data): read-only play log
+  let P=G.plays.filter(p=>(FILTER.half==='all'||String(p.half)===FILTER.half)&&(FILTER.type==='all'||p.type===FILTER.type||(FILTER.type==='other'&&!p.type))&&(!FILTER.flagged||(p.flags&&p.flags.length)));
+  const nflag=G.plays.filter(p=>p.flags&&p.flags.length).length;
+  let rows='',lastHalf=null;
+  for(const p of P){
+    if(p.half!==lastHalf){rows+=`<tr class="half"><td colspan="14">${p.half===1?'1st half':'2nd half'}</td></tr>`;lastHalf=p.half}
+    const fl=p.flags&&p.flags.length;
+    rows+=`<tr class="${fl?'flag':''}"><td class="n">${p.clip}</td><td class="n">${p.hudl??''}</td><td class="n">${ylTxt(p.yl)}</td><td>${esc(p.hash)}</td><td class="n">${p.dn??''}</td><td class="n">${p.dist??''}</td><td class="n">${p.gn??''}</td><td>${esc(p.eff)}</td><td>${p.expl==='YES'?'<span class="pill td">YES</span>':esc(p.expl)}</td><td>${esc(p.type)}</td><td>${esc(p.result)}</td><td>${esc(p.call)}</td><td>${p.player?'#'+esc(p.player)+' '+esc(p.playerName):''}</td><td style="white-space:normal;min-width:180px">${esc((p.flags||[]).join('; '))}</td></tr>`;
+  }
+  const acc=G.accuracy?`<div class="panel"><h3>Tagger accuracy vs Hudl tags</h3><div class="tablewrap"><table><thead><tr><th>Field</th><th class="n">Film only</th><th class="n">Film + almanac</th></tr></thead><tbody>${[['Yard ln exact','yardExact'],['Yard ln within 1','yardWithin1'],['Hash','hash'],['Down','dn'],['Distance','dist'],['Gain within 1','gn'],['Efficient','eff'],['Explosive','expl'],['Play type','type'],['Result','result']].map(([l,k])=>`<tr><td>${l}</td><td class="n">${G.accuracy.opponentScout[k]}%</td><td class="n">${G.accuracy.fridayNight[k]}%</td></tr>`).join('')}</tbody></table></div></div>`:'';
+  return `<section style="display:flex;flex-direction:column;gap:16px">
+  <p class="sub">This game is finished and published, so its tags are read-only here. To tag a new game, pick <b>+ Tag a new game…</b> in the Game menu.</p>
+  <div class="bar"><label>Half <select id="f_half"><option value="all">All</option><option value="1" ${FILTER.half==='1'?'selected':''}>1st</option><option value="2" ${FILTER.half==='2'?'selected':''}>2nd</option></select></label>
+  <label>Type <select id="f_type"><option value="all">All</option>${['Run','Pass'].map(t=>`<option ${FILTER.type===t?'selected':''}>${t}</option>`).join('')}<option value="other" ${FILTER.type==='other'?'selected':''}>Penalty / admin</option></select></label>
+  <label><input type="checkbox" id="f_flagged" ${FILTER.flagged?'checked':''}> Flagged for review only (${nflag})</label><span class="meta">${P.length} plays</span></div>
+  <div class="tablewrap" style="max-height:70vh"><table><thead><tr><th class="n">Clip</th><th class="n">Hudl</th><th class="n">Yard ln</th><th>Hash</th><th class="n">Dn</th><th class="n">Dist</th><th class="n">Gn/Ls</th><th>Eff</th><th>Expl</th><th>Type</th><th>Result</th><th>Call</th><th>Ball carrier / target</th><th>Review</th></tr></thead><tbody>${rows}</tbody></table></div>
+  ${acc}</section>`;
+}
+
+/* ---------- Claude-written summary ---------- */
+async function draftWhy(){const b=$('#aiWhy');b.disabled=true;b.textContent='Writing…';const g=buildG(),c=CFG();
+  try{const data={final:g.final,opponent:g.opponent,goals:g.goals,stats:{...g.stats.full,rushing:g.stats.full.rushing.slice(0,4),receiving:g.stats.full.receiving.slice(0,4)},
+      drives:g.drives.map(d=>({n:d.n,half:d.half,start:d.start,plays:d.plays,yards:d.yards,result:d.result,eff:d.effD?pct(d.effN,d.effD):null,expl:d.expl})),
+      turningPoints:g.turningPoints.map(t=>({clip:t.clip,title:t.title,when:t.when})),explosives:g.explosives.map(t=>({title:t.title,when:t.when}))};
+    const r=await S.sample(`Write the 2-3 sentence summary at the top of a high school offensive staff's postgame report. Data-first, direct, no hype or cheerleading. Use only the data below; do not invent players, plays, quarters or context that is not in it. Yard lines: negative = Deer Creek's own half. Lead with the result and the biggest reason. Plain text, no heading.\n\nDATA:\n${JSON.stringify(data)}`,{modelTier:'default'});
+    S.summary=(r.text||'').trim();refresh();render()}catch(e){toast('Could not write the summary ('+((e&&e.code)||'error')+')');b.disabled=false}}
+async function saveFile(name,data,mime){
+  try{const dl=await claude.use('downloads');if(dl){await dl.save({filename:name,data});toast('Saved '+name);return}}catch(e){if(e&&e.code==='declined')return}
+  try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:mime}));a.download=name;a.click();toast('Downloaded '+name)}catch(e){toast('Download not available here')}}
+
+/* ---------- Export to Hudl ---------- */
+const HCOLS=['PLAY #','ODK','YARD LN','HASH','DN','DIST','GN/LS','EFF','EXPLOSIVE?','PLAY TYPE','RESULT'];
+let HOPT={start:1,call:false,player:false};
+function hudlRows(){
+  const src=G.local?S.plays.map(p=>p.calc&&!p.skip?{...p.calc,result:(p.calc.result||'')+(p.calc.td&&p.calc.result?', TD':''),player:p.calc.player||p.carrier,expl:p.calc.exp,box:p.box,mof:p.mof,cov:p.cov,press:p.press}:null)
+    :G.plays.map(p=>({...p,exp:p.expl==='YES'?'YES':''}));
+  return src.map((c,k)=>{const r={'PLAY #':(G.local?+HOPT.start+k:(c.hudl??+HOPT.start+k)),'ODK':OPP()&&G.local?'D':'O'};if(!c)return r;
+    if(OPP()&&G.local)Object.assign(r,{'BOX':c.box||'','MOF':c.mof||'','COVERAGE':c.cov||'','PRESSURE BROUGHT':c.press??''});
+    Object.assign(r,{'YARD LN':c.yl??'','HASH':c.hash||'','DN':c.dn??'','DIST':c.dist??'','GN/LS':c.gn??'','EFF':c.eff||'','EXPLOSIVE?':c.exp||c.expl==='YES'&&'YES'||'',
+      'PLAY TYPE':/^(Penalty|Timeout)/.test(c.result)?'':c.type||'','RESULT':c.result||''});
+    if(HOPT.call)r['OFF PLAY']=c.call||'';if(HOPT.player)r['PLAYER']=c.player||'';return r})}
+function hudlCols(){const cols=OPP()&&G&&G.local?['PLAY #','ODK','YARD LN','HASH','DN','DIST','GN/LS','EFF','EXPLOSIVE?','PLAY TYPE','RESULT','BOX','MOF','COVERAGE','PRESSURE BROUGHT']:[...HCOLS];if(HOPT.call)cols.push('OFF PLAY');if(HOPT.player)cols.push('PLAYER');return cols}
+function renderHudl(){
+  if(G.local&&!S.plays.length)return `<div class="panel empty">Load and tag clips in Film Tagger first.</div>`;
+  const cols=hudlCols(),rows=hudlRows(),nRev=G.local?S.plays.filter(needsReview).length:0;
+  return `<section style="display:flex;flex-direction:column;gap:16px"><div class="panel"><h2>Export to Hudl</h2>
+   <p class="sub">One row per clip in clip order, so row 1 lines up with the first clip in the Hudl playlist. Skipped clips stay as blank rows to keep the order. ${OPP()&&G.local?'Opponent scout: ODK = D, plus BOX, MOF, COVERAGE and PRESSURE BROUGHT. Column names get matched to your Hudl column set next.':'Columns match your Hudl breakdown (PLAY #, ODK, YARD LN, HASH, DN, DIST, GN/LS, EFF, EXPLOSIVE?, PLAY TYPE, RESULT). P&10, DRIVE RESULT, 2FDOS and HAVOC? are left out for now.'}</p>
+   <div class="bar">${G.local?`<label>First PLAY # <input id="hStart" type="number" value="${HOPT.start}" style="width:90px"></label>`:'<input id="hStart" type="hidden">'}
+    <label><input type="checkbox" id="hCall" ${HOPT.call?'checked':''}> Include play call (OFF PLAY)</label><label><input type="checkbox" id="hPlayer" ${HOPT.player?'checked':''}> Include player</label></div>
+   <div class="bar"><button class="pri" id="hCsv">Download CSV</button><button id="hXlsx">Download Excel</button><button id="hCopy">Copy rows to paste</button><span class="meta">${rows.length} rows</span></div>
+   ${G.local?`<p class="sub" style="font-size:14px">${nRev?`<b class="miss">${nRev} plays still need review.</b> Clear the review queue in Film Tagger before you import.`:'<b class="hit">Review queue is clear.</b>'} Test the first import on a copy of the playlist.</p>`:''}</div>
+  <div class="tablewrap" style="max-height:65vh"><table><thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td>${esc(r[c]??'')}</td>`).join('')}</tr>`).join('')}</tbody></table></div></section>`}
+function wireHudl(){
+  const hs=$('#hStart');if(hs.type!=='hidden')hs.onchange=()=>{HOPT.start=+hs.value||1;render()};
+  $('#hCall').onchange=e=>{HOPT.call=e.target.checked;render()};$('#hPlayer').onchange=e=>{HOPT.player=e.target.checked;render()};
+  const csv=()=>{const cols=hudlCols(),q=v=>{v=String(v??'');return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};return [cols.join(','),...hudlRows().map(r=>cols.map(k=>q(r[k])).join(','))].join('\n')};
+  const nm=()=>(G.local?(CFG().game||CFG().opp||'game'):G.title)+(OPP()&&G.local?' Hudl D scout':' Hudl O');
+  $('#hCsv').onclick=()=>saveFile(nm()+'.csv',csv(),'text/csv');
+  $('#hXlsx').onclick=async()=>{if(typeof XLSX==='undefined'){toast('Excel writer not loaded; use CSV');return}const cols=hudlCols();const ws=XLSX.utils.json_to_sheet(hudlRows(),{header:cols});const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Hudl');
+    const b64=XLSX.write(wb,{bookType:'xlsx',type:'base64'});
+    try{const dl=await claude.use('downloads');if(dl){await dl.save({filename:nm()+'.xlsx',data:Uint8Array.from(atob(b64),c=>c.charCodeAt(0))});toast('Saved');return}}catch(e){if(e&&e.code==='declined')return}
+    const a=document.createElement('a');a.href='data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,'+b64;a.download=nm()+'.xlsx';a.click()};
+  $('#hCopy').onclick=async()=>{const cols=hudlCols();const t=hudlRows().map(r=>cols.map(c=>r[c]??'').join('\t')).join('\n');try{await navigator.clipboard.writeText(t);toast('Copied rows (no header)')}catch(e){toast('Copy not allowed here; use CSV')}};
+}
+
+/* ---------- start ---------- */
+function tombstone(ids){try{const t=JSON.parse(localStorage.getItem('fr:deleted')||'[]');ids.forEach(i=>{if(i&&!t.includes(i))t.push(i)});localStorage.setItem('fr:deleted',JSON.stringify(t))}catch(e){}}
+function startPick(){const v=$('#gamePick').value;if(v&&!v.startsWith('new:')){pick(v);return}G=null;render();$('#out').innerHTML='<div class="panel empty">No games yet. Pick <b>+ New self scout</b> in the Game menu, send a game from the Almanac, or <b>Import game file</b> for a finished game.</div>'}
+fillPicker();
+{const p=new URLSearchParams(location.search).get('game');if(p&&EMB.games[p])pick('emb:'+p);else startPick()}
+/* Import a finished game (the file "Download game file" makes, or a published game file). Kept on this device and synced with the staff. */
+$('#impGame').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const j=JSON.parse(await f.text());let list=[];
+  if(j.index&&j.games)list=j.index.map(x=>({lab:x.label,g:j.games[x.id]})).filter(x=>x.g);else if(j.staff||j.program)list=[{g:j.staff||j.program}];else if(j.plays)list=[{g:j}];
+  if(!list.length)throw new Error('not a Film Room game file');
+  for(const x of list){const g=x.g;g.id=g.id||('pub'+Date.now().toString(36));const lab=x.lab||g.title||g.opponent||g.id;EMB.games[g.id]=g;if(!EMB.index.some(i=>i.id===g.id))EMB.index.push({id:g.id,label:lab})}
+  savePub();fillPicker();$('#gamePick').value='emb:'+list[0].g.id;pick($('#gamePick').value);toast('Imported '+list.length+' game'+(list.length>1?'s':''))}catch(err){toast("Couldn't import: "+err.message)}e.target.value=''};
+/* From the Almanac (KDNCE): the game arrives here directly, no copy and paste. */
+window.takeAlmanac=takeAlmanac;
+function takeAlmanac(txt){const nm=((txt.split('\n')[0]||'').split('\t')[1]||'').trim();
+  const sv=SAVED();let id=null;if(G&&G.local&&KIND()==='self')id=CUR;else{const ex=sv.find(g=>g.kind!=='opp'&&nm&&g.label.toLowerCase().includes(nm.toLowerCase()));if(ex)id=ex.id}
+  if(id){openLocal(id);fillPicker();$('#gamePick').value='loc:'+id}else pick('new:self');
+  TAB='tagger';$('#setupBox').open=true;loadAlmText(txt);fillPicker();render()}
+addEventListener('message',e=>{if(e.origin!==location.origin||!e.data)return;if(e.data.almanac)takeAlmanac(e.data.almanac);if(e.data.film==='reload'){const busy=S.plays.some(p=>Object.keys(p.angles||{}).length);if(busy)toast('This game list changed on another iPad. Reopen the Film Room to see it.');else location.reload()}});
+(async()=>{try{const s=await claude.use('sample');if(s){const lim=await s.limits().catch(()=>null);if(lim&&lim.images){S.sample=s;S.imgMax=lim.images.maxCount||20}}}catch(e){}
+  $('#aiAll').disabled=!(S.sample&&S.plays.length);$('#aiAvail').textContent=S.sample?'AI reading on':'AI reading off in this view';if(TAB==='result'&&G&&G.local)render()})();
+</script>
+</body>
+</html>
