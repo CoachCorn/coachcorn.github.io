@@ -191,7 +191,7 @@ function signInModal(){const s=SUITESYNC.status();
  pwToggle('sc');pwToggle('sa');
  $('sx').onclick=closeM;
  $('rd').onclick=()=>{const b=$('rd');if(!b.dataset.arm){b.dataset.arm=1;b.textContent='Tap again: erase all demo data';return}
-  try{Object.keys(localStorage).filter(k=>['almanac_demo','glossary_v1_demo','gameplan_v1_demo','schedule_v1_demo','gp_cur'].includes(k)||k.indexOf('frd:')===0||k.indexOf('gpscout_v1_demo_')===0).forEach(k=>localStorage.removeItem(k))}catch(e){}location.reload()};
+  try{Object.keys(localStorage).filter(k=>['almanac_demo','glossary_v1_demo','gameplan_v1_demo','schedule_v1_demo','gp_cur','gp.demodeck','mr.demoset'].includes(k)||k.indexOf('frd:')===0||k.indexOf('gpscout_v1_demo_')===0).forEach(k=>localStorage.removeItem(k))}catch(e){}location.reload()};
  $('sg').onclick=async()=>{$('se').textContent='';try{await SUITESYNC.login($('su').value,$('sp').value,$('sc').value);closeM();renderHome();SUITESYNC.syncNow()}catch(e){$('se').textContent=e.message}};
  $('ss').onclick=async()=>{$('se').textContent='';try{await SUITESYNC.setup($('su').value,$('sp').value.trim().toLowerCase(),$('sn2').value,$('sc').value,$('sa').value);$('se').style.color='var(--ok)';$('se').textContent='Program set. Now tap Sign in.'}catch(e){$('se').style.color='';$('se').textContent=e.message}}}
 (()=>{let x0=null,y0=null;const h=$('home');h.addEventListener('touchstart',e=>{x0=e.touches[0].clientX;y0=e.touches[0].clientY},{passive:true});
