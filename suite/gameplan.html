@@ -118,7 +118,7 @@ function touch(p){p.upd=Date.now();writeStore()}
 const OLK=['LT','LG','C','RG','RT'],SK=['Q','X','Z','M','H','Y','F','A','B','T'];
 const COLS=['#ffffff','#ef5b5b','#5aa9ff','#f2b632','#2fbf71','#c58bff'];
 const TC={Q:'#ffffff',X:'#5aa9ff',Z:'#5aa9ff',M:'#f2b632',H:'#2fbf71',Y:'#c58bff',F:'#5ad1c8',A:'#ff9bd0',B:'#b0b8c4',T:'#ef7b5b'};
-const LOS=110,VW=480,VH=250;
+const LOS=110,VW=480,VH=250,HASHX=235; // the ball sits on the left hash: hash marks run down the column where the center lines up
 function baseDraw(){const t={},put=(k,x,y,on)=>t[k]={x,y,on};
  put('X',30,114,1);put('Z',456,112,1);put('M',165,150,1);put('Q',235,168,1);put('T',210,205,1);put('H',385,128,1);
  put('Y',395,112,0);put('F',430,150,0);put('A',300,190,0);put('B',260,205,0);
@@ -129,6 +129,8 @@ function svgOf(d,sel,cur){const n=++svgN,used=new Set();
  let s=`<svg viewBox="0 0 ${VW} ${VH}" xmlns="http://www.w3.org/2000/svg"><defs>`+[...used].map(c=>`<marker id="a${n}${c.slice(1)}" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L8 4L0 8z" fill="${c}"/></marker>`).join('')+`</defs>`;
  s+=`<rect width="${VW}" height="${VH}" fill="#101c14"/>`;
  for(let y=LOS+40;y<VH;y+=40)s+=`<line x1="0" x2="${VW}" y1="${y}" y2="${y}" stroke="#ffffff10"/>`;
+ for(let k=-14;k<=16;k++){const y=LOS+k*8;if(y<4||y>VH-2)continue;const w=k%5===0?16:9;s+=`<line x1="${HASHX-w/2}" x2="${HASHX+w/2}" y1="${y}" y2="${y}" stroke="#ffffff66" stroke-width="1.4"/>`}
+ s+=`<text x="${HASHX+11}" y="${VH-5}" fill="#ffffff55" font-size="8.5" font-family="sans-serif">L HASH</text>`;
  s+=`<line x1="0" x2="${VW}" y1="${LOS}" y2="${LOS}" stroke="#ffffff55" stroke-dasharray="6 5"/><text x="6" y="${LOS-5}" fill="#ffffff66" font-size="9" font-family="sans-serif">LOS</text>`;
  for(const l of lines){const c=l.col||'#ffffff',pts=(l.pts||[]).map(p=>p.join(',')).join(' ');if((l.pts||[]).length<2)continue;
   s+=`<polyline points="${pts}" fill="none" stroke="${c}" stroke-width="${l.dot?3:2.6}" stroke-linecap="round" stroke-linejoin="round" ${l.dot?'stroke-dasharray="1 7"':''} ${l.arrow?`marker-end="url(#a${n}${c.slice(1)})"`:''}/>`}
