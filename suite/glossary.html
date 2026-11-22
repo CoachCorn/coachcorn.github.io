@@ -50,7 +50,7 @@ const TYPES=[['formation','Formations'],['ftag','Formation tags'],['motion','Mot
 const DEF_SIDE=t=>['front','frontmod','coverage','shell'].includes(t)?'D':'O';
 const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const $=id=>document.getElementById(id);
-let G=null,S={q:'',type:'',review:false,nodef:false};
+let G=null,S={q:'',type:'',review:false,nodef:false,home:true};
 const noDef=t=>t.status==='active'&&!String((t.meaning&&t.meaning.text)||'').trim();
 function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',2200)}
 function load(){G=window.GL?GL.load(PROGRAM):null}
@@ -92,15 +92,33 @@ function render(){
  if(!G){$('list').innerHTML='<p class="note">No glossary on this device yet for '+esc(PROGRAM)+'. Open the Almanac once; it builds the glossary from its lists.</p>';$('meta').textContent='';return}
  $('ttl').textContent='Glossary · '+G.name;$('meta').textContent='rev '+G.rev+' · '+G.terms.length+' terms';
  const rv=GL.reviewList(G).length,nd=G.terms.filter(noDef).length,q=GL.U(S.q);
+ if(S.home&&!q&&!S.review&&!S.nodef)return renderHome();
  $('types').innerHTML=`<button class="chip ${S.review?'on':''}" data-rv="1" style="${rv?'border-color:var(--warn)':''}">Review (${rv})</button><button class="chip ${S.nodef?'on':''}" data-nd="1">No definitions yet (${nd})</button><button class="chip ${!S.type&&!S.review&&!S.nodef?'on':''}" data-t="">All</button>`+TYPES.map(([k,l])=>`<button class="chip ${S.type===k?'on':''}" data-t="${k}">${l}</button>`).join('');
  const list=G.terms.filter(t=>(!S.type||t.type===S.type)&&(!S.review||t.needsReview)&&(!S.nodef||noDef(t))&&(!q||[t.name,...t.aliases,t.meaning.text||'',t.code||''].some(x=>GL.U(x).includes(q))))
   .sort((a,b)=>(a.status===b.status?0:a.status==='active'?-1:1)||a.type.localeCompare(b.type)||a.name.localeCompare(b.name));
  const tl=t=>(TYPES.find(x=>x[0]===t)||[t,t])[1];
- $('list').innerHTML=`<table><thead><tr><th>Term</th><th>Type</th><th>Meaning</th></tr></thead><tbody>${list.map(t=>`<tr class="r" data-id="${esc(t.id)}" style="${t.status==='retired'?'opacity:.45':''}"><td><b>${esc(t.name)}</b>${t.code?' <span class="mut">'+esc(t.code)+(t.package?' '+t.package:'')+'</span>':''}${t.needsReview?'<span class="badge">REVIEW</span>':''}${t.status==='retired'?' <span class="mut">retired</span>':''}${t.aliases.length?'<div class="mut">also '+esc(t.aliases.join(', '))+'</div>':''}</td><td class="mut">${esc(tl(t.type))}${t.uses.length?' · '+t.uses.join('/'):''}</td><td>${esc(t.meaning.text||'')||'<span class="mut">no meaning yet</span>'}</td></tr>`).join('')||'<tr><td colspan="3" class="mut">Nothing matches.</td></tr>'}</tbody></table>`;
+ const head=S.type==='formation'?`<p style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="btn pri" id="toLib">Draw formations</button><span class="note">${G.terms.filter(t=>t.type==='formation'&&t.status==='active'&&!drawn(t)).length} not drawn yet. Opens the formation library in Gameplan.</span></p>`:'';
+ $('list').innerHTML=head+`<table><thead><tr><th>Term</th><th>Type</th><th>Meaning</th></tr></thead><tbody>${list.map(t=>`<tr class="r" data-id="${esc(t.id)}" style="${t.status==='retired'?'opacity:.45':''}"><td><b>${esc(t.name)}</b>${t.code?' <span class="mut">'+esc(t.code)+(t.package?' '+t.package:'')+'</span>':''}${t.needsReview?'<span class="badge">REVIEW</span>':''}${t.status==='retired'?' <span class="mut">retired</span>':''}${t.aliases.length?'<div class="mut">also '+esc(t.aliases.join(', '))+'</div>':''}</td><td class="mut">${esc(tl(t.type))}${t.uses.length?' · '+t.uses.join('/'):''}</td><td>${esc(t.meaning.text||'')||'<span class="mut">no meaning yet</span>'}</td></tr>`).join('')||'<tr><td colspan="3" class="mut">Nothing matches.</td></tr>'}</tbody></table>`;
+ $('types').insertAdjacentHTML('afterbegin','<button class="chip" data-home="1" style="font-weight:700">← Categories</button>');document.querySelector('[data-home]').onclick=()=>{S.home=true;S.type='';S.review=false;S.nodef=false;S.q='';$('q').value='';render()};
  document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{S.type=b.dataset.t;S.review=false;if(!b.dataset.t)S.nodef=false;render()});
  document.querySelector('[data-nd]').onclick=()=>{S.nodef=!S.nodef;if(S.nodef)S.review=false;render()};
  document.querySelector('[data-rv]').onclick=()=>{S.review=!S.review;render()};
- document.querySelectorAll('tr.r').forEach(r=>r.onclick=()=>edit(r.dataset.id))}
+ document.querySelectorAll('tr.r').forEach(r=>r.onclick=()=>edit(r.dataset.id));
+ const tl0=$('toLib');if(tl0)tl0.onclick=()=>{try{parent.postMessage({open:'gameplan',gpLib:1},location.origin)}catch(e){}if(parent===window)location.href='gameplan.html#lib'}}
+/* ---- home: one tile per category with badges for what still needs work (like a locker with new items) ---- */
+const drawn=t=>!!(t.draw&&t.draw.t);
+function renderHome(){const act=G.terms.filter(t=>t.status==='active'),rvl=GL.reviewList(G);
+ const tile=(k,l)=>{const ts=act.filter(t=>t.type===k),nd=ts.filter(t=>noDef(t)||t.needsReview).length,ud=k==='formation'?ts.filter(t=>!drawn(t)).length:0,work=nd+ud;
+  return`<button class="tile" data-cat="${k}" style="position:relative;text-align:left;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--card,#151c24);color:inherit;min-height:96px;cursor:pointer">
+   ${work?`<span style="position:absolute;top:-8px;right:-8px;min-width:24px;height:24px;border-radius:12px;background:var(--warn,#f2b632);color:#111;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;padding:0 6px">${work}</span>`:''}
+   <div style="font-weight:800;font-size:16px">${esc(l)}</div><div class="note" style="margin-top:2px">${ts.length} term${ts.length===1?'':'s'}</div>
+   ${nd?`<div style="margin-top:6px;font-size:13px;color:var(--warn,#f2b632)">${nd} need${nd===1?'s':''} a definition</div>`:''}
+   ${ud?`<div style="margin-top:2px;font-size:13px;color:var(--warn,#f2b632)">${ud} not drawn yet</div>`:''}</button>`};
+ const used=TYPES.filter(([k])=>act.some(t=>t.type===k)||['formation','ftag','motion','tag','run','pass','oneword'].includes(k));
+ $('types').innerHTML='';
+ $('list').innerHTML=`${rvl.length?`<button class="tile" data-cat="__review" style="width:100%;text-align:left;padding:12px 14px;border:1px solid var(--warn,#f2b632);border-radius:14px;background:transparent;color:inherit;margin-bottom:12px;cursor:pointer"><b>Review: ${rvl.length} new word${rvl.length===1?'':'s'}</b> <span class="note">added from the Almanac, the grid or an import; check spelling, define, or retire</span></button>`:''}
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px">${used.map(([k,l])=>tile(k,l)).join('')}</div>`;
+ document.querySelectorAll('[data-cat]').forEach(b=>b.onclick=()=>{const k=b.dataset.cat;S.home=false;if(k==='__review'){S.review=true;S.type=''}else{S.type=k;S.review=false}S.nodef=false;render()})}
 function modal(h){$('mbox').innerHTML=h;$('modal').classList.add('show')}
 function close(){$('modal').classList.remove('show')}
 $('modal').onclick=e=>{if(e.target.id==='modal')close()};
@@ -138,7 +156,7 @@ function edit(id){const t=id?GL.byId(G,id):null,tv=t?t.type:(S.type||'tag'),isTa
   const u=uses();if(u&&term.type==='tag'){term.uses=u;if(!u.length)term.status='retired'}
   commit(term);close();toast('Saved '+term.name)};
  const rb=$('e_r');if(rb)rb.onclick=()=>{load();const x=GL.byId(G,t.id);x.status==='active'?GL.retire(x):GL.activate(x);x.needsReview=false;commit(x);close();toast((x.status==='active'?'Brought back ':'Retired ')+x.name)}}
-$('q').oninput=e=>{S.q=e.target.value;render()};
+$('q').addEventListener('input',e=>{if(e.target.value.trim())S.home=false});$('q').oninput=e=>{S.q=e.target.value;render()};
 $('add').onclick=()=>{if(G)edit(null)};
 $('himp').onclick=impOpen;
 $('exp').onclick=()=>{if(!G)return;const b=new Blob([JSON.stringify(G,null,1)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='glossary-'+G.program+'-rev'+G.rev+'.json';document.body.appendChild(a);a.click();a.remove()};

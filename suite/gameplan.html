@@ -853,6 +853,8 @@ function boot(){ST=readStore();try{cur=localStorage.getItem('gp_cur')||null}catc
  if(!signedIn()&&ST.rows.some(p=>p.sample&&p.dv!==3)){ST.rows=ST.rows.filter(p=>!(p.sample&&p.dv!==3));ST.rows.unshift(samplePlan());writeStore()}   // demo vocabulary changed: swap an out-of-date sample week for the current one, leave the coach's own plans alone
  if(!signedIn()&&!ST.rows.length&&!(ST.deleted||[]).length){ST.rows.push(samplePlan());writeStore()}
  render()}
+addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.gameplan==='library'){if(!E&&!($('modal').classList.contains('show')&&$('lb_q')))libOpen();return}});
+if(location.hash==='#lib')setTimeout(()=>{try{libOpen()}catch(e){}},600);
 addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.gameplan==='changed'&&!E&&!$('modal').classList.contains('show')){ST=readStore();render()}});
 addEventListener('storage',e=>{if(!E&&!$('modal').classList.contains('show')){if(e.key===KEY){ST=readStore();render()}else if(e.key==='almanac_v1')render()}});
 boot();
