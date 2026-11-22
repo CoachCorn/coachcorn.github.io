@@ -249,6 +249,11 @@ function render(){const p=plan();
   </table></div></div>`).join(''):'<div class="empty">No formations yet. Tap <b>+ Formation</b>.</div>');
 }
 $('main').addEventListener('change',e=>{const p=plan(),bl=e.target.closest('.block');if(!p||!bl)return;const b=p.blocks[+bl.dataset.b];
+ if(e.target.dataset.f==='name'){const old=fmParse(b.name),nw=fmParse(e.target.value),g=glossary();b.name=e.target.value;
+  /* renamed to another formation: load that formation's standard drawing, personnel and formation tags; same formation, other side: mirror */
+  if(nw.base&&old.base.toUpperCase()===nw.base.toUpperCase()){if(old.side&&nw.side&&old.side!==nw.side&&b.draw){b.draw=mirrorDraw(b.draw);toast('Flipped to '+nw.side)}touch(p);return render()}
+  const t=fmTerm(g,b.name);if(t&&t.draw&&t.draw.t){b.draw=stdDraw(t,nw.side);if(t.draw.pers)b.pers=t.draw.pers;b.ftags=clone(t.ftags||[]);touch(p);toast('Loaded '+t.name+' from your formation library');return render()}
+  if(nw.base&&old.base)toast('No drawing saved for '+nw.base+' yet. Draw it here or in Formations.')}
  if(e.target.dataset.f){b[e.target.dataset.f]=e.target.value;if(e.target.dataset.f==='name'&&!(b.ftags&&b.ftags.length)){const t=fmTerm(glossary(),b.name);if(t&&t.ftags&&t.ftags.length){b.ftags=clone(t.ftags);if(!(t.draw&&t.draw.t))b.ftags.forEach(n=>tagDraw(b.draw,n,true));touch(p);return render()}}touch(p)}
  else if(e.target.dataset.pd){b.pd=b.pd||{};b.pd[e.target.dataset.pd]=e.target.value;touch(p)}});
 $('main').addEventListener('click',e=>{const p=plan();if(!p)return;const bl=e.target.closest('.block'),bi=bl?+bl.dataset.b:-1,b=p.blocks[bi];
