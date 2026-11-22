@@ -179,6 +179,15 @@ function svgOf(d,sel,cur,selL){const n=++svgN,used=new Set(),edit=selL!==undefin
 
 /* ---------- glossary ---------- */
 let GLO=null;function glossary(){try{GLO=window.GL?GL.load(PROGRAM):null}catch(e){GLO=null}return GLO}
+/* ---- standard formation drawings, kept on the glossary's formation terms (term.draw = {t,side,pers}) ---- */
+function fmParse(name){const m=String(name||'').trim().match(/^(.*?)\s+(LT|RT|LEFT|RIGHT)$/i);if(!m)return{base:String(name||'').trim(),side:''};const x=m[2].toUpperCase();return{base:m[1].trim(),side:(x==='LT'||x==='LEFT')?'LT':'RT'}}
+function fmTerm(g,name){if(!g)return null;const{base}=fmParse(name);return GL.find(g,'formation',name)||(base?GL.find(g,'formation',base):null)}
+function mirrorDraw(d){const o=clone(d),m=x=>Math.round(VW-x);for(const k in o.t)o.t[k].x=m(o.t[k].x);[['LT','RT'],['LG','RG']].forEach(([a,b])=>{if(o.t[a]&&o.t[b]){const x=o.t[a].x,y=o.t[a].y;o.t[a].x=o.t[b].x;o.t[a].y=o.t[b].y;o.t[b].x=x;o.t[b].y=y}});(o.l||[]).forEach(l=>l.pts=l.pts.map(q=>[m(q[0]),q[1]]));(o.sh||[]).forEach(h=>h.x=m(h.x));return o}
+function stdDraw(t,side){const r=t&&t.draw;if(!r||!r.t)return null;const d=Object.assign(baseDraw(),{t:clone(r.t),l:[]});return(!side||!r.side||side===r.side)?d:mirrorDraw(d)}
+function fmSave(name,d,pers,force){const g=glossary();if(!g)return 0;const{base,side}=fmParse(name);if(!base||/^new formation$/i.test(base))return 0;
+ let t=fmTerm(g,name),made=false;if(!t){t=GL.add(g,{type:'formation',name:base,source:'gameplan'}).term;made=true}
+ if(t.draw&&t.draw.t&&!force)return 0;const tk={};for(const k in d.t)if(!d.t[k].df&&!/^D_/.test(k))tk[k]=clone(d.t[k]);
+ t.draw={t:tk,side,pers:digits(pers)||persOf(d).code,at:Date.now()};GL.touch(t);GL.save(g);return made?2:1}
 function terms(types){const g=glossary();if(!g)return[];const out=[],seen=new Set();for(const t of types)for(const x of GL.active(g,t)){const n=x.name;if(!seen.has(n.toUpperCase())){seen.add(n.toUpperCase());out.push(n)}}return out.sort((a,b)=>a.localeCompare(b))}
 const SLOTS=[['ftag','Formation tag',['ftag']],['motion','Motion / Shift',['motion']],['formation','Formation',['formation']],['concept','Concept or one word',['run','pass','oneword']],['tag','Play tag',['tag']]];
 if(signedIn())SLOTS.push(['glf','GLF',['glf']]);
@@ -216,7 +225,7 @@ function render(){const p=plan();
  $('main').innerHTML=(p.sample?'<div class="note" style="margin-bottom:10px;padding:8px 10px;border:1px dashed var(--line);border-radius:10px">This is a sample plan. It goes away when you sign in. To keep a copy, use <b>Plans</b> then <b>Duplicate plan</b>.</div>':'')+hintHTML(sc,p)+`<datalist id="fm">${fm.map(n=>`<option value="${esc(n)}">`).join('')}</datalist>`+
  (p.blocks.length?p.blocks.map((b,bi)=>`<div class="block" data-b="${bi}">
   <div class="bh"><input class="nm" data-f="name" value="${esc(b.name)}" list="fm" placeholder="Formation name"><input class="ps" data-f="pers" value="${esc(b.pers)}" placeholder="Personnel"><span class="sp"></span>
-   <span class="act"><button class="btn sm" data-a="up">↑</button> <button class="btn sm" data-a="dn">↓</button> <button class="btn sm" data-a="dup">Copy</button> <button class="btn sm bad" data-a="del">Delete</button></span></div>
+   <span class="act"><button class="btn sm" data-a="up">↑</button> <button class="btn sm" data-a="dn">↓</button> <button class="btn sm" data-a="std">Standard</button> <button class="btn sm" data-a="dup">Copy</button> <button class="btn sm bad" data-a="del">Delete</button></span></div>
   <div class="bm"><div class="thumb" data-a="draw">${svgOf(b.draw)}<span class="tag">Edit drawing</span></div>
    <div class="pd"><div class="k">Predicted defense</div>${pdHTML(b,sc)}${blockHint(b,sc)}<div style="margin-top:6px"><label class="note">Note</label><input data-pd="box" value="${esc((b.pd||{}).box)}" placeholder="Anything you want to remember (box count, a tell)" style="width:100%;padding:6px"></div></div></div>
   <div class="tw"><table><colgroup><col style="width:92px">${p.cols.map(()=>'<col>').join('')}</colgroup>
@@ -233,6 +242,8 @@ $('main').addEventListener('click',e=>{const p=plan();if(!p)return;const bl=e.ta
   if(k==='draw')return openDraw(bi);
   if(k==='up'&&bi>0){[p.blocks[bi-1],p.blocks[bi]]=[p.blocks[bi],p.blocks[bi-1]];touch(p);return render()}
   if(k==='dn'&&bi<p.blocks.length-1){[p.blocks[bi+1],p.blocks[bi]]=[p.blocks[bi],p.blocks[bi+1]];touch(p);return render()}
+  if(k==='std'){const g=glossary();if(!g)return toast('No glossary on this device yet');const t=fmTerm(g,b.name),{base,side}=fmParse(b.name),has=!!(t&&t.draw&&t.draw.t);
+   return dialog({title:(base||'Formation')+' standard drawing',text:has?'The standard is saved in your glossary. Weekly tweaks stay on this block until you save them as the standard.':'No standard drawing is saved for this formation yet.',buttons:[{t:'Cancel'},...(has?[{t:'Reset block to standard',fn:()=>{const d=stdDraw(t,side);if(d){b.draw=d;touch(p);render();toast('Back to the standard '+base)}}}]:[]),{t:has?'Save this block as the standard':'Save as the standard',cls:'pri',fn:()=>{const r=fmSave(b.name,b.draw,b.pers,true);toast(r?'Saved as the standard '+base:'Could not save (no glossary or no name)')}}]})}
   if(k==='dup'){const c=clone(b);c.id=uid('b');c.name=b.name+' copy';p.blocks.splice(bi+1,0,c);touch(p);return render()}
   if(k==='del')return dialog({title:'Delete '+(b.name||'formation')+'?',text:'The drawing and every call in this block go away.',buttons:[{t:'Cancel'},{t:'Delete',cls:'bad',fn:()=>{p.blocks.splice(bi,1);touch(p);render()}}]})}
  const ce=e.target.closest('[data-cell]');if(ce&&b)return openCell(bi,ce.dataset.cell);
@@ -261,7 +272,24 @@ $('pmore').onclick=()=>{const p=plan();if(!p)return newPlanDialog();dialog({titl
  {t:'Duplicate plan',fn:()=>{const c=clone(p);c.id=uid('p');c.name=p.name+' copy';c.sample=false;c.upd=Date.now();ST.rows.push(c);cur=c.id;writeStore();render()}},
  {t:'Delete plan',cls:'bad',fn:()=>dialog({title:'Delete '+p.name+'?',text:'Every formation and call in it goes away.',buttons:[{t:'Cancel'},{t:'Delete',cls:'bad',fn:()=>{ST.rows=ST.rows.filter(x=>x.id!==p.id);ST.deleted=(ST.deleted||[]).concat(p.id);cur=null;writeStore();render()}}]})},
  {t:'Cancel'}]})};
-$('addb').onclick=()=>{const p=plan();if(!p)return newPlan(false);p.blocks.push({id:uid('b'),name:'New formation',pers:'',pd:{box:'',front:'',cov:'',blitz:''},draw:baseDraw(),cells:{}});touch(p);render();setTimeout(()=>{const n=document.querySelectorAll('.block .nm');if(n.length)n[n.length-1].scrollIntoView({behavior:'smooth',block:'center'})},50)};
+const plainAdd=(name,pers,draw)=>{const p=plan();p.blocks.push({id:uid('b'),name:name||'New formation',pers:pers||'',pd:{box:'',front:'',cov:'',blitz:''},draw:draw||baseDraw(),cells:{}});touch(p);render();setTimeout(()=>{const n=document.querySelectorAll('.block .nm');if(n.length)n[n.length-1].scrollIntoView({behavior:'smooth',block:'center'})},50)};
+function fmPicker(){const g=glossary();let q='',side='LT';const all=GL.active(g,'formation').slice().sort((a,b)=>a.name.localeCompare(b.name));
+ const pick=(name,isNew)=>{const full=name+(side?' '+side:'');let t=GL.find(g,'formation',name);if(!t&&isNew){t=GL.add(g,{type:'formation',name,source:'gameplan'}).term;GL.save(g)}
+  const d=t&&stdDraw(t,side);$('modal').classList.remove('show');$('mbox').style.width='';plainAdd(full,t&&t.draw&&t.draw.pers||'',d);if(d)toast('Filled in from your glossary: '+name)};
+ const list=()=>{const u=q.trim().toUpperCase(),rows=all.filter(t=>!u||t.name.toUpperCase().includes(u)||(t.aliases||[]).some(a=>String(a).toUpperCase().includes(u))),exact=all.some(t=>t.name.toUpperCase()===u);
+  return rows.map(t=>`<button class="btn" data-fp="${esc(t.name)}" style="display:flex;justify-content:space-between;gap:10px;width:100%;margin-bottom:6px;text-align:left"><b style="text-transform:uppercase">${esc(t.name)}</b><span class="note">${t.draw&&t.draw.t?'drawing saved'+(t.draw.pers?' · '+esc(t.draw.pers)+'p':''):'no drawing yet'}</span></button>`).join('')+
+   (u&&!exact?`<button class="btn pri" data-fpn="1" style="width:100%;margin-top:4px">Add “${esc(q.trim())}” as a new formation</button>`:'')||'<div class="note">No formations in your glossary yet. Type a name above to add one.</div>'};
+ $('mbox').style.width='min(520px,94vw)';
+ $('mbox').innerHTML=`<h3>Add a formation</h3><input id="fp_q" placeholder="Search your glossary or type a new one" autocomplete="off" autocapitalize="words" style="width:100%;padding:10px;margin-bottom:8px">
+  <div class="chips" id="fp_s" style="margin-bottom:8px"><span class="note" style="align-self:center">Side</span><button class="chip on" data-s="LT">LT</button><button class="chip" data-s="RT">RT</button><button class="chip" data-s="">None</button></div>
+  <div id="fp_l" style="max-height:48vh;overflow:auto">${list()}</div><div style="margin-top:10px"><button class="btn" id="fp_x">Cancel</button></div>`;
+ $('modal').classList.add('show');setTimeout(()=>{try{$('fp_q').focus()}catch(e){}},60);
+ $('fp_q').oninput=e=>{q=e.target.value;$('fp_l').innerHTML=list()};
+ $('fp_x').onclick=()=>{$('modal').classList.remove('show');$('mbox').style.width=''};
+ $('mbox').onclick=e=>{const sd=e.target.closest('[data-s]');if(sd){side=sd.dataset.s;$('fp_s').querySelectorAll('[data-s]').forEach(c=>c.classList.toggle('on',c===sd));return}
+  const f=e.target.closest('[data-fp]');if(f)return pick(f.dataset.fp,false);if(e.target.closest('[data-fpn]'))return pick(q.trim().replace(/\s+(LT|RT)$/i,''),true)};
+ $('mbox').onkeydown=e=>{if(e.key==='Enter'&&q.trim()){const u=q.trim().toUpperCase(),ex=all.find(t=>t.name.toUpperCase()===u);ex?pick(ex.name,false):pick(q.trim().replace(/\s+(LT|RT)$/i,''),true)}}}
+$('addb').onclick=()=>{const p=plan();if(!p)return newPlan(false);if(!glossary())return plainAdd();fmPicker()};
 $('addc').onclick=()=>{const p=plan();if(!p)return;dialog({title:'New column',fields:[{label:'Header (Jab, Cross, anything)',val:''},{label:'Small text under it (optional)',val:''}],buttons:[{t:'Cancel'},{t:'Add',cls:'pri',fn:v=>{p.cols.push({id:uid('c'),head:v[0].trim(),sub:v[1].trim()});touch(p);render()}}]})};
 $('addr').onclick=()=>{const p=plan();if(!p)return;dialog({title:'New row',fields:[{label:'Row name (Field run, Bdy run, anything)',val:''}],buttons:[{t:'Cancel'},{t:'Add',cls:'pri',fn:v=>{p.rows.push({id:uid('r'),label:v[0].trim()});touch(p);render()}}]})};
 function editCol(i){const p=plan(),c=p.cols[i];dialog({title:'Column',fields:[{label:'Header',val:c.head},{label:'Small text',val:c.sub}],buttons:[
@@ -611,7 +639,7 @@ const endDrag=()=>{if(E&&E.drag&&E.drag.kind==='free'){E.drag=null;finishFree();
 $('ed').addEventListener('pointerup',endDrag);$('ed').addEventListener('pointercancel',endDrag);
 $('ed').addEventListener('click',e=>{const b=e.target.closest('[data-e]');if(!b||!E)return;const a=b.dataset.e,t=E.d.t;
  if(a==='cancel'){const lk=E.look;E=null;$('ed').classList.remove('show');if(lk)$('looks').onclick();return}
- if(a==='save'){finishLine();const p=plan(),lk=E.look;if(lk){const c=p.blocks[E.bi].cells[lk.key];if(c){const was=c.look||{};c.look=Object.assign({},was,{d:E.d,gen:lk.gen,edited:true,at:Date.now()})}}else{const bl=p.blocks[E.bi];bl.draw=E.d;const q=persOf(E.d);if(q.ok){if(!digits(bl.pers))bl.pers=q.code;else if(digits(bl.pers)!==q.code)setTimeout(()=>toast('Personnel box says '+bl.pers+' but the drawing shows '+q.code+'p'),50)}}touch(p);E=null;$('ed').classList.remove('show');render();if(lk)$('looks').onclick();return}
+ if(a==='save'){finishLine();const p=plan(),lk=E.look;if(lk){const c=p.blocks[E.bi].cells[lk.key];if(c){const was=c.look||{};c.look=Object.assign({},was,{d:E.d,gen:lk.gen,edited:true,at:Date.now()})}}else{const bl=p.blocks[E.bi];bl.draw=E.d;const q=persOf(E.d);if(q.ok){if(!digits(bl.pers))bl.pers=q.code;else if(digits(bl.pers)!==q.code)setTimeout(()=>toast('Personnel box says '+bl.pers+' but the drawing shows '+q.code+'p'),50)}const fr=fmSave(bl.name,E.d,bl.pers||q.code,false);if(fr)setTimeout(()=>toast('Saved '+fmParse(bl.name).base+' to your glossary with this drawing'),1500)}touch(p);E=null;$('ed').classList.remove('show');render();if(lk)$('looks').onclick();return}
  if(a==='pl'){const k=b.dataset.k;snap();t[k].on=t[k].on?0:1;if(E.sel===k&&!t[k].on)E.sel=null}
  else if(a==='grp')E.grp=true;else if(a==='one')E.grp=false;
  else if(a==='lite'){snap();t.LT.x=t.RT.x+OLSP;t.LT.y=LOS}
