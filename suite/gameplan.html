@@ -595,7 +595,7 @@ function rdp(P,eps){if(P.length<3)return P;let mx=0,ix=0;const a=P[0],z=P[P.leng
 function finishFree(){const c=E.cur;E.cur=null;if(!c||c.pts.length<2)return;let len=0;for(let i=1;i<c.pts.length;i++)len+=Math.hypot(c.pts[i][0]-c.pts[i-1][0],c.pts[i][1]-c.pts[i-1][1]);if(len<12)return;
  let eps=c.curve?3:11,P=rdp(c.pts,eps);while(P.length>(c.curve?22:8)&&eps<30){eps+=1.5;P=rdp(c.pts,eps)}
  if(!c.curve&&P.length===2){const a=P[0],z=P[1],dx=z[0]-a[0],dy=z[1]-a[1],ang=Math.atan2(Math.abs(dx),Math.abs(dy))*180/Math.PI;if(ang<7)P=[a,[a[0],z[1]]];else if(ang>83)P=[a,[z[0],a[1]]]}
- P=P.map(q=>[Math.round(q[0]),Math.round(q[1])]);snap();E.d.l.push({pts:P,dot:c.dot,arrow:c.arrow,blk:c.blk,curve:!!c.curve&&P.length>=3,col:c.col});E.selL=E.d.l.length-1;E.sel=null}
+ P=P.map(q=>[Math.round(q[0]),Math.round(q[1])]);snap();E.d.l.push({pts:P,dot:c.dot,arrow:c.arrow,blk:c.blk,curve:!!c.curve&&P.length>=3,col:c.col});E.selL=null;E.sel=null}
 const blkLine=(from,to,col)=>{const edge=(a,b,r)=>{const dx=b.x-a.x,dy=b.y-a.y,m=Math.hypot(dx,dy)||1;return[Math.round(a.x+dx/m*r),Math.round(a.y+dy/m*r)]};return{pts:[edge(from,to,12),edge(to,from,14)],blk:1,col}};
 function climbLine(D1,D2,cx,col){const dx=D1.x-D2.x,dy=D1.y-D2.y,m=Math.hypot(dx,dy)||1,wx=dx/m,wy=dy/m,side=D1.x>=cx?1:-1,A=55*Math.PI/180,rot=a=>[wx*Math.cos(a)-wy*Math.sin(a),wx*Math.sin(a)+wy*Math.cos(a)],u1=rot(A),u2=rot(-A),u=(u1[0]*side>=u2[0]*side)?u1:u2,L=Math.max(34,m*.75),
   C={x:D2.x+u[0]*L,y:D2.y+u[1]*L},E={x:D2.x+u[0]*14,y:D2.y+u[1]*14},cm=Math.hypot(C.x-D1.x,C.y-D1.y)||1,S={x:D1.x+(C.x-D1.x)/cm*14,y:D1.y+(C.y-D1.y)/cm*14},R=Math.round,pts=[];
@@ -630,17 +630,17 @@ function pt(ev){const sv=$('cv').querySelector('svg'),m=sv.getScreenCTM();if(!m)
 function finishLine(){if(E.cur&&E.cur.pts.length>1){snap();E.d.l.push(E.cur)}E.cur=null}
 function redrawCanvas(){const cv=$('cv');if(cv)cv.innerHTML=svgOf(E.d,E.sel,E.cur,E.selL)}
 $('ed').addEventListener('pointerdown',e=>{const cv=e.target.closest('#cv');if(!cv||!E)return;const g=e.target.closest('[data-k]'),p0=pt(e);
- if(E.blk&&!E.cur&&(E.mode==='line'||E.mode==='move')&&g&&E.sel&&E.d.t[E.sel]&&E.d.t[E.sel].on&&!E.d.t[E.sel].df&&E.d.t[g.dataset.k]&&E.d.t[g.dataset.k].df){snap();E.d.l.push(blkLine(E.d.t[E.sel],E.d.t[g.dataset.k],E.col));E.selL=E.d.l.length-1;E.sel=null;redrawCanvas();edRender();e.preventDefault();return}
+ if(E.blk&&!E.cur&&(E.mode==='line'||E.mode==='move')&&g&&E.sel&&E.d.t[E.sel]&&E.d.t[E.sel].on&&!E.d.t[E.sel].df&&E.d.t[g.dataset.k]&&E.d.t[g.dataset.k].df){snap();E.d.l.push(blkLine(E.d.t[E.sel],E.d.t[g.dataset.k],E.col));E.selL=null;E.sel=null;redrawCanvas();edRender();e.preventDefault();return}
  if((E.mode==='line'||E.mode==='combo'||E.mode==='shape')&&!E.cur&&!g&&(e.target.closest('[data-l]')||e.target.closest('[data-s]'))){E.mode='move';E.combo=null}
  if(E.mode==='free'){let st=null;if(g){E.sel=g.dataset.k}const t=g&&E.d.t[E.sel];if(t&&t.on)st=[t.x,t.y];E.cur={pts:st?[st]:[[p0.x,p0.y]],dot:E.dot,arrow:E.arrow&&!E.blk,blk:E.blk,curve:!!E.curve,col:E.col,free:1};E.selL=null;E.drag={kind:'free',p0};cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);redrawCanvas();e.preventDefault();return}
- if(E.mode==='shape'){if(!g){snap();(E.d.sh||(E.d.sh=[])).push({k:E.shape,x:p0.x,y:p0.y,col:E.col});E.selS=E.d.sh.length-1;E.sel=null;E.selL=null;E.mode='move';redrawCanvas();edRender()}e.preventDefault();return}
+ if(E.mode==='shape'){if(!g){snap();(E.d.sh||(E.d.sh=[])).push({k:E.shape,x:p0.x,y:p0.y,col:E.col});E.selS=null;E.sel=null;E.selL=null;E.mode='move';redrawCanvas();edRender()}e.preventDefault();return}
  if(E.mode==='move'){const h=e.target.closest('[data-h]'),ln=e.target.closest('[data-l]');
   const mh=e.target.closest('[data-m]');if(mh){const[li,j]=mh.dataset.m.split(':').map(Number),L=E.d.l[li];snap();const a=L.pts[j],b=L.pts[j+1];L.pts.splice(j+1,0,[Math.round((a[0]+b[0])/2),Math.round((a[1]+b[1])/2)]);if(L.pts.length===3)L.curve=true;E.curve=!!L.curve;E.drag={kind:'pt',p0,li,pi:j+1};cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);e.preventDefault();return}
   if(h){const[li,pi]=h.dataset.h.split(':').map(Number);snap();E.drag={kind:'pt',p0,li,pi};cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);e.preventDefault();return}
-  if(g){const k=g.dataset.k;E.sel=k;E.selL=null;E.selS=null;snap();const start={};const ids=(OLK.includes(k)&&E.grp)?OLK:[k];ids.forEach(i=>start[i]={x:E.d.t[i].x,y:E.d.t[i].y});E.drag={kind:'tok',p0,start};cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);redrawCanvas();e.preventDefault();return}
+  if(g){const k=g.dataset.k,was=E.sel===k;E.sel=k;E.selL=null;E.selS=null;snap();const start={};const ids=(OLK.includes(k)&&E.grp)?OLK:[k];ids.forEach(i=>start[i]={x:E.d.t[i].x,y:E.d.t[i].y});E.drag={kind:'tok',p0,start,was};cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);redrawCanvas();e.preventDefault();return}
   const sh=e.target.closest('[data-s]');if(sh&&!ln){const si=+sh.dataset.s,H=E.d.sh[si];E.selS=si;E.selL=null;E.sel=null;E.col=H.col||E.col;snap();E.drag={kind:'sh',p0,si,ox:H.x,oy:H.y};cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);redrawCanvas();edRender();e.preventDefault();return}
   if(ln){E.selS=null;const li=+ln.dataset.l,L=E.d.l[li];E.selL=li;E.sel=null;E.dot=!!L.dot;E.arrow=!!L.arrow;E.blk=!!L.blk;E.curve=!!L.curve;E.col=L.col||COLS[0];snap();E.drag={kind:'ln',p0,li,orig:clone(L.pts)};cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);redrawCanvas();e.preventDefault();return}
-  if(E.sel&&E.d.t[E.sel]&&E.d.t[E.sel].on&&!(e.target.closest('[data-l]'))){const t=E.d.t[E.sel];snap();E.d.l.push({pts:[[t.x,t.y],[p0.x,p0.y]],dot:E.dot,arrow:E.arrow&&!E.blk,blk:E.blk,curve:E.curve,col:E.col});E.selL=E.d.l.length-1;E.sel=null;redrawCanvas();edRender();return}
+  if(E.sel&&E.d.t[E.sel]&&E.d.t[E.sel].on&&!(e.target.closest('[data-l]'))){const t=E.d.t[E.sel];snap();E.d.l.push({pts:[[t.x,t.y],[p0.x,p0.y]],dot:E.dot,arrow:E.arrow&&!E.blk,blk:E.blk,curve:E.curve,col:E.col});E.selL=null;E.sel=null;redrawCanvas();edRender();return}
   E.sel=null;E.selL=null;E.selS=null;redrawCanvas();edRender();return}
  if(E.mode==='combo'){const k=g&&g.dataset.k,C=E.combo||(E.combo={a:null,b:null,c:null}),T=E.d.t,isD=k=>k&&T[k]&&T[k].df,isO=k=>k&&T[k]&&T[k].on&&!T[k].df&&k!=='Q',fin=()=>{E.combo={a:null,b:null,c:null};E.sel=null};
   if(isO(k)){if(!C.a||C.c){E.combo={a:k,b:null,c:null};E.sel=k}else if(!C.b&&k!==C.a){C.b=k;E.sel=k}else if(!C.c){C.a=k;C.b=null;E.sel=k}else{E.combo={a:k,b:null,c:null};E.sel=k}}
@@ -649,9 +649,9 @@ $('ed').addEventListener('pointerdown',e=>{const cv=e.target.closest('#cv');if(!
   else if(!k&&C.c)fin();else if(!k&&(E.selL!=null||E.selS!=null)){E.selL=null;E.selS=null}
   redrawCanvas();edRender();e.preventDefault();return}
  // line mode
- if(g&&!E.cur){E.sel=g.dataset.k;redrawCanvas();edRender();return}
+ if(g&&!E.cur){E.sel=(E.sel===g.dataset.k)?null:g.dataset.k;E.selL=null;redrawCanvas();edRender();return}
  if(!E.cur){if(!E.sel||!E.d.t[E.sel]||!E.d.t[E.sel].on){if(E.selL!=null||E.selS!=null){E.selL=null;E.selS=null;redrawCanvas();edRender()}return}const t=E.d.t[E.sel];E.cur={pts:[[t.x,t.y]],dot:E.dot,arrow:E.arrow&&!E.blk,blk:E.blk,curve:E.curve,col:E.col}}
- E.cur.pts.push([p0.x,p0.y]);E.cur.dot=E.dot;E.cur.arrow=E.arrow&&!E.blk;E.cur.blk=E.blk;E.cur.curve=E.curve;E.cur.col=E.col;finishLine();E.selL=E.d.l.length-1;E.sel=null;redrawCanvas();edRender();e.preventDefault()});
+ E.cur.pts.push([p0.x,p0.y]);E.cur.dot=E.dot;E.cur.arrow=E.arrow&&!E.blk;E.cur.blk=E.blk;E.cur.curve=E.curve;E.cur.col=E.col;finishLine();E.selL=null;E.sel=null;redrawCanvas();edRender();e.preventDefault()});
 $('ed').addEventListener('pointermove',e=>{if(!E||!E.drag)return;const d=E.drag,p1=pt(e),dx=p1.x-d.p0.x,dy=p1.y-d.p0.y;
  if(d.kind==='free'){const P=E.cur&&E.cur.pts,l=P&&P[P.length-1];if(l&&Math.hypot(p1.x-l[0],p1.y-l[1])>=4){P.push([p1.x,p1.y]);redrawCanvas()}return}
  if(d.kind==='sh'){const H=E.d.sh[d.si];H.x=Math.max(16,Math.min(VW-16,d.ox+dx));H.y=Math.max(18,Math.min(VH-16,d.oy+dy))}
@@ -659,7 +659,8 @@ $('ed').addEventListener('pointermove',e=>{if(!E||!E.drag)return;const d=E.drag,
  else if(d.kind==='ln'){const xs=d.orig.map(q=>q[0]),ys=d.orig.map(q=>q[1]),mx=Math.max(8-Math.min(...xs),Math.min(VW-8-Math.max(...xs),dx)),my=Math.max(8-Math.min(...ys),Math.min(VH-8-Math.max(...ys),dy));E.d.l[d.li].pts=d.orig.map(q=>[q[0]+mx,q[1]+my])}
  else for(const k in d.start){const s0=d.start[k],t=E.d.t[k];t.x=Math.max(8,Math.min(VW-8,s0.x+dx));t.y=Math.max(8,Math.min(VH-8,s0.y+dy))}
  redrawCanvas()});
-const endDrag=()=>{if(E&&E.drag&&E.drag.kind==='free'){E.drag=null;finishFree();redrawCanvas();edRender();return}if(E&&E.drag){const k=E.drag.kind;E.drag=null;if(E.hist.length&&JSON.stringify(E.d)===E.hist[E.hist.length-1])E.hist.pop();else if(k==='tok'){E.sel=null;redrawCanvas()}edRender()}};
+const endDrag=()=>{if(E&&E.drag&&E.drag.kind==='free'){E.drag=null;finishFree();E.sel=null;E.selL=null;E.selS=null;redrawCanvas();edRender();return}if(E&&E.drag){const dg=E.drag,k=dg.kind;E.drag=null;if(E.hist.length&&JSON.stringify(E.d)===E.hist[E.hist.length-1]){E.hist.pop();if(k==='tok'&&dg.was){E.sel=null;redrawCanvas()}}else{E.sel=null;E.selL=null;E.selS=null;redrawCanvas()}edRender()}};
+$('ed').addEventListener('pointerdown',e=>{if(!E||!e.target.isConnected||e.target.closest('button,.chip,.sw,input,#cv,.fh'))return;if(E.sel||E.selL!=null||E.selS!=null){E.sel=null;E.selL=null;E.selS=null;E.cur=null;redrawCanvas();edRender()}});
 $('ed').addEventListener('pointerup',endDrag);$('ed').addEventListener('pointercancel',endDrag);
 $('ed').addEventListener('click',e=>{const b=e.target.closest('[data-e]');if(!b||!E)return;const a=b.dataset.e,t=E.d.t;
  if(a==='cancel'){const lk=E.look;E=null;$('ed').classList.remove('show');if(lk)$('looks').onclick();return}
