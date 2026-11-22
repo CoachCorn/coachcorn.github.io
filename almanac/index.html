@@ -833,4 +833,4 @@ document.getElementById('rep').onclick=()=>openReport('report');document.getElem
 function modal_close(){document.getElementById('modal').classList.remove('show')}
 try{new MutationObserver(()=>{if(document.documentElement.classList.contains('ovl')&&!document.getElementById('modal').classList.contains('show')){document.documentElement.classList.remove('ovl');try{parent.postMessage({settingsClosed:1},location.origin)}catch(e){}}}).observe(document.getElementById('modal'),{attributes:true,attributeFilter:['class']})}catch(e){}
 load();d=freshDraft(lastNext());renderAll();
-</script></body></html>
+</script><script src="../shared/filedrop.js"></script></body></html>

@@ -834,4 +834,4 @@ function boot(){ST=readStore();try{cur=localStorage.getItem('gp_cur')||null}catc
 addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.gameplan==='changed'&&!E&&!$('modal').classList.contains('show')){ST=readStore();render()}});
 addEventListener('storage',e=>{if(!E&&!$('modal').classList.contains('show')){if(e.key===KEY){ST=readStore();render()}else if(e.key==='almanac_v1')render()}});
 boot();
-</script></body></html>
+</script><script src="../shared/filedrop.js"></script></body></html>
