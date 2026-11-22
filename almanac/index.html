@@ -537,6 +537,7 @@ function glRemoved(k,before,after){if(!glOn()||!GLX_MAP[k])return;const m=GLX_MA
 window.syncBusy=()=>edit!==null||!!(d&&(d.formation||d.call||d.owc||d.result||d.glf||(d.tags&&d.tags.length)||(d.ftags&&d.ftags.length)||d.motion));
 window.syncUpsert=games=>{for(const g of games){const i=A.games.findIndex(x=>x.id===g.id);if(i>=0)A.games[i]=g;else A.games.push(g)}
  if(!A.games.find(g=>g.id===A.cur))A.cur=A.games[0].id;d=freshDraft(lastNext());save();renderAll();toast(games.length+' game'+(games.length===1?'':'s')+' synced from another device')};
+window.syncRemove=ids=>{A.games=A.games.filter(g=>!ids.includes(g.id));if(!A.games.length)newGame('Game 1',true);if(!A.games.find(g=>g.id===A.cur))A.cur=A.games[0].id;d=freshDraft(lastNext());save();renderAll();toast(ids.length+' game'+(ids.length===1?'':'s')+' deleted on another device')};
 addEventListener('storage',e=>{if(window.GL&&e.key===GL.key(CONFIG.program)){GLO=GL.load(CONFIG.program)||GLO;glApply();try{localStorage.setItem(KEY,JSON.stringify(A))}catch(x){}renderAll()}});
 function glInit(){if(!window.GL){GLO=null;return}GLO=GL.load(CONFIG.program);if(!GLO){GLO=glSeed();GL.save(GLO)}if(!SIGNED&&GLO.terms.some(t=>t.type==='glf')){GLO.terms=GLO.terms.filter(t=>t.type!=='glf');GL.save(GLO)}glApply();glCapture()}
 /* Front codes from the glossary (falls back to the built-in TECH table when there is no glossary). */

@@ -61,7 +61,7 @@
  async function syncGames(s,list){const w=almanacWin();if(!w)return; // the Almanac tab writes games; wait until it has loaded
   if(w.syncBusy&&w.syncBusy())return; // a play is being edited
   let A;try{A=JSON.parse(localStorage.getItem(ALM))}catch(e){A=null}if(!A||!Array.isArray(A.games))return;
-  s.games=s.games||{};const upsert=[];const local=new Map(A.games.map(g=>[g.id,g]));
+  s.games=s.games||{};const upsert=[],remove=[];const local=new Map(A.games.map(g=>[g.id,g]));
   for(const g of A.games){if(/^demo/i.test(g.id)||g.demo)continue;
    const key='game/'+g.id,h=hash(JSON.stringify(g)),mem=s.games[g.id],sv=list.find(d=>d.key===key);
    if(!sv){const r=await call('PUT','/doc',{key,baseRev:0,body:g,device:device()});if(r.status===200)s.games[g.id]={rev:r.data.rev,h};continue}
@@ -69,14 +69,17 @@
    // the server copy changed since we last saw it: merge it with ours play by play
    for(let tries=0;tries<3;tries++){
     const r=await call('GET','/doc?key='+encodeURIComponent(key));if(r.status!==200||!okGame(r.data.body))break;
+    if(r.data.body.deleted){remove.push(g.id);s.games[g.id]={rev:r.data.rev,gone:true};break}   // deleted on another device
     const m=mergeGame(g,r.data.body),mh=hash(JSON.stringify(m)),sh=hash(JSON.stringify(r.data.body));
     if(mh!==h){upsert.push(m);Object.assign(g,m)}
     if(mh===sh){s.games[g.id]={rev:r.data.rev,h:mh};break}
     const p=await call('PUT','/doc',{key,baseRev:r.data.rev,body:m,device:device()});
     if(p.status===200){s.games[g.id]={rev:p.data.rev,h:mh};break}if(p.status!==409)break}}
   for(const d of list){if(!d.key.startsWith('game/'))continue;const id=d.key.slice(5);if(local.has(id)||(s.games[id]&&s.games[id].gone))continue;
-   if(s.games[id]&&!local.has(id)){s.games[id].gone=true;continue} // deleted on this device: leave it deleted here
-   const r=await call('GET','/doc?key='+encodeURIComponent(d.key));if(r.status===200&&okGame(r.data.body)){upsert.push(r.data.body);s.games[id]={rev:r.data.rev,h:hash(JSON.stringify(r.data.body))}}}
+   if(s.games[id]&&!local.has(id)){await call('PUT','/doc',{key:d.key,baseRev:d.rev,body:{id,deleted:true,plays:[],upd:Date.now()},device:device()});s.games[id].gone=true;continue} // deleted on this device: tell the server so other devices drop it too
+   const r=await call('GET','/doc?key='+encodeURIComponent(d.key));if(r.status===200&&okGame(r.data.body)&&r.data.body.deleted){s.games[id]={rev:r.data.rev,gone:true};continue}
+   if(r.status===200&&okGame(r.data.body)){upsert.push(r.data.body);s.games[id]={rev:r.data.rev,h:hash(JSON.stringify(r.data.body))}}}
+  if(remove.length&&w.syncRemove)w.syncRemove(remove);
   if(upsert.length){w.syncUpsert(upsert);for(const g of upsert)if(!s.games[g.id])s.games[g.id]={rev:0,h:hash(JSON.stringify(g))}}}
 
  /* --- schedule: rows merged by id, newest edit wins, deletions stick --- */
