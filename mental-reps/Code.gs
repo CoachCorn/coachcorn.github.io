@@ -19,7 +19,7 @@ var SAMPLE = {"settings": {"App name": "Mental Reps", "Team name": "Sample Team"
 var LOG_HEAD = ['Time', 'Name', 'Pos', 'Card', 'Correct', 'Day', 'EventId', 't'];
 var DRILL_HEAD = ['Time', 'Name', 'Pos', 'Score', 'TDs', 'Answered', 'Right', 'Longest streak', 'Day', 'DrillId', 't', 'Set'];
 var DECK_HEAD = ['ID', 'Positions', 'Question', 'Answer', 'Wrong 1', 'Wrong 2', 'Wrong 3', 'Explanation', 'Image', 'Active'];
-var RESERVED = ['settings', 'roster', 'log', 'drills', 'mastery', 'most missed', 'help'];
+var RESERVED = ['settings', 'roster', 'log', 'drills', 'mastery', 'most missed', 'help', 'corrections'];
 
 function ss_() { return SpreadsheetApp.getActiveSpreadsheet(); }
 function tab_(n) { var s = ss_(); return s.getSheetByName(n) || s.insertSheet(n); }
@@ -327,6 +327,7 @@ function handlePost_(o) {
       return 'ok';
     }
     if (o.type === 'deck') return deckFromApp_(o);
+    if (o.type === 'corrections') return correctionsFromApp_(o);
     return 'skip';
   } finally { lock.releaseLock(); }
 }
@@ -434,4 +435,22 @@ function refreshDashboard() {
   } else mm.getRange('A3').setValue('No misses yet');
   mm.setColumnWidth(1, 520);
   SpreadsheetApp.flush();
+}
+
+
+/* Gameplan > Draw all looks > Copy my corrections. Appends one row per corrected look to a Corrections tab so Claude can read it later.
+   Needs the coach code. A look already saved with identical text is skipped. */
+function correctionsFromApp_(o) {
+  var code = String(settings_()['Coach code'] || '');
+  if (!code || code === 'CHANGE-ME' || String(o.code) !== code) return 'bad code';
+  var t = tab_('Corrections');
+  if (t.getLastRow() < 1) t.getRange(1, 1, 1, 5).setValues([['Saved', 'Plan', 'Call', 'Glossary wording', 'Corrections']]).setFontWeight('bold');
+  var have = {}; if (t.getLastRow() > 1) t.getRange(2, 1, t.getLastRow() - 1, 5).getValues().forEach(function (r) { have[r[1] + '|' + r[2] + '|' + r[4]] = 1; });
+  var n = 0;
+  (o.items || []).forEach(function (x) {
+    var k = String(o.plan) + '|' + String(x.call) + '|' + String(x.fix);
+    if (have[k]) return;
+    t.appendRow([new Date(), String(o.plan || ''), String(x.call || ''), String(x.gloss || ''), String(x.fix || '')]); n++;
+  });
+  return 'ok:' + n;
 }

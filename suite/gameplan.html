@@ -358,7 +358,7 @@ $('looks').onclick=()=>{const p=plan();if(!p||!p.blocks.length)return toast('Sta
  $('mbox').style.width='min(980px,96vw)';
  $('mbox').innerHTML=`<h3>Draw all looks</h3><div class="note">Each call starts from its formation's drawing plus your glossary wording. Fix any drawing with <b>Edit drawing</b> (same tool as the grid), then <b>Send to Mental Reps</b> on that card when it is right. Concepts and play tags are not drawn yet.</div>
   ${needCode?'<div class="lab">Coach code (needed to send)</div><input type="password" id="lk_code" autocapitalize="off" autocorrect="off" value="'+esc(LKCODE)+'">':''}${h}
-  <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="lk_cp">Copy my corrections</button><button class="btn" id="lk_x">Close</button></div><textarea id="lk_ta" style="display:none;width:100%;height:160px;margin-top:8px;font-size:12px"></textarea>`;
+  <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="lk_cp">Save + copy my corrections</button><button class="btn" id="lk_x">Close</button></div><textarea id="lk_ta" style="display:none;width:100%;height:160px;margin-top:8px;font-size:12px"></textarea>`;
  $('modal').classList.add('show');$('mbox').onkeydown=null;const y0=$('modal').scrollTop;
  const again=()=>{const y=$('mbox').scrollTop;$('looks').onclick();$('mbox').scrollTop=y};
  if($('lk_code'))$('lk_code').oninput=e=>{LKCODE=e.target.value};
@@ -366,9 +366,14 @@ $('looks').onclick=()=>{const p=plan();if(!p||!p.blocks.length)return toast('Sta
   if(x.dataset.lk==='edit'){const gen=lookFor(bl,Object.assign({},c,{look:null})).d;$('modal').classList.remove('show');$('mbox').style.width='';openDraw(+x.dataset.b,{key:x.dataset.k,gen,d:c.look&&c.look.d||lookFor(bl,c).d});return}
   if(x.dataset.lk==='redo'){delete c.look;touch(p);return again()}
   if(x.dataset.lk==='send'){x.disabled=true;await lookSend(p,bl,x.dataset.k);return again()}};
- $('lk_cp').onclick=()=>{const L=[];p.blocks.forEach(b=>p.rows.forEach(r=>p.cols.forEach(c=>{const x=b.cells[r.id+'|'+c.id];if(!x||!x.look||!x.look.edited||!x.look.gen)return;const df=lookDiff(x.look.gen,x.look.d);if(!df.length)return;
-   const defs=['ftag','motion'].map(k=>x.s[k]?x.s[k]+' = '+(defOf(k,x.s[k])||'(no definition)'):'').filter(Boolean);L.push(b.name+' · '+callText(x)+(defs.length?'\n  Glossary: '+defs.join(' | '):'')+'\n  '+df.join('\n  '))})));
-  const txt=L.length?'Corrections to Draw all looks:\n\n'+L.join('\n\n'):'No edited drawings yet.';const ta=$('lk_ta');ta.style.display='block';ta.value=txt;ta.select();try{navigator.clipboard.writeText(txt).then(()=>toast('Copied. Paste it to me in the chat.')).catch(()=>toast('Select the text below and copy it'))}catch(e){toast('Select the text below and copy it')}};
+ $('lk_cp').onclick=()=>{const L=[],items=[];p.blocks.forEach(b=>p.rows.forEach(r=>p.cols.forEach(c=>{const x=b.cells[r.id+'|'+c.id];if(!x||!x.look||!x.look.edited||!x.look.gen)return;const df=lookDiff(x.look.gen,x.look.d);if(!df.length)return;
+   const defs=['ftag','motion'].map(k=>x.s[k]?x.s[k]+' = '+(defOf(k,x.s[k])||'(no definition)'):'').filter(Boolean),call=b.name+' · '+callText(x);items.push({call,gloss:defs.join(' | '),fix:df.join('\n')});L.push(call+(defs.length?'\n  Glossary: '+defs.join(' | '):'')+'\n  '+df.join('\n  '))})));
+  const txt=L.length?'Corrections to Draw all looks:\n\n'+L.join('\n\n'):'No edited drawings yet.';const ta=$('lk_ta');ta.style.display='block';ta.value=txt;ta.select();
+  let cp='';try{navigator.clipboard.writeText(txt).catch(()=>{});cp=' Also copied.'}catch(e){}
+  if(!items.length)return toast('No edited drawings yet.');
+  if(!signedIn())return toast('Demo space: copied only. Sign in to save to the sheet.');
+  let code='';try{code=localStorage.getItem('cs.code')||''}catch(e){}code=code||LKCODE;if(!code)return toast('Enter the coach code above to save to the sheet.'+cp);
+  fetch(mrEndpoint(),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({type:'corrections',code,plan:String(p.name||''),items})}).then(r=>r.text()).then(t=>{t=t.trim();toast(/^ok:/.test(t)?'Saved '+t.slice(3)+' new correction'+(t.slice(3)==='1'?'':'s')+' to the sheet.'+cp:t==='bad code'?'That coach code was not accepted.'+cp:t==='skip'?'The sheet needs the updated Code.gs deployed first.'+cp:'The sheet said: '+t+cp)}).catch(()=>toast('Could not reach the sheet.'+cp))};
  $('lk_x').onclick=()=>{$('modal').classList.remove('show');$('mbox').style.width=''}}
 $('prn').onclick=()=>{try{window.print()}catch(e){toast('Print is not available here')}};
 
