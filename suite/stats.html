@@ -66,7 +66,13 @@ const U=x=>String(x||'').trim().toUpperCase();
 const realGames=a=>(a.games||[]).filter(g=>!g.demo&&!/\(other iPad\)$/.test(g.opp||''));
 function gameYear(g,S){const r=S.rows.find(x=>x.game===g.id||(!x.game&&U(x.opp)===U(g.opp)));if(r&&r.date)return+r.date.slice(0,4);const t=parseInt(String(g.id).slice(1),10);return t>1e12?new Date(t).getFullYear():new Date().getFullYear()}
 function rowFor(g,S){return S.rows.find(x=>x.game===g.id)||S.rows.find(x=>!x.game&&U(x.opp)===U(g.opp))}
-function plays(gs){return gs.flatMap(g=>(g.plays||[]).filter(p=>p.k==='p'&&p.result!=='PEN').map(p=>Object.assign({_g:g.id},p)))}
+/* Imported Hudl games can hold "Otsd Kong" as one formation. When the end of the name is a known formation (Almanac formation list),
+   the words in front are formation tags: formation Kong, formation tag OTSD. Read-time only; stored games are not changed. */
+function fmKnown(){const L=A().lists||{};return(L.formations||[]).map(x=>String(x).toUpperCase().split(/\s+/)).filter(a=>a[0]).sort((a,b)=>b.length-a.length)}
+function fmNorm(p,K){const f=String(p.formation||'').trim();if(!f)return p;const W=f.split(/\s+/),U=W.map(x=>x.toUpperCase());if(U.length<2)return p;
+ const k=K.find(n=>n.length<U.length&&n.every((x,i)=>x===U[U.length-n.length+i]));if(!k)return p;const ft=[...U.slice(0,U.length-k.length),...listOf(p.ftags,p.ftag).map(x=>String(x).toUpperCase())];
+ p.formation=W.slice(U.length-k.length).join(' ');p.ftags=[...new Set(ft)];p.ftag=p.ftags.join(' ');return p}
+function plays(gs){const K=fmKnown();return gs.flatMap(g=>(g.plays||[]).filter(p=>p.k==='p'&&p.result!=='PEN').map(p=>fmNorm(Object.assign({_g:g.id},p,{ftags:p.ftags?[...p.ftags]:p.ftags}),K)))}
 function eff(p){if(p.td)return 1;const g=+p.gain||0,n=+p.dist||10;if(p.down===1)return g>=(n>=10?4:n)?1:0;if(p.down===2)return g>=Math.ceil(n/2)?1:0;return g>=n?1:0}
 function expl(p,L){const t=p.ptype==='run'?(L.expRun||15):(L.expPass||15);return(+p.gain||0)>=t?1:0}
 function summ(P,L){const n=P.length,y=P.reduce((a,p)=>a+(+p.gain||0),0),e=P.reduce((a,p)=>a+eff(p),0),x=P.reduce((a,p)=>a+expl(p,L),0),r=P.filter(p=>p.ptype==='run').length;
