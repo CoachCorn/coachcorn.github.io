@@ -87,7 +87,7 @@ function viewSchedule(){const S=sched(),rows=S.rows.filter(r=>String(r.date||'')
  let w=0,l=0,t=0;for(const r of rows)if(r.us!==''&&r.us!=null&&r.them!==''&&r.them!=null){+r.us>+r.them?w++:+r.us<+r.them?l++:t++}
  const fmt=d=>d?new Date(d+'T12:00').toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}):'No date';
  return`<div class="rec"><b>${w}–${l}${t?'–'+t:''}</b><span>${V.season} record</span><span style="flex:1"></span><button class="btn pri" id="addg">+ Add game</button></div>`+
- (rows.length?rows.map(r=>`<button class="row" data-row="${r.id}">${logoHtml(r)}<span class="mid"><div class="opp"><small>${r.ha==='A'?'at':'vs.'}</small>${esc(r.opp)}</div><div class="meta">${fmt(r.date)} · ${r.ha==='A'?'Away':r.ha==='N'?'Neutral':'Home'}${r.game||matchGame(r)?' · stats ready':''}</div></span><span class="res">${result(r)}</span></button>`).join('')
+ (rows.length?rows.map(r=>`<button class="row" data-row="${r.id}"><span data-edit="${r.id}" title="Edit game" style="display:flex;flex:none;cursor:pointer">${logoHtml(r)}</span><span class="mid"><div class="opp"><small>${r.ha==='A'?'at':'vs.'}</small>${esc(r.opp)}</div><div class="meta">${fmt(r.date)} · ${r.ha==='A'?'Away':r.ha==='N'?'Neutral':'Home'}${r.game||matchGame(r)?' · stats ready':''}</div></span><span class="res">${result(r)}</span></button>`).join('')
  :'<div class="empty">No games on the '+V.season+' schedule yet. Tap <b>+ Add game</b> to type them in.</div>')}
 function matchGame(r){return r.game||((realGames(A()).find(g=>U(g.opp)===U(r.opp))||{}).id)}
 function editRow(id){const S=sched(),r=id?S.rows.find(x=>x.id===id):{id:newId(),opp:'',date:'',ha:'H',us:'',them:'',color:'#3b4b5c',logo:null,game:null};
@@ -149,7 +149,7 @@ function render(){hdr();let h;
  else if(V.tab==='schedule')h=viewSchedule();else if(V.tab==='season')h=viewSeason(gamesInSeason());else if(V.tab==='games')h=viewGames();else h=viewSplits();
  $('main').innerHTML=h;
  const ag=$('addg');if(ag)ag.onclick=()=>editRow(null);
- document.querySelectorAll('[data-row]').forEach(b=>b.onclick=()=>editRow(b.dataset.row));
+ document.querySelectorAll('[data-row]').forEach(b=>b.onclick=e=>{const r=sched().rows.find(x=>x.id===b.dataset.row),gid=r&&matchGame(r);if(e.target.closest('[data-edit]')||!gid)return editRow(b.dataset.row);V.game=gid;render()});
  document.querySelectorAll('tr[data-g]').forEach(r=>r.onclick=()=>{V.game=r.dataset.g;render()});
  const bk=$('back');if(bk)bk.onclick=()=>{V.game=null;render()}}
 addEventListener('storage',e=>{if(e.key==='almanac_v1'||e.key==='almanac_demo'||(e.key&&e.key.indexOf('schedule_v1_')===0))render()});
