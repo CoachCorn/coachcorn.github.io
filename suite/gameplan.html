@@ -118,8 +118,11 @@ function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';cle
 
 /* ---------- storage ---------- */
 function signedIn(){try{const x=JSON.parse(localStorage.getItem('suite_sync'))||{};return!!(x.token&&x.exp>Date.now())}catch(e){return false}}
+const OFF=40;   // the line of scrimmage sits 40 px (about 3 yards) lower than in version 1 drawings, so the defense has room
+function migDraw(d){if(!d||!d.t||d.v>=2)return;Object.values(d.t).forEach(p=>{if(p&&typeof p.y==='number')p.y+=OFF});(d.l||[]).forEach(l=>(l.pts||[]).forEach(q=>{q[1]+=OFF}));d.v=2}
+function migStore(s){(s.rows||[]).forEach(p=>(p.blocks||[]).forEach(b=>{migDraw(b.draw);Object.values(b.cells||{}).forEach(c=>{if(c&&c.look){migDraw(c.look.d);migDraw(c.look.gen)}})}));return s}
 let ST=readStore();
-function readStore(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&Array.isArray(s.rows))return s}catch(e){}return{rows:[],deleted:[]}}
+function readStore(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&Array.isArray(s.rows))return migStore(s)}catch(e){}return{rows:[],deleted:[]}}
 function writeStore(){try{localStorage.setItem(KEY,JSON.stringify(ST))}catch(e){toast('Could not save on this device')}}
 let cur=null;
 function plan(){return ST.rows.find(p=>p.id===cur)||ST.rows[0]||null}
@@ -132,8 +135,8 @@ const TC={Q:'#ffffff',X:'#5aa9ff',Z:'#5aa9ff',M:'#f2b632',H:'#2fbf71',Y:'#c58bff
 /* The drawing is the whole field width: 160 ft (high school), 4.4 px per foot. The left hash sits where the center lines up (53'4" from the sideline).
    Noah asked for the hashes drawn farther apart than real: HASHR puts the right hash 66 ft from the left one (real is 53'4"). Change the 66 to change it.
    Numbers are 6 ft tall: top 9 yards (27 ft) from the sideline, bottom 21 ft. */
-const PXFT=4.4,YD=3*PXFT,LOS=110,VW=Math.round(160*PXFT),VH=250,HASHX=Math.round(53.333*PXFT),HASHR=HASHX+Math.round(66*PXFT),NSHIFT=4,NB=Math.round((21-NSHIFT)*PXFT),NT=Math.round((27-NSHIFT)*PXFT); // numbers drawn NSHIFT ft closer to the sideline than the NFHS spec, at Noah's request
-const L1=LOS-16,L2=LOS-50,L3=LOS-86,DP={
+const PXFT=4.4,YD=3*PXFT,LOS=110+OFF,VW=Math.round(160*PXFT),VH=250+OFF,HASHX=Math.round(53.333*PXFT),HASHR=HASHX+Math.round(66*PXFT),NSHIFT=4,NB=Math.round((21-NSHIFT)*PXFT),NT=Math.round((27-NSHIFT)*PXFT); // numbers drawn NSHIFT ft closer to the sideline than the NFHS spec, at Noah's request
+const L1=LOS-16,L2=LOS-50,L3=LOS-100,DP={
  '4-3-4':[['DE1','DE',133,L1],['DT1','DT',205,L1],['DT2','DT',265,L1],['DE2','DE',337,L1],['WL','W',170,L2],['ML','M',235,L2],['SL','S',300,L2],['CB1','CB',40,LOS-55],['CB2','CB',450,LOS-55],['FS','FS',205,L3],['SS','SS',265,L3]],
  '3-4-4':[['DE1','DE',145,L1],['NT','NT',235,L1],['DE2','DE',325,L1],['OL1','W',105,LOS-34],['IL1','M',205,L2],['IL2','M',265,L2],['OL2','S',365,LOS-34],['CB1','CB',40,LOS-55],['CB2','CB',450,LOS-55],['FS','FS',205,L3],['SS','SS',265,L3]],
  '3-3-5':[['DE1','DE',145,L1],['NT','NT',235,L1],['DE2','DE',325,L1],['WL','W',175,L2],['ML','M',235,L2],['SL','S',295,L2],['CB1','CB',40,LOS-55],['CB2','CB',450,LOS-55],['FS','FS',205,L3],['SS','SS',265,L3],['NB','N',350,LOS-42]],
@@ -141,9 +144,9 @@ const L1=LOS-16,L2=LOS-50,L3=LOS-86,DP={
 function addDefense(t,pre){pre=DP[pre]?pre:'4-3-4';Object.keys(t).forEach(k=>{if(t[k].df)delete t[k]});DP[pre].forEach(([k,lab,x,y])=>{t['D_'+k]={x,y,on:1,df:1,lab}});return pre}
 const OLSP=36;   // spacing between offensive linemen
 function baseDraw(){const t={},put=(k,x,y,on)=>t[k]={x,y,on};
- put('X',30,114,1);put('Z',456,112,1);put('M',165,150,1);put('Q',235,168,1);put('T',210,205,1);put('H',385,128,1);
- put('Y',395,112,0);put('F',430,150,0);put('A',300,190,0);put('B',260,205,0);
- OLK.forEach((k,i)=>put(k,235-2*OLSP+i*OLSP,LOS,1));return{t,l:[]}}
+ put('X',30,114+OFF,1);put('Z',456,112+OFF,1);put('M',165,150+OFF,1);put('Q',235,168+OFF,1);put('T',210,205+OFF,1);put('H',385,128+OFF,1);
+ put('Y',395,112+OFF,0);put('F',430,150+OFF,0);put('A',300,190+OFF,0);put('B',260,205+OFF,0);
+ OLK.forEach((k,i)=>put(k,235-2*OLSP+i*OLSP,LOS,1));return{t,l:[],v:2}}
 let svgN=0;
 function svgOf(d,sel,cur,selL){const n=++svgN,used=new Set(),edit=selL!==undefined;
  const lines=(d.l||[]).concat(cur?[cur]:[]);lines.forEach(l=>used.add(l.col||'#ffffff'));
@@ -154,7 +157,7 @@ function svgOf(d,sel,cur,selL){const n=++svgN,used=new Set(),edit=selL!==undefin
  // numbers: 6 ft tall, top 9 yards in, bottom 7 yards in, both sides
  s+=`<line x1="1" x2="1" y1="0" y2="${VH}" stroke="#ffffff77" stroke-width="2"/><line x1="${VW-1}" x2="${VW-1}" y1="0" y2="${VH}" stroke="#ffffff77" stroke-width="2"/>`;
  // hash marks, a tick every yard, longer every 5
- for(const hx of [HASHX,HASHR])for(let k=-9;k<=12;k++){const y=LOS+k*YD;if(y<3||y>VH-2)continue;const w=k%5===0?18:9;s+=`<line x1="${hx-w/2}" x2="${hx+w/2}" y1="${y}" y2="${y}" stroke="#ffffff66" stroke-width="1.4"/>`}
+ for(const hx of [HASHX,HASHR])for(let k=-12;k<=12;k++){const y=LOS+k*YD;if(y<3||y>VH-2)continue;const w=k%5===0?18:9;s+=`<line x1="${hx-w/2}" x2="${hx+w/2}" y1="${y}" y2="${y}" stroke="#ffffff66" stroke-width="1.4"/>`}
  // yard numerals (6 ft tall), both read bottom to top: 4 on the bottom, 0 on top
  for(const [cx,rot] of [[(NB+NT)/2,-90],[VW-(NB+NT)/2,-90]])s+=`<text x="${cx}" y="${LOS}" transform="rotate(${rot} ${cx} ${LOS})" fill="#ffffff26" font-size="36" font-weight="700" font-family="sans-serif" text-anchor="middle" dominant-baseline="central" letter-spacing="3">40</text>`;
  s+=`<line x1="0" x2="${VW}" y1="${LOS}" y2="${LOS}" stroke="#ffffff55" stroke-dasharray="6 5"/>`;
@@ -278,9 +281,9 @@ const LOOK={
   BUNCH:{g:1,fn:t=>{const h=on(t,'H',t.Z.x-20,t.Z.y+12),y=on(t,'Y',t.Z.x-20,t.Z.y-12);t.Z.y=LOS;y.x=t.Z.x-28;y.y=LOS;h.x=t.Z.x-14;h.y=LOS+24}}},
  motion:{
   MAP:(t,L)=>{const m=t.M,x0=HASHX-45;m.x=x0;L.push({pts:[[x0,m.y],[HASHR+5*YD,LOS+20]],dot:1,arrow:1,col:'#3b9cff'})},
-  JET:{g:1,fn:(t,L)=>{const h=on(t,'H',385,128),d=dir(t),x1=d<0?HASHX-30:HASHR+30;L.push({pts:[[h.x,h.y],[t.Q.x,LOS+38],[x1,LOS+38]],dot:1,arrow:1,col:'#3b9cff'})}},
-  FLY:{g:1,fn:(t,L)=>{const h=on(t,'H',385,128),d=dir(t),x1=d<0?HASHX-30:HASHR+30;L.push({pts:[[h.x,h.y],[x1,h.y]],dot:1,arrow:1,col:'#3b9cff'})}},
-  ORBIT:{g:1,fn:(t,L)=>{const h=on(t,'B',260,205),d=h.x<t.Q.x?1:-1,x1=d>0?HASHR+10:HASHX-10;L.push({pts:[[h.x,h.y],[t.Q.x,Q_B(t)],[x1,t.Q.y+8]],dot:1,arrow:1,col:'#3b9cff'})}}}};
+  JET:{g:1,fn:(t,L)=>{const h=on(t,'H',385,128+OFF),d=dir(t),x1=d<0?HASHX-30:HASHR+30;L.push({pts:[[h.x,h.y],[t.Q.x,LOS+38],[x1,LOS+38]],dot:1,arrow:1,col:'#3b9cff'})}},
+  FLY:{g:1,fn:(t,L)=>{const h=on(t,'H',385,128+OFF),d=dir(t),x1=d<0?HASHX-30:HASHR+30;L.push({pts:[[h.x,h.y],[x1,h.y]],dot:1,arrow:1,col:'#3b9cff'})}},
+  ORBIT:{g:1,fn:(t,L)=>{const h=on(t,'B',260,205+OFF),d=h.x<t.Q.x?1:-1,x1=d>0?HASHR+10:HASHX-10;L.push({pts:[[h.x,h.y],[t.Q.x,Q_B(t)],[x1,t.Q.y+8]],dot:1,arrow:1,col:'#3b9cff'})}}}};
 const Q_B=t=>t.Q.y+48;
 /* ---- read the glossary wording: plain sentences turned into moves. Anything it cannot read is reported back, never guessed. ---- */
 const PNAME={'left tackle':'LT','right tackle':'RT','left guard':'LG','right guard':'RG','center':'C','quarterback':'Q'};
@@ -301,7 +304,7 @@ function parseDef(text){const ok=[],bad=[],steps=[];let subj=null;
    steps.push(t=>{const p=on(t,A,t[B].x,t[B].y);p.x=how==='behind'?t[B].x:t[B].x+30;p.y=how==='behind'?t[B].y+28:t[B].y});ok.push(cl);continue}
   if((m=cl.match(new RegExp('^'+PTOK+'\\s+(?:stacked\\s+)?(behind|beside|next to|inside|outside)\\s+'+PTOK)))){subj=m[1];const A=m[1],how=m[2],B=m[3];
    steps.push(t=>{const q=t[B],p=on(t,A,q.x,q.y),side=q.x>=t.Q.x?1:-1;p.x=how==='behind'?q.x:how==='inside'?q.x-side*28:how==='outside'?q.x+side*28:q.x+side*28;p.y=how==='behind'?q.y+24:q.y});ok.push(cl);continue}
-  if((m=cl.match(new RegExp('^'+PTOK+'\\s+(?:starts?|begins?|lines? up)\\s+(?:on the other side|opposite)')))){subj=m[1];const A=m[1];steps.push(t=>{const p=on(t,A,235,150);p.x=2*t.Q.x-p.x});ok.push(cl);continue}
+  if((m=cl.match(new RegExp('^'+PTOK+'\\s+(?:starts?|begins?|lines? up)\\s+(?:on the other side|opposite)')))){subj=m[1];const A=m[1];steps.push(t=>{const p=on(t,A,235,150+OFF);p.x=2*t.Q.x-p.x});ok.push(cl);continue}
   if((m=cl.match(new RegExp('^'+PTOK+'\\s+on\\s+the\\s+(?:line|ball)')))){subj=m[1];const A=m[1];steps.push(t=>{on(t,A,235,LOS).y=LOS});ok.push(cl);continue}
   if((m=cl.match(new RegExp('^(?:'+PTOK+'\\s+)?(?:fast\\s+|quick\\s+)?(?:motions?|runs|goes)\\s+(?:in motion\\s+)?(?:to|across|toward)\\s+(?:the\\s+)?(left|right|field|boundary|landing spot|spot|call)?')))){const A=m[1]||subj;if(!A){bad.push(cl);continue}const sd=m[2];
    steps.push((t,L)=>{const p=on(t,A,385,128);let x1;if(!sd||/landing|spot|call/i.test(sd))x1=HASHR+5*YD;else x1=SIDEX(sd)+(/^(left|boundary)$/i.test(sd)?-45:5*YD);L.push({pts:[[p.x,p.y],[x1,Math.max(p.y,LOS+20)]],dot:1,arrow:1,col:'#3b9cff'})});ok.push(cl);continue}
