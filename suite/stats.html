@@ -32,7 +32,7 @@ table{width:100%;border-collapse:collapse;font-size:14px;background:var(--card);
 th{font-size:11px;text-transform:uppercase;color:var(--mut);text-align:right;padding:7px 8px;background:#132030}th:first-child,td:first-child{text-align:left}
 td{padding:7px 8px;border-top:1px solid var(--line);text-align:right}
 tr.click{cursor:pointer}tr.click:active{background:#223140}
-.up{color:var(--ok);font-weight:700}.dn{color:var(--bad);font-weight:700}.mut{color:var(--mut)}.note{color:var(--mut);font-size:12px}
+.dd{font-size:12px;line-height:1.15;margin-top:1px}.cmp{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--mut);font-weight:600;text-transform:none;letter-spacing:0;white-space:nowrap}.cmp input{width:18px;height:18px;margin:0;accent-color:#2fbf71}.sh{display:flex;align-items:center;justify-content:space-between;gap:10px}.sh h3{margin:18px 0 8px}.up{color:var(--ok);font-weight:700}.dn{color:var(--bad);font-weight:700}.mut{color:var(--mut)}.note{color:var(--mut);font-size:12px}
 .empty{color:var(--mut);padding:30px 10px;text-align:center}
 .modal{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:9}.modal.show{display:flex}
 .box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;width:min(480px,94vw);max-height:90vh;overflow:auto}
@@ -70,8 +70,11 @@ function expl(p,L){const t=p.ptype==='run'?(L.expRun||15):(L.expPass||15);return
 function summ(P,L){const n=P.length,y=P.reduce((a,p)=>a+(+p.gain||0),0),e=P.reduce((a,p)=>a+eff(p),0),x=P.reduce((a,p)=>a+expl(p,L),0),r=P.filter(p=>p.ptype==='run').length;
  return{n,ypp:n?y/n:0,eff:n?e/n:0,exp:n?x/n:0,run:n?r/n:0,yds:y,to:P.filter(p=>p.result==='INT'||p.result==='FUM').length,td:P.filter(p=>p.td).length}}
 const pct=v=>Math.round(v*100)+'%',f1=v=>(Math.round(v*10)/10).toFixed(1);
-function delta(v,avg,isPct,n){if(n<3)return`<span class="mut">${isPct?pct(v):f1(v)}</span>`;const d=isPct?Math.round((v-avg)*100):Math.round((v-avg)*10)/10;
- const s=(d>0?'+':'')+(isPct?d+'%':d.toFixed(1));return`${isPct?pct(v):f1(v)} <span class="${d>0?'up':d<0?'dn':'mut'}">${d===0?'':s}</span>`}
+function delta(v,avg,isPct,n,show){const val=isPct?pct(v):f1(v);if(show===false||n<3)return`<span class="${n<3?'mut':''}">${val}</span>`;const d=isPct?Math.round((v-avg)*100):Math.round((v-avg)*10)/10;
+ const s=d===0?(isPct?'0%':'0.0'):(d>0?'+':'')+(isPct?d+'%':d.toFixed(1));return`<div>${val}</div><div class="dd ${d>0?'up':d<0?'dn':'mut'}">${s}</div>`}
+/* +/- vs the season average can be switched off per grid in Splits (and all at once). Saved on this device. */
+const CMPK='stats_cmp_v1';let CMP={};try{CMP=JSON.parse(localStorage.getItem(CMPK))||{}}catch(e){CMP={}}
+const cmpOn=id=>!CMP[id];function cmpSave(){try{localStorage.setItem(CMPK,JSON.stringify(CMP))}catch(e){}}
 /* ---------- header ---------- */
 function seasons(){const a=A(),S=sched(),ys=new Set([...S.rows.map(r=>+String(r.date||'').slice(0,4)).filter(Boolean),...realGames(a).map(g=>gameYear(g,S))]);if(!ys.size)ys.add(new Date().getFullYear());return[...ys].sort((x,y)=>y-x)}
 function hdr(){const ss=seasons();if(!V.season||!ss.includes(V.season))V.season=ss[0];
@@ -138,16 +141,19 @@ function bucket(p){if(p.down===1)return'1st down';const n=+p.dist||10,b=n<=3?'sh
 function zone(f){f=+f||25;return f<=20?'Backed up (own 1-20)':f<=40?'Own 20-40':f<=60?'Open field':f<=80?'Plus territory (opp 40-20)':f<=90?'Opp 20-10':'Red zone'}
 function viewSplits(){const gs=V.game?realGames(A()).filter(g=>g.id===V.game):gamesInSeason(),L=A().lists||{},P=plays(gs),all=summ(P,L);
  if(!P.length)return`<div class="empty">No logged plays in ${V.season} yet.</div>`;
- const split=(title,key)=>{const m={};for(const p of P){const k=key(p);if(!k)continue;(m[k]=m[k]||[]).push(p)}
-  const rows=Object.entries(m).sort((a,b)=>b[1].length-a[1].length).map(([k,a])=>{const s=summ(a,L);return[esc(k),s.n,delta(s.ypp,all.ypp,false,s.n),delta(s.eff,all.eff,true,s.n),delta(s.exp,all.exp,true,s.n)]});
-  return`<h3>${title}</h3>`+tbl(['','Plays','Yds/play','Eff','Exp'],rows)};
- const L2=A().lists||{};return`<p class="note">Explosive = ${(L2.expRun||15)===(L2.expPass||15)?(L2.expRun||15)+'+ yards on any play':(L2.expRun||15)+'+ run, '+(L2.expPass||15)+'+ pass'} (change in Almanac › Setup). Compared with the ${V.season} average (${f1(all.ypp)} yds/play, ${pct(all.eff)} efficient, ${pct(all.exp)} explosive). Fewer than 3 plays shows no +/–.</p>`+
-  split('By call (one word or concept)',p=>p.owc||p.call)+split('By formation',p=>p.formation?(p.formation+(p.ftag?' '+p.ftag:'')):null)+split('By down and distance',bucket)+split('By field zone',p=>zone(p.f))+split('Run / pass',p=>p.ptype==='run'?'Run':'Pass')}
+ const split=(title,key,id)=>{const on=cmpOn(id);const m={};for(const p of P){const k=key(p);if(!k)continue;(m[k]=m[k]||[]).push(p)}
+  const rows=Object.entries(m).sort((a,b)=>b[1].length-a[1].length).map(([k,a])=>{const s=summ(a,L);return[esc(k),s.n,delta(s.ypp,all.ypp,false,s.n,on),delta(s.eff,all.eff,true,s.n,on),delta(s.exp,all.exp,true,s.n,on)]});
+  return`<div class="sh"><h3>${title}</h3><label class="cmp"><input type="checkbox" data-cmp="${id}" ${on?'checked':''}>+/−</label></div>`+tbl(['','Plays','Yds/play','Eff','Exp'],rows)};
+ const IDS=['call','form','down','zone','rp'],allOn=IDS.every(cmpOn);
+ const L2=A().lists||{};return`<p class="note">Explosive = ${(L2.expRun||15)===(L2.expPass||15)?(L2.expRun||15)+'+ yards on any play':(L2.expRun||15)+'+ run, '+(L2.expPass||15)+'+ pass'} (change in Almanac › Setup). Compared with the ${V.season} average (${f1(all.ypp)} yds/play, ${pct(all.eff)} efficient, ${pct(all.exp)} explosive). Fewer than 3 plays shows no +/–.</p><label class="cmp" style="margin:4px 0 2px;font-size:13px"><input type="checkbox" id="cmpall" ${allOn?'checked':''}>Show all +/−</label>`+
+  split('By call (one word or concept)',p=>p.owc||p.call,'call')+split('By formation',p=>p.formation?(p.formation+(p.ftag?' '+p.ftag:'')):null,'form')+split('By down and distance',bucket,'down')+split('By field zone',p=>zone(p.f),'zone')+split('Run / pass',p=>p.ptype==='run'?'Run':'Pass','rp')}
 /* ---------- render ---------- */
 function render(){hdr();let h;
  if(V.game){const g=realGames(A()).find(x=>x.id===V.game);h=g?viewSeason([g],g.opp):'<div class="empty">Game not found.</div>'}
  else if(V.tab==='schedule')h=viewSchedule();else if(V.tab==='season')h=viewSeason(gamesInSeason());else if(V.tab==='games')h=viewGames();else h=viewSplits();
  $('main').innerHTML=h;
+ document.querySelectorAll('[data-cmp]').forEach(c=>c.onchange=()=>{if(c.checked)delete CMP[c.dataset.cmp];else CMP[c.dataset.cmp]=1;cmpSave();render()});
+ const ca=$('cmpall');if(ca)ca.onchange=()=>{['call','form','down','zone','rp'].forEach(k=>{if(ca.checked)delete CMP[k];else CMP[k]=1});cmpSave();render()};
  const ag=$('addg');if(ag)ag.onclick=()=>editRow(null);
  document.querySelectorAll('[data-row]').forEach(b=>b.onclick=e=>{const r=sched().rows.find(x=>x.id===b.dataset.row),gid=r&&matchGame(r);if(e.target.closest('[data-edit]')||!gid)return editRow(b.dataset.row);V.game=gid;render()});
  document.querySelectorAll('tr[data-g]').forEach(r=>r.onclick=()=>{V.game=r.dataset.g;render()});
