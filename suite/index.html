@@ -151,14 +151,15 @@ function renderHome(){const s=SUITESYNC.status(),n=reviewCount(),ai=almInfo(),ng
  $('tiles').innerHTML=(SIDE==='D'?DTOOLS:TOOLS).map(t=>{const[c,svg]=IC[t.id];return`<button class="tile ${t.soon?'soon':''}" data-t="${t.id}"><span class="ic" style="background:${c}22;color:${c}">${svg}</span><span class="tx"><b>${t.name}${t.soon?'<span class="tag">SOON</span>':''}</b><span class="d">${desc(t)}</span></span><span class="go">›</span>${t.id==='glossary'&&n?`<span class="dot">${n}</span>`:''}</button>`}).join('');
  const ago=s.last?Math.round((Date.now()-s.last)/60000):null,cls=!s.signedIn?'':s.busy?'busy':s.error?'bad':'ok';
  const txt=s.signedIn?(s.busy?'Syncing…':s.error?esc(s.error):'Synced '+(ago===0?'just now':ago+' min ago'))+(navigator.onLine?'':' · offline'):'This device only · not syncing';
- $('syncline').innerHTML=`<span class="side"><button data-side="O" class="${SIDE==='O'?'on':''}">Offense</button><button data-side="D" class="${SIDE==='D'?'on':''}">Defense</button></span><span class="sd ${cls}"></span><span>${txt}</span><button id="syncbtn">${s.signedIn?'Sync':'Sign in'}</button>`;
- $('syncbtn').onclick=signInModal;
+ $('syncline').innerHTML=`<span class="side"><button data-side="O" class="${SIDE==='O'?'on':''}">Offense</button><button data-side="D" class="${SIDE==='D'?'on':''}">Defense</button></span><span class="sd ${cls}"></span><span>${txt}</span><button id="syncbtn">${s.signedIn?'Sync':'Sign in'}</button><button id="setbtn">Settings</button>`;
+ $('syncbtn').onclick=signInModal;$('setbtn').onclick=toSettings;
  document.querySelectorAll('[data-side]').forEach(b=>b.onclick=()=>setSide(b.dataset.side))}
 function setSide(v){SIDE=v;try{localStorage.setItem('suite_side',v)}catch(e){}renderHome()}
 function barStatus(){const s=SUITESYNC.status();document.body.classList.toggle('isdemo',!s.signedIn);$('st').textContent=!navigator.onLine?'Offline':s.busy?'Syncing…':s.error?'Sync problem':s.signedIn?'Synced':''}
 $('tiles').onclick=e=>{const b=e.target.closest('[data-t]');if(b)open(b.dataset.t)};
 $('homebtn').onclick=goHome;$('demob1').onclick=()=>signInModal();
 /* A tool can ask the shell to open another tool, e.g. the Almanac's Glossary button. */
+function toSettings(){open('almanac');const f=made.almanac;let tries=0;const go=()=>{let w=null;try{w=f.contentWindow;if(!w||!w.openSetup)throw 0}catch(e){if(++tries<40)return setTimeout(go,250);return}w.openSetup()};go()}
 function toAlm(id){open('almanac');const f=made.almanac;let tries=0;const go=()=>{let w=null;try{w=f.contentWindow;if(!w||!w.takeGrid)throw 0}catch(e){if(++tries<40)return setTimeout(go,250);return}w.takeGrid(id)};go()}
 function toFilm(txt){open('film');const f=made.film;let tries=0;const go=()=>{let w=null;try{w=f.contentWindow;if(!w||!w.takeAlmanac)throw 0}catch(e){if(++tries<40)return setTimeout(go,250);return}w.postMessage({almanac:txt},location.origin)};go()}
 addEventListener('message',e=>{if(e.origin!==location.origin||!e.data)return;if(e.data.toFilm){toFilm(e.data.toFilm);return}if(e.data.toAlmanac){toAlm(e.data.toAlmanac);return}if(!e.data.open)return;open(e.data.open);
