@@ -131,6 +131,7 @@ function touch(p){p.upd=Date.now();writeStore()}
 /* ---------- drawing data ---------- */
 const OLK=['LT','LG','C','RG','RT'],SK=['Q','X','Z','M','H','Y','F','A','B','T'];
 const COLS=['#ffffff','#ef5b5b','#5aa9ff','#f2b632','#2fbf71','#c58bff'];
+const LKEY=[['#5aa9ff','Motion'],['#ef5b5b','Shift'],['#2fbf71','Ball carrier'],['#f2b632','Carrier on read']];
 const TC={Q:'#ffffff',X:'#5aa9ff',Z:'#5aa9ff',M:'#f2b632',H:'#2fbf71',Y:'#c58bff',F:'#5ad1c8',A:'#ff9bd0',B:'#b0b8c4',T:'#ef7b5b'};
 /* The drawing is the whole field width: 160 ft (high school), 4.4 px per foot. The left hash sits where the center lines up (53'4" from the sideline).
    Noah asked for the hashes drawn farther apart than real: HASHR puts the right hash 66 ft from the left one (real is 53'4"). Change the 66 to change it.
@@ -173,6 +174,7 @@ function svgOf(d,sel,cur,selL){const n=++svgN,used=new Set(),edit=selL!==undefin
   s+=(on?geo+` fill="none" stroke="#9b7bff" stroke-width="9" stroke-opacity=".4" stroke-linejoin="round"/>`:'')+geo+` fill="none" stroke="${c}" stroke-width="2.6" stroke-dasharray="3 5" stroke-linecap="round" stroke-linejoin="round"/>`+(edit?`<circle data-s="${i}" cx="${h.x}" cy="${h.y}" r="${h.k==='tri'?30:22}" fill="transparent"/>`:'')});
  if(edit&&selL!=null&&d.l[selL]){const q=d.l[selL].pts;for(let j=0;j<q.length-1;j++)s+=`<circle data-m="${selL}:${j}" cx="${(q[j][0]+q[j+1][0])/2}" cy="${(q[j][1]+q[j+1][1])/2}" r="8" fill="#101c14" fill-opacity=".6" stroke="#9b7bff" stroke-width="2" stroke-dasharray="3 2"/>`}
  if(edit&&selL!=null&&d.l[selL])d.l[selL].pts.forEach((q,j)=>{s+=`<circle data-h="${selL}:${j}" cx="${q[0]}" cy="${q[1]}" r="9" fill="#9b7bff" stroke="#fff" stroke-width="2"/>`});
+ {const us=LKEY.filter(k=>(d.l||[]).concat(d.sh||[]).some(l=>(l.col||'#ffffff')===k[0]));let lx=10;us.forEach(k=>{s+=`<line x1="${lx}" y1="${VH-10}" x2="${lx+16}" y2="${VH-10}" stroke="${k[0]}" stroke-width="3" stroke-linecap="round"/><text x="${lx+21}" y="${VH-6.5}" font-size="10" fill="#cbd5e1" font-family="system-ui,sans-serif">${k[1]}</text>`;lx+=21+k[1].length*5.6+16})}
  return s+'</svg>'}
 
 /* ---------- glossary ---------- */
@@ -557,6 +559,7 @@ function edRender(){const p=plan(),b=p.blocks[E.bi];
    <div class="note" style="margin-top:6px">${E.mode==='free'?'Freehand: press a player and drag the route with your finger, then lift to finish. The Line style buttons below apply (dotted, arrow, block, color). Tap Move / edit to change a line afterward.':E.mode==='shape'?'Tap the field to place the '+(E.shape==='tri'?'run read (dotted triangle)':'throw read (dotted circle)')+'. Then drag it to move it.':E.mode==='move'?(E.selL!=null?'Line selected: drag a purple dot to reshape, lengthen or shorten it, drag the line to move it, or delete it. Color and style buttons change it.':'Drag a player where he lines up. Tap a line to edit it.'):(E.mode==='combo'?(!Object.values(E.d.t).some(x=>x.df&&x.on)?'Turn on a defense first (Defense, below), then tap a lineman.':!(E.combo&&E.combo.a)?'Combo: tap the first lineman.':!E.combo.b?'Now tap the lineman he is combo-ing with.':!E.combo.c?'Now tap the defender they both block.':'Tap a second defender for the climb. Tap the field if you are done.'):(E.sel?'Tap the field where the line ends from '+E.sel+'. It is finished when you tap. To bend it, tap the line and drag a dot.':'Tap a player first, then tap the field.'))}</div>
 </div>
   <div class="g"><div class="k">Line style</div><div class="chips"><button class="chip ${!E.dot?'on':''}" data-e="solid">Solid</button><button class="chip ${E.dot?'on':''}" data-e="dotted">Dotted (motion / shift)</button><button class="chip ${E.arrow&&!E.blk?'on':''}" data-e="arrow">Arrowhead</button><button class="chip ${E.blk?'on':''}" data-e="blk">Block</button><button class="chip ${E.curve?'on':''}" data-e="curve">Curved</button></div><div class="note">Select a line, then drag a dashed dot on it to bend it.</div>
+   <div class="chips" style="margin-bottom:6px">${LKEY.map(k=>`<button class="chip ${E.col===k[0]?'on':''}" data-e="col" data-c="${k[0]}" style="border-left:6px solid ${k[0]}">${k[1]}</button>`).join('')}</div>
    <div>${COLS.map(c=>`<span class="sw ${E.col===c?'on':''}" data-e="col" data-c="${c}" style="background:${c}"></span>`).join('')}</div></div>
   <div class="g"><div class="k">Defense</div><div class="chips">${['4-3-4','3-4-4','3-3-5','4-2-5'].map(q=>`<button class="chip ${E.d.dp===q&&Object.values(E.d.t).some(x=>x.df&&x.on)?'on':''}" data-e="defp" data-p="${q}">${q}</button>`).join('')}<button class="chip" data-e="defoff">Hide defense</button></div><div class="note" style="margin-top:6px">Tap a preset to put that defense on the field. Drag any defender to move him.</div></div>
   <div class="g"><div class="k">Edit</div><div class="chips"><button class="chip" data-e="undo">Undo</button><button class="chip ${E.selL!=null?'on':''}" data-e="dellsel">Delete selected line</button><button class="chip" data-e="dellast">Delete last line</button><button class="chip" data-e="clear">Clear all lines</button></div></div>
@@ -597,7 +600,7 @@ $('ed').addEventListener('pointermove',e=>{if(!E||!E.drag)return;const d=E.drag,
  else if(d.kind==='ln'){const xs=d.orig.map(q=>q[0]),ys=d.orig.map(q=>q[1]),mx=Math.max(8-Math.min(...xs),Math.min(VW-8-Math.max(...xs),dx)),my=Math.max(8-Math.min(...ys),Math.min(VH-8-Math.max(...ys),dy));E.d.l[d.li].pts=d.orig.map(q=>[q[0]+mx,q[1]+my])}
  else for(const k in d.start){const s0=d.start[k],t=E.d.t[k];t.x=Math.max(8,Math.min(VW-8,s0.x+dx));t.y=Math.max(8,Math.min(VH-8,s0.y+dy))}
  redrawCanvas()});
-const endDrag=()=>{if(E&&E.drag&&E.drag.kind==='free'){E.drag=null;finishFree();redrawCanvas();edRender();return}if(E&&E.drag){E.drag=null;if(E.hist.length&&JSON.stringify(E.d)===E.hist[E.hist.length-1])E.hist.pop();edRender()}};
+const endDrag=()=>{if(E&&E.drag&&E.drag.kind==='free'){E.drag=null;finishFree();redrawCanvas();edRender();return}if(E&&E.drag){const k=E.drag.kind;E.drag=null;if(E.hist.length&&JSON.stringify(E.d)===E.hist[E.hist.length-1])E.hist.pop();else if(k==='tok'){E.sel=null;redrawCanvas()}edRender()}};
 $('ed').addEventListener('pointerup',endDrag);$('ed').addEventListener('pointercancel',endDrag);
 $('ed').addEventListener('click',e=>{const b=e.target.closest('[data-e]');if(!b||!E)return;const a=b.dataset.e,t=E.d.t;
  if(a==='cancel'){const lk=E.look;E=null;$('ed').classList.remove('show');if(lk)$('looks').onclick();return}
@@ -614,7 +617,7 @@ $('ed').addEventListener('click',e=>{const b=e.target.closest('[data-e]');if(!b|
  else if(a==='blk'){E.blk=!E.blk;if(E.blk)E.arrow=false;if(E.cur){E.cur.blk=E.blk;E.cur.arrow=E.arrow}if(E.selL!=null){snap();E.d.l[E.selL].blk=E.blk;E.d.l[E.selL].arrow=E.arrow}}
  else if(a==='curve'){E.curve=!E.curve;if(E.cur)E.cur.curve=E.curve;if(E.selL!=null){snap();E.d.l[E.selL].curve=E.curve}}
  else if(a==='defp'){snap();E.d.dp=addDefense(t,b.dataset.p)}else if(a==='defoff'){snap();Object.values(t).forEach(x=>{if(x.df)x.on=0});if(E.sel&&String(E.sel).indexOf('D_')===0)E.sel=null}
- else if(a==='col'){E.col=b.dataset.c;if(E.cur)E.cur.col=E.col;if(E.selL!=null){snap();E.d.l[E.selL].col=E.col}}
+ else if(a==='col'){E.col=b.dataset.c;if(E.selS!=null&&E.d.sh&&E.d.sh[E.selS]){snap();E.d.sh[E.selS].col=E.col}if(E.cur)E.cur.col=E.col;if(E.selL!=null){snap();E.d.l[E.selL].col=E.col}}
  else if(a==='dellsel'){if(E.selL!=null){snap();E.d.l.splice(E.selL,1);E.selL=null}else if(E.selS!=null&&E.d.sh&&E.d.sh[E.selS]){snap();E.d.sh.splice(E.selS,1);E.selS=null}}
  else if(a==='undo')edUndo();else if(a==='redo')edRedo()
  else if(a==='dellast'){snap();E.d.l.pop();E.selL=null}
