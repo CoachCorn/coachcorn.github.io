@@ -546,7 +546,7 @@ function edRender(){const p=plan(),b=p.blocks[E.bi];
    <div class="chips"><button class="chip" data-e="lite">Lite</button><button class="chip" data-e="heavy">Heavy</button><button class="chip" data-e="reset">Reset to base</button></div>
    <div class="note" style="margin-top:6px">Heavy: right tackle over to the left side. Lite: left tackle over to the right side.</div></div>
   <div class="g"><div class="k">Tap to</div><div class="chips"><button class="chip ${E.mode==='move'?'on':''}" data-e="mm">Move / edit</button><button class="chip ${E.mode==='line'?'on':''}" data-e="ml">Draw a line</button><button class="chip ${E.mode==='combo'?'on':''}" data-e="mc">Combo block</button></div>
-   <div class="note" style="margin-top:6px">${E.mode==='move'?(E.selL!=null?'Line selected: drag a purple dot to reshape, lengthen or shorten it, drag the line to move it, or delete it. Color and style buttons change it.':'Drag a player where he lines up. Tap a line to edit it.'):(E.mode==='combo'?(!Object.values(E.d.t).some(x=>x.df&&x.on)?'Turn on a defense first (Defense, below), then tap a lineman.':!(E.combo&&E.combo.a)?'Combo: tap the offensive lineman.':!E.combo.b?'Now tap the defender he blocks.':!E.combo.c?'Now tap the lineman he is combo-ing with.':'Both blocks are drawn. Tap the field to send the climb up to the next level, or tap another lineman to start a new combo.'):(E.sel?'Tap the field where the line ends from '+E.sel+'. It is finished when you tap. To bend it, tap the line and drag a dot.':'Tap a player first, then tap the field.'))}</div>
+   <div class="note" style="margin-top:6px">${E.mode==='move'?(E.selL!=null?'Line selected: drag a purple dot to reshape, lengthen or shorten it, drag the line to move it, or delete it. Color and style buttons change it.':'Drag a player where he lines up. Tap a line to edit it.'):(E.mode==='combo'?(!Object.values(E.d.t).some(x=>x.df&&x.on)?'Turn on a defense first (Defense, below), then tap a lineman.':!(E.combo&&E.combo.a)?'Combo: tap the first lineman.':!E.combo.b?'Now tap the lineman he is combo-ing with.':!E.combo.c?'Now tap the defender they both block.':'Tap a second defender for the climb. Tap the field if you are done.'):(E.sel?'Tap the field where the line ends from '+E.sel+'. It is finished when you tap. To bend it, tap the line and drag a dot.':'Tap a player first, then tap the field.'))}</div>
 </div>
   <div class="g"><div class="k">Line style</div><div class="chips"><button class="chip ${!E.dot?'on':''}" data-e="solid">Solid</button><button class="chip ${E.dot?'on':''}" data-e="dotted">Dotted (motion / shift)</button><button class="chip ${E.arrow&&!E.blk?'on':''}" data-e="arrow">Arrowhead</button><button class="chip ${E.blk?'on':''}" data-e="blk">Block</button><button class="chip ${E.curve?'on':''}" data-e="curve">Curved</button></div><div class="note">Select a line, then drag a dashed dot on it to bend it.</div>
    <div>${COLS.map(c=>`<span class="sw ${E.col===c?'on':''}" data-e="col" data-c="${c}" style="background:${c}"></span>`).join('')}</div></div>
@@ -565,14 +565,15 @@ $('ed').addEventListener('pointerdown',e=>{const cv=e.target.closest('#cv');if(!
   if(ln){const li=+ln.dataset.l,L=E.d.l[li];E.selL=li;E.sel=null;E.dot=!!L.dot;E.arrow=!!L.arrow;E.blk=!!L.blk;E.curve=!!L.curve;E.col=L.col||COLS[0];snap();E.drag={kind:'ln',p0,li,orig:clone(L.pts)};cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);redrawCanvas();e.preventDefault();return}
   if(E.sel&&E.d.t[E.sel]&&E.d.t[E.sel].on&&!(e.target.closest('[data-l]'))){const t=E.d.t[E.sel];snap();E.d.l.push({pts:[[t.x,t.y],[p0.x,p0.y]],dot:E.dot,arrow:E.arrow&&!E.blk,blk:E.blk,curve:E.curve,col:E.col});E.selL=E.d.l.length-1;E.sel=null;redrawCanvas();edRender();return}
   E.sel=null;E.selL=null;redrawCanvas();edRender();return}
- if(E.mode==='combo'){const k=g&&g.dataset.k,C=E.combo||(E.combo={a:null,b:null,c:null}),T=E.d.t,isD=k=>k&&T[k]&&T[k].df;
+ if(E.mode==='combo'){const k=g&&g.dataset.k,C=E.combo||(E.combo={a:null,b:null,c:null}),T=E.d.t,isD=k=>k&&T[k]&&T[k].df,fin=()=>{E.combo={a:null,b:null,c:null};E.sel=null};
   const edge=(from,to,r)=>{const dx=to.x-from.x,dy=to.y-from.y,m=Math.hypot(dx,dy)||1;return[Math.round(from.x+dx/m*r),Math.round(from.y+dy/m*r)]};
-  const blk=(from,to,r1,r2)=>({pts:[edge(from,to,r1),edge(to,from,r2)].map(q=>q),blk:1,col:E.col});
-  if(k&&OLK.includes(k)){if(!C.a||C.c){E.combo={a:k,b:null,c:null};E.sel=k}
-   else if(C.b&&k!==C.a){C.c=k;snap();E.d.l.push(blk(T[C.a],T[C.b],12,14),blk(T[k],T[C.b],12,14));E.sel=null}
-   else if(!C.b){C.a=k;E.sel=k}}
-  else if(isD(k)){if(C.a&&!C.b){C.b=k;E.sel=k}}
-  else if(!k&&C.c){snap();const D=T[C.b];E.d.l.push({pts:[[D.x,D.y-14],[p0.x,p0.y]],blk:1,col:E.col});E.combo={a:null,b:null,c:null};E.sel=null}
+  const blk=(from,to)=>({pts:[edge(from,to,12),edge(to,from,14)],blk:1,col:E.col});
+  const climb=(D1,D2)=>{const cx=T.C?T.C.x:D1.x,dx=D2.x-D1.x,dy=D2.y-D1.y,m=Math.hypot(dx,dy)||1,side=D1.x>=cx?1:-1,nx=-dy/m,ny=dx/m,sg=(nx*side>=0)?1:-1,off=Math.max(26,m*.6),M={x:(D1.x+D2.x)/2+nx*sg*off,y:(D1.y+D2.y)/2+ny*sg*off},ux=M.x-D2.x,uy=M.y-D2.y,um=Math.hypot(ux,uy)||1,R=x=>Math.round(x);
+   return{pts:[edge(D1,M,14),[R(M.x),R(M.y)],[R(D2.x+ux/um*30),R(D2.y+uy/um*30)],[R(D2.x+ux/um*14),R(D2.y+uy/um*14)]],curve:true,blk:1,col:E.col}};
+  if(k&&OLK.includes(k)){if(!C.a||C.c){E.combo={a:k,b:null,c:null};E.sel=k}else if(!C.b&&k!==C.a){C.b=k;E.sel=k}else if(!C.c){C.a=k;C.b=null;E.sel=k}else{E.combo={a:k,b:null,c:null};E.sel=k}}
+  else if(isD(k)){if(C.a&&C.b&&!C.c){C.c=k;snap();E.d.l.push(blk(T[C.a],T[k]),blk(T[C.b],T[k]));E.sel=k}
+   else if(C.c&&k!==C.c){snap();E.d.l.push(climb(T[C.c],T[k]));fin()}}
+  else if(!k&&C.c)fin();
   redrawCanvas();edRender();e.preventDefault();return}
  // line mode
  if(g&&!E.cur){E.sel=g.dataset.k;redrawCanvas();edRender();return}
