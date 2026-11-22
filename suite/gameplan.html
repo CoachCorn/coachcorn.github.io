@@ -148,6 +148,8 @@ function baseDraw(){const t={},put=(k,x,y,on)=>t[k]={x,y,on};
  put('Y',395,112+OFF,0);put('F',430,150+OFF,0);put('A',300,190+OFF,0);put('B',260,205+OFF,0);
  OLK.forEach((k,i)=>put(k,235-2*OLSP+i*OLSP,LOS,1));return{t,l:[],v:2}}
 let svgN=0;
+function pathD(pts,curve){const P=pts.map(p=>[+p[0],+p[1]]);if(!curve||P.length<3)return'M'+P.map(p=>p[0]+' '+p[1]).join(' L');let d='M'+P[0][0]+' '+P[0][1];
+ for(let i=0;i<P.length-1;i++){const p0=P[i-1]||P[i],p1=P[i],p2=P[i+1],p3=P[i+2]||p2;d+=' C'+(p1[0]+(p2[0]-p0[0])/6)+' '+(p1[1]+(p2[1]-p0[1])/6)+','+(p2[0]-(p3[0]-p1[0])/6)+' '+(p2[1]-(p3[1]-p1[1])/6)+','+p2[0]+' '+p2[1]}return d}
 function svgOf(d,sel,cur,selL){const n=++svgN,used=new Set(),edit=selL!==undefined;
  const lines=(d.l||[]).concat(cur?[cur]:[]);lines.forEach(l=>used.add(l.col||'#ffffff'));
  let s=`<svg viewBox="0 0 ${VW} ${VH}" xmlns="http://www.w3.org/2000/svg"><defs>`+[...used].map(c=>`<marker id="a${n}${c.slice(1)}" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L8 4L0 8z" fill="${c}"/></marker>`).join('')+`</defs>`;
@@ -161,12 +163,13 @@ function svgOf(d,sel,cur,selL){const n=++svgN,used=new Set(),edit=selL!==undefin
  // yard numerals (6 ft tall), both read bottom to top: 4 on the bottom, 0 on top
  for(const [cx,rot] of [[(NB+NT)/2,-90],[VW-(NB+NT)/2,-90]])s+=`<text x="${cx}" y="${LOS}" transform="rotate(${rot} ${cx} ${LOS})" fill="#ffffff26" font-size="36" font-weight="700" font-family="sans-serif" text-anchor="middle" dominant-baseline="central" letter-spacing="3">40</text>`;
  s+=`<line x1="0" x2="${VW}" y1="${LOS}" y2="${LOS}" stroke="#ffffff55" stroke-dasharray="6 5"/>`;
- for(let li=0;li<lines.length;li++){const l=lines[li],c=l.col||'#ffffff',pts=(l.pts||[]).map(p=>p.join(',')).join(' ');if((l.pts||[]).length<2)continue;
-  s+=`<polyline points="${pts}" fill="none" stroke="${c}" stroke-width="${l.dot?3:2.6}" stroke-linecap="round" stroke-linejoin="round" ${l.dot?'stroke-dasharray="1 7"':''} ${l.arrow&&!l.blk?`marker-end="url(#a${n}${c.slice(1)})"`:''}/>`+(l.blk?(()=>{const q=l.pts,a=q[q.length-2],z=q[q.length-1],dx=z[0]-a[0],dy=z[1]-a[1],m=Math.hypot(dx,dy)||1,px=-dy/m*9,py=dx/m*9;return`<line x1="${z[0]-px}" y1="${z[1]-py}" x2="${z[0]+px}" y2="${z[1]+py}" stroke="${c}" stroke-width="3.4" stroke-linecap="round"/>`})():'')+(edit&&li<d.l.length?(selL===li?`<polyline points="${pts}" fill="none" stroke="#9b7bff" stroke-width="9" stroke-opacity=".4" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>`:'')+`<polyline data-l="${li}" points="${pts}" fill="none" stroke="transparent" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" pointer-events="stroke"/>`:'')}
+ for(let li=0;li<lines.length;li++){const l=lines[li],c=l.col||'#ffffff',pts=(l.pts||[]).map(p=>p.join(',')).join(' '),pd=pathD(l.pts||[],l.curve);if((l.pts||[]).length<2)continue;
+  s+=`<path d="${pd}" fill="none" stroke="${c}" stroke-width="${l.dot?3:2.6}" stroke-linecap="round" stroke-linejoin="round" ${l.dot?'stroke-dasharray="1 7"':''} ${l.arrow&&!l.blk?`marker-end="url(#a${n}${c.slice(1)})"`:''}/>`+(l.blk?(()=>{const q=l.pts,a=q[q.length-2],z=q[q.length-1],dx=z[0]-a[0],dy=z[1]-a[1],m=Math.hypot(dx,dy)||1,px=-dy/m*9,py=dx/m*9;return`<line x1="${z[0]-px}" y1="${z[1]-py}" x2="${z[0]+px}" y2="${z[1]+py}" stroke="${c}" stroke-width="3.4" stroke-linecap="round"/>`})():'')+(edit&&li<d.l.length?(selL===li?`<path d="${pd}" fill="none" stroke="#9b7bff" stroke-width="9" stroke-opacity=".4" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>`:'')+`<path data-l="${li}" d="${pd}" fill="none" stroke="transparent" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" pointer-events="stroke"/>`:'')}
  for(const k of Object.keys(d.t).filter(k=>d.t[k].df&&d.t[k].on)){const t=d.t[k];s+=`<g data-k="${k}">${sel===k?`<circle cx="${t.x}" cy="${t.y}" r="17" fill="none" stroke="#9b7bff" stroke-width="2.5"/>`:''}<circle cx="${t.x}" cy="${t.y}" r="12" fill="#2a1416" stroke="#ef5b5b" stroke-width="1.8"/><text x="${t.x}" y="${t.y+3.5}" text-anchor="middle" font-size="9.5" font-weight="800" font-family="sans-serif" fill="#ff8c8c" pointer-events="none">${t.lab||''}</text></g>`}
  const order=[...OLK,...SK];
  for(const k of order){const t=d.t[k];if(!t||!t.on)continue;const ol=OLK.includes(k),c=TC[k]||'#fff';
   s+=`<g data-k="${k}" ${sel===k?'':''}>${sel===k?`<circle cx="${t.x}" cy="${t.y}" r="17" fill="none" stroke="#9b7bff" stroke-width="2.5"/>`:''}<circle cx="${t.x}" cy="${t.y}" r="12" fill="${ol?'#101c14':c}" stroke="${ol?'#e8eef4':'#0008'}" stroke-width="${ol?1.8:1}"/><text x="${t.x}" y="${t.y+4.5}" text-anchor="middle" font-size="12.5" font-weight="800" font-family="sans-serif" fill="${ol?'#e8eef4':'#0b1118'}" pointer-events="none">${ol?'O':k}</text></g>`}
+ if(edit&&selL!=null&&d.l[selL]){const q=d.l[selL].pts;for(let j=0;j<q.length-1;j++)s+=`<circle data-m="${selL}:${j}" cx="${(q[j][0]+q[j+1][0])/2}" cy="${(q[j][1]+q[j+1][1])/2}" r="8" fill="#101c14" fill-opacity=".6" stroke="#9b7bff" stroke-width="2" stroke-dasharray="3 2"/>`}
  if(edit&&selL!=null&&d.l[selL])d.l[selL].pts.forEach((q,j)=>{s+=`<circle data-h="${selL}:${j}" cx="${q[0]}" cy="${q[1]}" r="9" fill="#9b7bff" stroke="#fff" stroke-width="2"/>`});
  return s+'</svg>'}
 
@@ -536,9 +539,9 @@ function edRender(){const p=plan(),b=p.blocks[E.bi];
    <div class="chips"><button class="chip" data-e="lite">Lite</button><button class="chip" data-e="heavy">Heavy</button><button class="chip" data-e="reset">Reset to base</button></div>
    <div class="note" style="margin-top:6px">Heavy: right tackle over to the left side. Lite: left tackle over to the right side.</div></div>
   <div class="g"><div class="k">Tap to</div><div class="chips"><button class="chip ${E.mode==='move'?'on':''}" data-e="mm">Move / edit</button><button class="chip ${E.mode==='line'?'on':''}" data-e="ml">Draw a line</button><button class="chip ${E.mode==='combo'?'on':''}" data-e="mc">Combo block</button></div>
-   <div class="note" style="margin-top:6px">${E.mode==='move'?(E.selL!=null?'Line selected: drag a purple dot to reshape, lengthen or shorten it, drag the line to move it, or delete it. Color and style buttons change it.':'Drag a player where he lines up. Tap a line to edit it.'):(E.mode==='combo'?(!(E.combo&&E.combo.a)?'Combo: tap the first lineman.':!E.combo.b?'Now tap the second lineman. A line joins the two.':'Tap the field where the combo block goes. A block line is drawn from '+E.combo.b+'.'):E.cur?'Tap the field to add points. Tap Done when the route ends.':(E.sel?'Tap the field to start a line from '+E.sel+'.':'Tap a player first, then tap the field.'))}</div>
+   <div class="note" style="margin-top:6px">${E.mode==='move'?(E.selL!=null?'Line selected: drag a purple dot to reshape, lengthen or shorten it, drag the line to move it, or delete it. Color and style buttons change it.':'Drag a player where he lines up. Tap a line to edit it.'):(E.mode==='combo'?(!Object.values(E.d.t).some(x=>x.df&&x.on)?'Turn on a defense first (Defense, below), then tap a lineman.':!(E.combo&&E.combo.a)?'Combo: tap the offensive lineman.':!E.combo.b?'Now tap the defender he blocks.':!E.combo.c?'Now tap the lineman he is combo-ing with.':'Both blocks are drawn. Tap the field to send the climb up to the next level, or tap another lineman to start a new combo.'):E.cur?'Tap the field to add points. Tap Done when the route ends.':(E.sel?'Tap the field to start a line from '+E.sel+'.':'Tap a player first, then tap the field.'))}</div>
    ${E.mode==='line'?`<div class="chips"><button class="chip" data-e="done">Done with line</button></div>`:''}</div>
-  <div class="g"><div class="k">Line style</div><div class="chips"><button class="chip ${!E.dot?'on':''}" data-e="solid">Solid</button><button class="chip ${E.dot?'on':''}" data-e="dotted">Dotted (motion / shift)</button><button class="chip ${E.arrow&&!E.blk?'on':''}" data-e="arrow">Arrowhead</button><button class="chip ${E.blk?'on':''}" data-e="blk">Block |—</button></div>
+  <div class="g"><div class="k">Line style</div><div class="chips"><button class="chip ${!E.dot?'on':''}" data-e="solid">Solid</button><button class="chip ${E.dot?'on':''}" data-e="dotted">Dotted (motion / shift)</button><button class="chip ${E.arrow&&!E.blk?'on':''}" data-e="arrow">Arrowhead</button><button class="chip ${E.blk?'on':''}" data-e="blk">Block |—</button><button class="chip ${E.curve?'on':''}" data-e="curve">Curved</button></div><div class="note">Select a line, then drag a dashed dot on it to bend it.</div>
    <div>${COLS.map(c=>`<span class="sw ${E.col===c?'on':''}" data-e="col" data-c="${c}" style="background:${c}"></span>`).join('')}</div></div>
   <div class="g"><div class="k">Defense</div><div class="chips">${['4-3-4','3-4-4','3-3-5','4-2-5'].map(q=>`<button class="chip ${E.d.dp===q&&Object.values(E.d.t).some(x=>x.df&&x.on)?'on':''}" data-e="defp" data-p="${q}">${q}</button>`).join('')}<button class="chip" data-e="defoff">Hide defense</button></div><div class="note" style="margin-top:6px">Tap a preset to put that defense on the field. Drag any defender to move him.</div></div>
   <div class="g"><div class="k">Edit</div><div class="chips"><button class="chip" data-e="undo">Undo</button><button class="chip ${E.selL!=null?'on':''}" data-e="dellsel">Delete selected line</button><button class="chip" data-e="dellast">Delete last line</button><button class="chip" data-e="clear">Clear all lines</button></div></div>
@@ -548,19 +551,24 @@ function finishLine(){if(E.cur&&E.cur.pts.length>1){snap();E.d.l.push(E.cur)}E.c
 function redrawCanvas(){const cv=$('cv');if(cv)cv.innerHTML=svgOf(E.d,E.sel,E.cur,E.selL)}
 $('ed').addEventListener('pointerdown',e=>{const cv=e.target.closest('#cv');if(!cv||!E)return;const g=e.target.closest('[data-k]'),p0=pt(e);
  if(E.mode==='move'){const h=e.target.closest('[data-h]'),ln=e.target.closest('[data-l]');
+  const mh=e.target.closest('[data-m]');if(mh){const[li,j]=mh.dataset.m.split(':').map(Number),L=E.d.l[li];snap();const a=L.pts[j],b=L.pts[j+1];L.pts.splice(j+1,0,[Math.round((a[0]+b[0])/2),Math.round((a[1]+b[1])/2)]);if(L.pts.length===3)L.curve=true;E.curve=!!L.curve;E.drag={kind:'pt',p0,li,pi:j+1};cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);e.preventDefault();return}
   if(h){const[li,pi]=h.dataset.h.split(':').map(Number);snap();E.drag={kind:'pt',p0,li,pi};cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);e.preventDefault();return}
   if(g){const k=g.dataset.k;E.sel=k;E.selL=null;snap();const start={};const ids=(OLK.includes(k)&&E.grp)?OLK:[k];ids.forEach(i=>start[i]={x:E.d.t[i].x,y:E.d.t[i].y});E.drag={kind:'tok',p0,start};cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);redrawCanvas();e.preventDefault();return}
-  if(ln){const li=+ln.dataset.l,L=E.d.l[li];E.selL=li;E.sel=null;E.dot=!!L.dot;E.arrow=!!L.arrow;E.blk=!!L.blk;E.col=L.col||COLS[0];snap();E.drag={kind:'ln',p0,li,orig:clone(L.pts)};cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);redrawCanvas();e.preventDefault();return}
+  if(ln){const li=+ln.dataset.l,L=E.d.l[li];E.selL=li;E.sel=null;E.dot=!!L.dot;E.arrow=!!L.arrow;E.blk=!!L.blk;E.curve=!!L.curve;E.col=L.col||COLS[0];snap();E.drag={kind:'ln',p0,li,orig:clone(L.pts)};cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);redrawCanvas();e.preventDefault();return}
   E.sel=null;E.selL=null;redrawCanvas();edRender();return}
- if(E.mode==='combo'){const k=g&&g.dataset.k,C=E.combo||(E.combo={a:null,b:null}),T=E.d.t;
-  if(!C.a){if(k&&OLK.includes(k)){C.a=k;E.sel=k}}
-  else if(!C.b){if(k&&OLK.includes(k)&&k!==C.a){C.b=k;snap();E.d.l.push({pts:[[T[C.a].x,T[C.a].y],[T[k].x,T[k].y]],col:E.col,combo:1});E.sel=k}}
-  else if(!k){snap();E.d.l.push({pts:[[T[C.b].x,T[C.b].y],[p0.x,p0.y]],blk:1,col:E.col});E.combo={a:null,b:null};E.sel=null}
+ if(E.mode==='combo'){const k=g&&g.dataset.k,C=E.combo||(E.combo={a:null,b:null,c:null}),T=E.d.t,isD=k=>k&&T[k]&&T[k].df;
+  const edge=(from,to,r)=>{const dx=to.x-from.x,dy=to.y-from.y,m=Math.hypot(dx,dy)||1;return[Math.round(from.x+dx/m*r),Math.round(from.y+dy/m*r)]};
+  const blk=(from,to,r1,r2)=>({pts:[edge(from,to,r1),edge(to,from,r2)].map(q=>q),blk:1,col:E.col});
+  if(k&&OLK.includes(k)){if(!C.a||C.c){E.combo={a:k,b:null,c:null};E.sel=k}
+   else if(C.b&&k!==C.a){C.c=k;snap();E.d.l.push(blk(T[C.a],T[C.b],12,14),blk(T[k],T[C.b],12,14));E.sel=null}
+   else if(!C.b){C.a=k;E.sel=k}}
+  else if(isD(k)){if(C.a&&!C.b){C.b=k;E.sel=k}}
+  else if(!k&&C.c){snap();const D=T[C.b];E.d.l.push({pts:[[D.x,D.y-14],[p0.x,p0.y]],blk:1,col:E.col});E.combo={a:null,b:null,c:null};E.sel=null}
   redrawCanvas();edRender();e.preventDefault();return}
  // line mode
  if(g&&!E.cur){E.sel=g.dataset.k;redrawCanvas();edRender();return}
- if(!E.cur){if(!E.sel||!E.d.t[E.sel]||!E.d.t[E.sel].on)return;const t=E.d.t[E.sel];E.cur={pts:[[t.x,t.y]],dot:E.dot,arrow:E.arrow&&!E.blk,blk:E.blk,col:E.col}}
- E.cur.pts.push([p0.x,p0.y]);E.cur.dot=E.dot;E.cur.arrow=E.arrow&&!E.blk;E.cur.blk=E.blk;E.cur.col=E.col;redrawCanvas();edRender();e.preventDefault()});
+ if(!E.cur){if(!E.sel||!E.d.t[E.sel]||!E.d.t[E.sel].on)return;const t=E.d.t[E.sel];E.cur={pts:[[t.x,t.y]],dot:E.dot,arrow:E.arrow&&!E.blk,blk:E.blk,curve:E.curve,col:E.col}}
+ E.cur.pts.push([p0.x,p0.y]);E.cur.dot=E.dot;E.cur.arrow=E.arrow&&!E.blk;E.cur.blk=E.blk;E.cur.curve=E.curve;E.cur.col=E.col;redrawCanvas();edRender();e.preventDefault()});
 $('ed').addEventListener('pointermove',e=>{if(!E||!E.drag)return;const d=E.drag,p1=pt(e),dx=p1.x-d.p0.x,dy=p1.y-d.p0.y;
  if(d.kind==='pt')E.d.l[d.li].pts[d.pi]=[p1.x,p1.y];
  else if(d.kind==='ln'){const xs=d.orig.map(q=>q[0]),ys=d.orig.map(q=>q[1]),mx=Math.max(8-Math.min(...xs),Math.min(VW-8-Math.max(...xs),dx)),my=Math.max(8-Math.min(...ys),Math.min(VH-8-Math.max(...ys),dy));E.d.l[d.li].pts=d.orig.map(q=>[q[0]+mx,q[1]+my])}
@@ -576,11 +584,12 @@ $('ed').addEventListener('click',e=>{const b=e.target.closest('[data-e]');if(!b|
  else if(a==='lite'){snap();t.LT.x=t.RT.x+OLSP;t.LT.y=LOS}
  else if(a==='heavy'){snap();t.RT.x=t.LT.x-OLSP;t.RT.y=LOS}
  else if(a==='reset'){snap();const bd=baseDraw();OLK.forEach(k=>t[k]=bd.t[k])}
- else if(a==='mm'){finishLine();E.mode='move';E.combo=null}else if(a==='ml'){E.mode='line';E.selL=null;E.combo=null}else if(a==='mc'){finishLine();E.mode='combo';E.combo={a:null,b:null};E.selL=null;E.sel=null}
+ else if(a==='mm'){finishLine();E.mode='move';E.combo=null}else if(a==='ml'){E.mode='line';E.selL=null;E.combo=null}else if(a==='mc'){finishLine();E.mode='combo';E.combo={a:null,b:null,c:null};E.selL=null;E.sel=null}
  else if(a==='done')finishLine();
  else if(a==='solid'){E.dot=false;if(E.cur)E.cur.dot=false;if(E.selL!=null){snap();E.d.l[E.selL].dot=false}}else if(a==='dotted'){E.dot=true;if(E.cur)E.cur.dot=true;if(E.selL!=null){snap();E.d.l[E.selL].dot=true}}
  else if(a==='arrow'){E.arrow=!E.arrow;if(E.arrow)E.blk=false;if(E.cur){E.cur.arrow=E.arrow;E.cur.blk=E.blk}if(E.selL!=null){snap();E.d.l[E.selL].arrow=E.arrow;E.d.l[E.selL].blk=E.blk}}
  else if(a==='blk'){E.blk=!E.blk;if(E.blk)E.arrow=false;if(E.cur){E.cur.blk=E.blk;E.cur.arrow=E.arrow}if(E.selL!=null){snap();E.d.l[E.selL].blk=E.blk;E.d.l[E.selL].arrow=E.arrow}}
+ else if(a==='curve'){E.curve=!E.curve;if(E.cur)E.cur.curve=E.curve;if(E.selL!=null){snap();E.d.l[E.selL].curve=E.curve}}
  else if(a==='defp'){snap();E.d.dp=addDefense(t,b.dataset.p)}else if(a==='defoff'){snap();Object.values(t).forEach(x=>{if(x.df)x.on=0});if(E.sel&&String(E.sel).indexOf('D_')===0)E.sel=null}
  else if(a==='col'){E.col=b.dataset.c;if(E.cur)E.cur.col=E.col;if(E.selL!=null){snap();E.d.l[E.selL].col=E.col}}
  else if(a==='dellsel'){if(E.selL!=null){snap();E.d.l.splice(E.selL,1);E.selL=null}}
@@ -589,6 +598,8 @@ $('ed').addEventListener('click',e=>{const b=e.target.closest('[data-e]');if(!b|
  else if(a==='clear'){snap();E.d.l=[];E.cur=null;E.selL=null}
  edRender()});
 
+addEventListener('keydown',e=>{if(!E||!$('ed').classList.contains('show'))return;if(/^(INPUT|TEXTAREA|SELECT)$/.test((e.target||{}).tagName||''))return;
+ if((e.key==='Backspace'||e.key==='Delete')&&E.selL!=null&&E.d.l[E.selL]){e.preventDefault();snap();E.d.l.splice(E.selL,1);E.selL=null;redrawCanvas();edRender()}});
 /* ---------- boot ---------- */
 function boot(){ST=readStore();try{cur=localStorage.getItem('gp_cur')||null}catch(e){}
  if(signedIn()&&ST.rows.some(p=>p.sample)){ST.rows=ST.rows.filter(p=>!p.sample);writeStore()}   // signed in: the demo plan goes away, the coaches' plans load from sync
