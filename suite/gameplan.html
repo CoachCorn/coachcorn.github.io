@@ -75,6 +75,7 @@ td .cc.empty{color:#3e5163;font-size:20px}
 .hrow{display:flex;gap:8px;align-items:flex-start;padding:4px 0}.hl{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);min-width:78px;padding-top:4px}.hcs{display:flex;flex-wrap:wrap;gap:6px}
 .hc{background:#18232f;border:1px solid var(--line);border-radius:8px;padding:3px 8px;font-size:13px}.hc b{text-transform:uppercase}.hc i{font-style:normal;font-weight:700}.hc i.g{color:var(--ok)}.hc i.r{color:var(--bad)}
 @media print{.hint,.bhint{display:none}}
+.hc.ng{border-color:var(--warn)}.hc em{font-style:normal;color:var(--warn);font-size:11px;text-transform:uppercase;letter-spacing:.04em}.dont{display:flex;gap:8px;align-items:flex-start;padding:4px 0 8px;margin-bottom:4px;border-bottom:1px solid var(--line)}.dont .hl{color:var(--warn)}
 .hmore summary{font-size:12px;color:var(--mut);margin:6px 0 2px;cursor:pointer}.bhint{margin-top:8px;padding-top:6px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:6px;align-items:center}.bhint .hl{min-width:0;padding:0}
 .look{display:flex;justify-content:space-between;gap:8px;align-items:baseline;border-top:1px solid var(--line);padding:5px 0;font-size:14px}.look:first-of-type{border-top:0}
 .look b{text-transform:uppercase}.look .p{color:var(--mut);font-size:12px;white-space:nowrap}.fb2{color:var(--warn);font-size:12px}
@@ -191,7 +192,7 @@ function render(){const p=plan();
   $('mk0').onclick=()=>newPlan(false);if($('mk1'))$('mk1').onclick=()=>newPlan(true);return}
  cur=p.id;try{localStorage.setItem('gp_cur',cur)}catch(e){}
  const fm=terms(['formation']),sc=scoutFor(p);
- $('main').innerHTML=(p.sample?'<div class="note" style="margin-bottom:10px;padding:8px 10px;border:1px dashed var(--line);border-radius:10px">This is a sample plan. It goes away when you sign in. To keep a copy, use <b>Plans</b> then <b>Duplicate plan</b>.</div>':'')+hintHTML(sc)+`<datalist id="fm">${fm.map(n=>`<option value="${esc(n)}">`).join('')}</datalist>`+
+ $('main').innerHTML=(p.sample?'<div class="note" style="margin-bottom:10px;padding:8px 10px;border:1px dashed var(--line);border-radius:10px">This is a sample plan. It goes away when you sign in. To keep a copy, use <b>Plans</b> then <b>Duplicate plan</b>.</div>':'')+hintHTML(sc,p)+`<datalist id="fm">${fm.map(n=>`<option value="${esc(n)}">`).join('')}</datalist>`+
  (p.blocks.length?p.blocks.map((b,bi)=>`<div class="block" data-b="${bi}">
   <div class="bh"><input class="nm" data-f="name" value="${esc(b.name)}" list="fm" placeholder="Formation name"><input class="ps" data-f="pers" value="${esc(b.pers)}" placeholder="Personnel"><span class="sp"></span>
    <span class="act"><button class="btn sm" data-a="up">↑</button> <button class="btn sm" data-a="dn">↓</button> <button class="btn sm" data-a="dup">Copy</button> <button class="btn sm bad" data-a="del">Delete</button></span></div>
@@ -290,21 +291,32 @@ function scoutFor(p){if(!p||!window.SCOUT)return null;const src=p.scoutSrc||'aut
  return g?{name:g.scout.name,rows:g.scout.rows,from:'Almanac · '+g.opp}:null}
 /* ---- "Start here": what gives this opponent's defense trouble, by the scout data ---- */
 const HMIN=5;   // fewest plays a concept or formation needs before it is ranked
-const baseOf=rows=>{const n=rows.length||1;return{e:rows.filter(x=>x.ef).length/n,x:rows.filter(x=>x.ex).length/n,n:rows.length}};
-function trouble(rows,keyf,base){const m={};rows.forEach(x=>{const k=keyf(x);if(k)(m[k]=m[k]||[]).push(x)});
- return Object.entries(m).filter(([k,a])=>a.length>=HMIN).map(([k,a])=>{const n=a.length,e=a.filter(x=>x.ef).length/n,x=a.filter(x=>x.ex).length/n;return{k,n,de:Math.round((e-base.e)*100),dx:Math.round((x-base.x)*100),sc:(e-base.e)+(x-base.x)}}).filter(r=>r.sc>0).sort((a,b)=>b.sc-a.sc)}
+// Efficiency and explosive come from the same settings as the Stats tab (explosive yards for run / pass are set in Almanac > Setup), worked out from down, distance and gain.
+// Rows with no gain fall back to the scout's own EFF / EXPLOSIVE? columns.
+function hset(){const A=almData(),L=(A&&A.lists)||{};return{run:L.expRun||15,pass:L.expPass||15}}
+function ro(x,T){if(x.gn==null||x.gn===''||isNaN(+x.gn))return{e:x.ef?1:0,x:x.ex?1:0,k:!!(x.ef||x.ex)};
+ const g=+x.gn,n=+x.di||10,run=/run|rush/i.test(x.pt||''),e=x.dn===1?g>=(n>=10?4:n):x.dn===2?g>=Math.ceil(n/2):g>=n;return{e:e?1:0,x:g>=(run?T.run:T.pass)?1:0,k:true}}
+const hasOut=rows=>rows.some(x=>x.gn!=null&&x.gn!==''&&!isNaN(+x.gn)||x.ef||x.ex);
+const rate=(a,T)=>{const n=a.length||1;let e=0,x=0;a.forEach(r=>{const o=ro(r,T);e+=o.e;x+=o.x});return{e:e/n,x:x/n,n:a.length}};
+const baseOf=(rows,T)=>rate(rows,T||hset());
+function trouble(rows,keyf,base,T){T=T||hset();const m={};rows.forEach(x=>{const k=keyf(x);if(k)(m[k]=m[k]||[]).push(x)});
+ return Object.entries(m).filter(([k,a])=>a.length>=HMIN).map(([k,a])=>{const r=rate(a,T);return{k,n:a.length,de:Math.round((r.e-base.e)*100),dx:Math.round((r.x-base.x)*100),sc:(r.e-base.e)+(r.x-base.x)}}).filter(r=>r.sc>0).sort((a,b)=>b.sc-a.sc)}
 const hn=v=>`<i class="${v>0?'g':v<0?'r':''}">${v>0?'+':v<0?'−':''}${Math.abs(v)}%</i>`;
-const hchip=r=>`<span class="hc"><b>${esc(r.k)}</b> ${hn(r.de)} eff ${hn(r.dx)} expl <span class="mut">n=${r.n}</span></span>`;
-function hintHTML(sc){if(!sc)return'';const rows=sc.rows||[];
- if(!rows.some(x=>x.ef||x.ex))return`<div class="hint"><div class="k">Start here</div><div class="note">This scout has no EFF or EXPLOSIVE columns, so it cannot rank what hurts them.</div></div>`;
+let HW=null;const hchip=r=>`<span class="hc${HW&&!onGrid(HW,r.k)?' ng':''}"><b>${esc(r.k)}</b> ${hn(r.de)} eff ${hn(r.dx)} expl <span class="mut">n=${r.n}</span>${HW&&!onGrid(HW,r.k)?' <em>not on grid</em>':''}</span>`;
+function planWords(p){const w=new Set();(p&&p.blocks||[]).forEach(b=>{if(b.name)w.add(SCOUT.normFm(b.name));Object.values(b.cells||{}).forEach(c=>{const x=(c&&c.s)||{};Object.values(x).forEach(v=>{if(typeof v==='string'&&v.trim())w.add(v.trim().toUpperCase())})})});return w}
+const onGrid=(W,k)=>{k=String(k).toUpperCase();return W.has(k)||[...W].some(x=>x.length>2&&(x.includes(k)||k.includes(x)))};
+function hintHTML(sc,p){if(!sc)return'';const rows=sc.rows||[];
+ if(!hasOut(rows))return`<div class="hint"><div class="k">Start here</div><div class="note">This scout has no gain (GN/LS) column to work out efficiency and explosives from, so it cannot rank what hurts them.</div></div>`;
  const base=baseOf(rows),C=trouble(rows,x=>x.cn&&x.cn.toUpperCase(),base),F=trouble(rows,x=>x.fm,base);
  if(!C.length&&!F.length)return`<div class="hint"><div class="k">Start here</div><div class="note">Nothing in this scout has ${HMIN}+ plays above their average yet.</div></div>`;
+ HW=planWords(p);const miss=[...C.map(r=>({...r,t:'concept'})),...F.map(r=>({...r,t:'formation'}))].filter(r=>!onGrid(HW,r.k)).sort((a,b)=>b.sc-a.sc).slice(0,4),
+  dont=miss.length?`<div class="dont"><span class="hl">Don't forget</span><span class="hcs">${miss.map(r=>`<span class="hc ng"><b>${esc(r.k)}</b> <span class="mut">${r.t}</span> ${hn(r.de)} eff ${hn(r.dx)} expl <span class="mut">n=${r.n}</span></span>`).join('')}</span></div>`:(p&&p.blocks&&p.blocks.length?'<div class="note" style="margin:2px 0 6px">Everything that hurts them is already on your grid.</div>':'');
  const line=(l,a,m)=>a.length?`<div class="hrow"><span class="hl">${l}</span><span class="hcs">${a.slice(0,m).map(hchip).join('')}</span></div>`:'';
  const more=(C.length>4||F.length>3)?`<details class="hmore"><summary>See the full list</summary>${line('Concepts',C,12)}${line('Formations',F,12)}</details>`:'';
- return`<div class="hint"><div class="k">Start here · what gives ${esc(sc.name||'this defense')} trouble</div>${line('Concepts',C,4)}${line('Formations',F,3)}${more}
-  <div class="note" style="margin-top:6px">Compared with their scout average (${Math.round(base.e*100)}% efficient, ${Math.round(base.x*100)}% explosive over ${base.n} plays). Only ${HMIN}+ plays count. Green = better for you.</div></div>`}
-function blockHint(b,sc){if(!sc)return'';const r=predict(b,sc);if(!r||!r.looks||!r.looks.length)return'';const cv=r.looks[0].cv,rows=sc.rows.filter(x=>x.cv===cv);
- if(!rows.some(x=>x.ef||x.ex))return'';const C=trouble(rows,x=>x.cn&&x.cn.toUpperCase(),baseOf(rows)).slice(0,2);if(!C.length)return'';
+ return`<div class="hint"><div class="k">Start here · what gives ${esc(sc.name||'this defense')} trouble</div>${dont}${line('Concepts',C,4)}${line('Formations',F,3)}${more}
+  <div class="note" style="margin-top:6px">Compared with their scout average (${Math.round(base.e*100)}% efficient, ${Math.round(base.x*100)}% explosive over ${base.n} plays). Explosive = ${hset().run===hset().pass?hset().run+'+ yards on any play':hset().run+'+ run, '+hset().pass+'+ pass'} (your Almanac setting). Only ${HMIN}+ plays count. Green = better for you.</div></div>`}
+function blockHint(b,sc){if(!sc)return'';HW=planWords(plan());const r=predict(b,sc);if(!r||!r.looks||!r.looks.length)return'';const cv=r.looks[0].cv,rows=sc.rows.filter(x=>x.cv===cv);
+ if(!hasOut(rows))return'';const C=trouble(rows,x=>x.cn&&x.cn.toUpperCase(),baseOf(rows)).slice(0,2);if(!C.length)return'';
  return`<div class="bhint"><span class="hl">Into ${esc(cv)}</span> ${C.map(hchip).join('')}</div>`}
 const digits=x=>String(x==null?'':x).replace(/\D/g,'');
 function predict(b,sc){if(!sc||!b.name)return null;const fm=SCOUT.normFm(b.name),rows=sc.rows.filter(x=>x.cv&&x.fr&&x.rs!==''),N=5;
