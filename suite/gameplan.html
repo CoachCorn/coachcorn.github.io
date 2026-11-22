@@ -300,7 +300,7 @@ function ftPicker(bi,after){const g=glossary(),p=plan(),b=p.blocks[bi];if(!g)ret
   if(n){const nm=q.trim();GL.add(g,{type:'ftag',name:nm,source:'gameplan'});GL.save(g);if(!has(nm)){b.ftags.push(nm);tagDraw(drawOf(b),nm,true)}q='';draw();return}
   if(d){if(d.dataset.ftd==='2'){const base=fmParse(b.name).base;let tm=fmTerm(g,b.name);if(!tm&&base&&!/^new formation$/i.test(base))tm=GL.add(g,{type:'formation',name:base,source:'gameplan'}).term;if(tm){tm.ftags=clone(b.ftags);GL.touch(tm);GL.save(g);toast('Saved as the default tags for '+base)}else toast('Name the formation first')}
    touch(p);$('modal').classList.remove('show');$('mbox').style.width='';if(after)after();else render()}}}
-function fmPicker(){const g=glossary();let q='',side='LT';const all=GL.active(g,'formation').slice().sort((a,b)=>a.name.localeCompare(b.name));
+function fmPicker(){const g=glossary();let q='',side='';const all=GL.active(g,'formation').slice().sort((a,b)=>a.name.localeCompare(b.name));
  const pick=(name,isNew)=>{const full=name+(side?' '+side:'');let t=GL.find(g,'formation',name);if(!t&&isNew){t=GL.add(g,{type:'formation',name,source:'gameplan'}).term;GL.save(g)}
   const d=t&&stdDraw(t,side);$('modal').classList.remove('show');$('mbox').style.width='';plainAdd(full,t&&t.draw&&t.draw.pers||'',d,t&&t.ftags);if(d||(t&&t.ftags&&t.ftags.length))toast('Filled in from your glossary: '+name)};
  const list=()=>{const u=q.trim().toUpperCase(),rows=all.filter(t=>!u||t.name.toUpperCase().includes(u)||(t.aliases||[]).some(a=>String(a).toUpperCase().includes(u))),exact=all.some(t=>t.name.toUpperCase()===u);
@@ -308,7 +308,7 @@ function fmPicker(){const g=glossary();let q='',side='LT';const all=GL.active(g,
    (u&&!exact?`<button class="btn pri" data-fpn="1" style="width:100%;margin-top:4px">Add “${esc(q.trim())}” as a new formation</button>`:'')||'<div class="note">No formations in your glossary yet. Type a name above to add one.</div>'};
  $('mbox').style.width='min(520px,94vw)';
  $('mbox').innerHTML=`<h3>Add a formation</h3><input id="fp_q" placeholder="Search your glossary or type a new one" autocomplete="off" autocapitalize="words" style="width:100%;padding:10px;margin-bottom:8px">
-  <div class="chips" id="fp_s" style="margin-bottom:8px"><span class="note" style="align-self:center">Side</span><button class="chip on" data-s="LT">LT</button><button class="chip" data-s="RT">RT</button><button class="chip" data-s="">None</button></div>
+  <div class="chips" id="fp_s" style="margin-bottom:8px"><span class="note" style="align-self:center">Side</span><button class="chip" data-s="LT">LT</button><button class="chip" data-s="RT">RT</button><button class="chip on" data-s="">None</button></div>
   <div id="fp_l" style="max-height:48vh;overflow:auto">${list()}</div><div style="margin-top:10px"><button class="btn" id="fp_x">Cancel</button></div>`;
  $('modal').classList.add('show');setTimeout(()=>{try{$('fp_q').focus()}catch(e){}},60);
  $('fp_q').oninput=e=>{q=e.target.value;$('fp_l').innerHTML=list()};
@@ -674,9 +674,9 @@ function finishLine(){if(E.cur&&E.cur.pts.length>1){snap();E.d.l.push(E.cur);con
 function redrawCanvas(){const cv=$('cv');if(cv)cv.innerHTML=svgOf(E.d,E.sel,E.cur,E.selL)}
 $('ed').addEventListener('pointerdown',e=>{const cv=e.target.closest('#cv');if(!cv||!E)return;const g=e.target.closest('[data-k]'),p0=pt(e);
  if(E.blk&&!E.cur&&(E.mode==='line'||E.mode==='move')&&g&&E.sel&&E.d.t[E.sel]&&E.d.t[E.sel].on&&!E.d.t[E.sel].df&&E.d.t[g.dataset.k]&&E.d.t[g.dataset.k].df){snap();E.d.l.push(blkLine(E.d.t[E.sel],E.d.t[g.dataset.k],E.col));E.selL=null;E.sel=null;redrawCanvas();edRender();e.preventDefault();return}
- if((E.mode==='line'||E.mode==='combo'||E.mode==='shape'||E.mode==='shift')&&!E.cur&&!g&&(e.target.closest('[data-l]')||e.target.closest('[data-s]'))){E.mode='move';E.combo=null}
+ if((E.mode==='line'||E.mode==='combo'||E.mode==='shape'||E.mode==='shift')&&!E.cur&&!g&&(e.target.closest('[data-l]')||e.target.closest('[data-s]')||e.target.closest('[data-h]')||e.target.closest('[data-m]'))){E.mode='move';E.combo=null}
  if(E.mode==='free'){let st=null;if(g){E.sel=g.dataset.k}const t=g&&E.d.t[E.sel];if(t&&t.on)st=[t.x,t.y];E.cur={pts:st?[st]:[[p0.x,p0.y]],dot:E.dot,arrow:E.arrow&&!E.blk,blk:E.blk,curve:!!E.curve,col:E.col,free:1};E.selL=null;E.drag={kind:'free',p0};cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);redrawCanvas();e.preventDefault();return}
- if(E.mode==='text'){const sh=e.target.closest('[data-s]');if(sh&&E.d.sh[+sh.dataset.s]&&E.d.sh[+sh.dataset.s].k==='txt'){txtEdit(+sh.dataset.s)}else txtEdit(null,p0);e.preventDefault();return}
+ if(E.mode==='text'){const sh=e.target.closest('[data-s]'),si=sh?+sh.dataset.s:-1,H=si>=0?E.d.sh[si]:null;if(H&&H.k==='txt'){E.selS=si;E.selL=null;E.sel=null;snap();E.drag={kind:'sh',p0,si,ox:H.x,oy:H.y,tapEdit:1};cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);redrawCanvas()}else txtEdit(null,p0);e.preventDefault();return}
  if(E.mode==='motion'){const T=E.d.t,ok=k=>k&&T[k]&&T[k].on&&!T[k].df&&!OLK.includes(k),k=g&&g.dataset.k;
   if(ok(k)&&k!==E.shk){E.shk=k;E.sel=k}else if(k&&k===E.shk){E.shk=null;E.sel=null}
   else if(E.shk&&!ok(k)){const t=T[E.shk];const q=snapSeg([t.x,t.y],p0);p0.x=q.x;p0.y=q.y;snap();E.d.l.push({pts:[[t.x,t.y],[p0.x,p0.y]],dot:1,arrow:1,col:E.col});E.shk=null;E.sel=null;E.selS=null;E.selL=null}
@@ -687,7 +687,7 @@ $('ed').addEventListener('pointerdown',e=>{const cv=e.target.closest('#cv');if(!
   redrawCanvas();edRender();e.preventDefault();return}
  if(E.mode==='shape'){const dt=g&&E.d.t[g.dataset.k];if(dt&&dt.df&&dt.on){snap();(E.d.sh||(E.d.sh=[])).push({k:E.shape,x:dt.x,y:dt.y,col:E.col});E.selS=null;E.sel=null;E.selL=null;E.mode='move';redrawCanvas();edRender();e.preventDefault();return}if(!g){snap();(E.d.sh||(E.d.sh=[])).push({k:E.shape,x:p0.x,y:p0.y,col:E.col});E.selS=null;E.sel=null;E.selL=null;E.mode='move';redrawCanvas();edRender()}e.preventDefault();return}
  if(E.mode==='move'){const h=e.target.closest('[data-h]'),ln=e.target.closest('[data-l]');
-  const mh=e.target.closest('[data-m]');if(mh){const[li,j]=mh.dataset.m.split(':').map(Number),L=E.d.l[li];snap();const a=L.pts[j],b=L.pts[j+1];L.pts.splice(j+1,0,[Math.round((a[0]+b[0])/2),Math.round((a[1]+b[1])/2)]);if(L.pts.length===3)L.curve=true;E.curve=!!L.curve;E.drag={kind:'pt',p0,li,pi:j+1};cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);e.preventDefault();return}
+  const mh=e.target.closest('[data-m]');if(mh){const[li,j]=mh.dataset.m.split(':').map(Number),L=E.d.l[li];if(L.curve&&L.pts.length>=3){e.preventDefault();return}snap();const a=L.pts[j],b=L.pts[j+1];L.pts.splice(j+1,0,[Math.round((a[0]+b[0])/2),Math.round((a[1]+b[1])/2)]);if(L.pts.length===3)L.curve=true;E.curve=!!L.curve;E.drag={kind:'pt',p0,li,pi:j+1};cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);e.preventDefault();return}
   if(h){const[li,pi]=h.dataset.h.split(':').map(Number);snap();E.drag={kind:'pt',p0,li,pi};cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);e.preventDefault();return}
   if(g){const k=g.dataset.k,was=E.sel===k;E.sel=k;E.selL=null;E.selS=null;snap();const start={};const ids=(OLK.includes(k)&&E.grp)?OLK:[k];ids.forEach(i=>start[i]={x:E.d.t[i].x,y:E.d.t[i].y});E.drag={kind:'tok',p0,start,was};cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);redrawCanvas();e.preventDefault();return}
   const sh=e.target.closest('[data-s]');if(sh&&!ln){const si=+sh.dataset.s,H=E.d.sh[si];E.selS=si;E.selL=null;E.sel=null;E.col=H.col||E.col;snap();E.drag={kind:'sh',p0,si,ox:H.x,oy:H.y};cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);redrawCanvas();edRender();e.preventDefault();return}
@@ -711,7 +711,7 @@ $('ed').addEventListener('pointermove',e=>{if(!E||!E.drag)return;const d=E.drag,
  else if(d.kind==='ln'){const xs=d.orig.map(q=>q[0]),ys=d.orig.map(q=>q[1]),mx=Math.max(8-Math.min(...xs),Math.min(VW-8-Math.max(...xs),dx)),my=Math.max(VT+8-Math.min(...ys),Math.min(VH-8-Math.max(...ys),dy));E.d.l[d.li].pts=d.orig.map(q=>[q[0]+mx,q[1]+my])}
  else for(const k in d.start){const s0=d.start[k],t=E.d.t[k];t.x=Math.max(8,Math.min(VW-8,s0.x+dx));t.y=Math.max(VT+8,Math.min(VH-8,s0.y+dy))}
  redrawCanvas()});
-const endDrag=()=>{if(E&&E.drag&&E.drag.kind==='free'){E.drag=null;finishFree();E.sel=null;E.selL=null;E.selS=null;redrawCanvas();edRender();return}if(E&&E.drag){const dg=E.drag,k=dg.kind;E.drag=null;if(E.hist.length&&JSON.stringify(E.d)===E.hist[E.hist.length-1]){E.hist.pop();if(k==='tok'&&dg.was){E.sel=null;redrawCanvas()}}else{E.sel=null;E.selL=null;E.selS=null;redrawCanvas()}edRender()}};
+const endDrag=()=>{if(E&&E.drag&&E.drag.kind==='free'){E.drag=null;finishFree();E.sel=null;E.selL=null;E.selS=null;redrawCanvas();edRender();return}if(E&&E.drag){const dg=E.drag,k=dg.kind;E.drag=null;if(E.hist.length&&JSON.stringify(E.d)===E.hist[E.hist.length-1]){E.hist.pop();if(k==='tok'&&dg.was){E.sel=null;redrawCanvas()}if(dg.tapEdit){edRender();return txtEdit(dg.si)}}else{E.sel=null;if(k!=='pt'&&k!=='ln')E.selL=null;E.selS=null;redrawCanvas()}edRender()}};
 $('ed').addEventListener('pointerdown',e=>{if(!E||!e.target.isConnected||e.target.closest('button,.chip,.sw,input,#cv,.fh'))return;if(E.sel||E.selL!=null||E.selS!=null){E.sel=null;E.selL=null;E.selS=null;E.cur=null;redrawCanvas();edRender()}});
 $('ed').addEventListener('pointerup',endDrag);$('ed').addEventListener('pointercancel',endDrag);
 $('ed').addEventListener('click',e=>{const b=e.target.closest('[data-e]');if(!b||!E)return;const a=b.dataset.e,t=E.d.t;

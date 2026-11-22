@@ -216,6 +216,7 @@ function loadAlmText(txt){try{const rows=txt.replace(/\r/g,'').split('\n').map(l
   $('#almStatus').textContent=`${S.alm.filter(a=>!a.noplay).length} plays read from the Almanac app (${S.alm.filter(a=>a.nd).length} drives${S.alm.some(a=>a.noplay)?', '+S.alm.filter(a=>a.noplay).length+' timeout/no play':''})`;save();refresh();toast('Almanac loaded');return true}catch(e){toast("Couldn't read that: "+e.message);return false}}
 $('#pasteAlm').onclick=async()=>{let t='';try{t=await navigator.clipboard.readText()}catch(e){}
   if(t&&/(^|\n)(ALMANAC\t[^\n]*\n)?\s*(DOWN|DN)\t/i.test(t)&&loadAlmText(t))return;
+  if(S.alm&&S.alm.length&&!$('#almPaste')){toast('This game already has '+S.alm.filter(a=>!a.noplay).length+' Almanac plays loaded. Use the Almanac\'s → Film Room button; Paste is only for the standalone Almanac.');return}
   let box=$('#almPaste');if(!box){box=document.createElement('textarea');box.id='almPaste';box.placeholder='Paste the almanac here, then tap Load';box.style.minHeight='70px';const b=document.createElement('button');b.textContent='Load pasted almanac';b.id='almPasteGo';b.className='pri';$('#almStatus').before(box,b);b.onclick=()=>{if(loadAlmText(box.value)){box.remove();b.remove()}}}box.focus()};
 $('#fAlm').onchange=e=>e.target.files[0]&&loadAlm(e.target.files[0]);
 dropper($('#dropAlm'),fs=>fs[0]&&loadAlm(fs[0]));
@@ -237,7 +238,7 @@ function parseAlm(rows){
   let hi=rows.findIndex(r=>r.some(c=>/^(DOWN|DN)$/.test(String(c).trim().toUpperCase())));
   if(hi<0){ // pasted without the header row: use the standard almanac column order
     const looks=rows.filter(r=>/^[1-4]$/.test(String(r[0]||'').trim())&&/^\d+$/.test(String(r[1]||'').trim())).length;
-    if(looks<3)throw new Error("that isn't almanac rows. Copy from the DOWN header row down, or use Send to Film Room in the Almanac app");
+    if(looks<3)throw new Error("that isn't almanac rows. That text has no DOWN header row. In the suite just tap → Film Room in the Almanac (no paste needed); otherwise copy from the DOWN header row down");
     rows=[['DOWN','DISTANCE','JUMBO Y/N','SHIFT','MOTION','PLAY TAG','RUN CALL','PASS CALL','RGS Y/N','SHOT Y/N','RESULT','PLAYER','YARD LINE'],...rows];hi=0;}
   const H=rows[hi].map(c=>String(c).trim().toUpperCase().replace(/^DN$/,'DOWN'));const col=n=>H.indexOf(n);
   const C={dn:col('DOWN'),dist:col('DISTANCE'),motion:col('MOTION'),tag:col('PLAY TAG'),run:col('RUN CALL'),pass:col('PASS CALL'),result:col('RESULT'),player:col('PLAYER'),yl:col('YARD LINE')};
