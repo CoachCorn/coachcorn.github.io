@@ -119,6 +119,31 @@ function renderHome(){const act=G.terms.filter(t=>t.status==='active'),rvl=GL.re
  $('list').innerHTML=`${rvl.length?`<button class="tile" data-cat="__review" style="width:100%;text-align:left;padding:12px 14px;border:1px solid var(--warn,#f2b632);border-radius:14px;background:transparent;color:inherit;margin-bottom:12px;cursor:pointer"><b>Review: ${rvl.length} new word${rvl.length===1?'':'s'}</b> <span class="note">added from the Almanac, the grid or an import; check spelling, define, or retire</span></button>`:''}
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px">${used.map(([k,l])=>tile(k,l)).join('')}</div>`;
  document.querySelectorAll('[data-cat]').forEach(b=>b.onclick=()=>{const k=b.dataset.cat;S.home=false;if(k==='__review'){S.review=true;S.type=''}else{S.type=k;S.review=false}S.nodef=false;render()})}
+/* ---- fill-in-the-blanks definition builder: writes the meaning in the sentence shapes Draw all looks can read ---- */
+const MP=['X','Z','H','Y','M','A','F','B','T','Q'],MOL=['LT','LG','C','RG','RT'],SIDES=['left','right','field','boundary'];
+const mSel=(id,opts,ph)=>`<select data-m="${id}" style="max-width:100%">${ph?`<option value="">${ph}</option>`:''}${opts.map(o=>`<option>${o}</option>`).join('')}</select>`;
+const mIn=(id,ph,w)=>`<input type="text" data-m="${id}" placeholder="${ph}" style="width:${w||140}px">`;
+const MAD={
+ ftag:{h:'Who goes where',b:()=>`${mSel('p',[...MP,...MOL])} ${mSel('v',['moves to the','lines up on the','stacked behind','beside','inside','outside','in the backfield beside','in the backfield behind'])} ${mSel('w',[...SIDES,...MP])} ${mSel('l',['','on the line'])} <br><span class="note">Add more players by building again; each adds a sentence.</span>`,
+  f:v=>{const sideV=/^(moves to the|lines up on the)$/.test(v.v);const w=sideV&&!SIDES.includes(v.w)?'right':v.w;return `${v.p} ${v.v.replace('lines up on the','moves to the')} ${w}${sideV?'':''}${v.l?' '+v.l:''}.`}},
+ motion:{h:'Who moves, how and when',b:()=>`${mSel('p',MP)} ${mSel('v',['motions to the','shifts to the'])} ${mSel('w',SIDES)}. ${mIn('when','Snap when... (optional)',220)}`,
+  f:v=>`${v.p} ${v.v} ${v.w}.${v.when?' '+v.when.replace(/\.?$/,'.'):''}`},
+ formation:{h:'Personnel, surface and receivers',b:()=>`${mSel('pers',['10','11','12','20','21','22','13'])} personnel. ${mSel('surf',['2x2','3x1','2x1','3x2','1x1','4x1','empty'])} ${mIn('desc','e.g. trips to the call side, X on the numbers',300)}`,
+  f:v=>`${v.pers} personnel. ${v.surf}${v.desc?', '+v.desc:''}.`},
+ pass:{h:'Routes by receiver number (counted from the side the concept goes to)',b:()=>`Count from the ${mSel('side',['left','right'])}.<br>${[1,2,3,4,5].map(n=>`#${n} ${mIn('r'+n,n<=4?'route':'(if 5 wide)',120)}`).join(' ')}<br>QB reads ${mIn('read','e.g. #3 to #2',140)}`,
+  f:v=>`From the ${v.side}: `+[1,2,3,4,5].filter(n=>v['r'+n]).map(n=>`#${n} ${v['r'+n]}`).join(', ')+'.'+(v.read?` QB reads ${v.read}.`:'')},
+ run:{h:'Scheme, point of attack, aiming point, read',b:()=>`${mIn('sch','scheme, e.g. Inside zone',160)} to the ${mSel('poa',['call side','left','right','field','boundary'])}. ${mSel('rb',['B','T','Q'])} aims at ${mIn('aim','e.g. playside guard\'s outside hip',220)}. Read ${mIn('read','(optional) e.g. backside end',160)}`,
+  f:v=>`${v.sch||'Run'} to the ${v.poa}. ${v.rb} aims at ${v.aim||'the hole'}.${v.read?' Read '+v.read+'.':''}`},
+ tag:{h:'What it changes and on which plays',b:()=>`${mIn('who','who, e.g. #2 or Y',90)} ${mIn('chg','what changes, e.g. runs a seam instead',240)} on ${mSel('on',['pass plays','run plays','run and pass plays'])}.`,
+  f:v=>`${v.who?v.who+' ':''}${v.chg}${v.chg?' ':''}on ${v.on}.`},
+ oneword:{h:'What it calls',b:()=>`Formation ${mIn('fm','e.g. Trips',110)} Left hash ${mIn('L','call',120)} Right hash ${mIn('R','call',120)} ${mIn('x','anything else (optional)',200)}`,
+  f:v=>`${v.fm||''}${v.fm?'. ':''}${v.L?'Left hash '+v.L+'. ':''}${v.R?'Right hash '+v.R+'. ':''}${v.x||''}`.trim()}};
+function madRender(ty,t){const box=$('e_mad');if(!box)return;const M=MAD[ty];if(!M){box.style.display='none';return}box.style.display='block';
+ box.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center"><b>Build the definition</b><span class="note">${esc(M.h)}</span></div><div style="margin:8px 0;line-height:2.3">${M.b()}</div><div class="note" id="mad_pv" style="margin-bottom:6px"></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="mad_add">Add to meaning</button><button class="btn" id="mad_rep">Replace meaning</button></div>`;
+ const val=()=>{const v={};box.querySelectorAll('[data-m]').forEach(e=>v[e.dataset.m]=e.value.trim());return v},pv=()=>{$('mad_pv').textContent='Preview: '+M.f(val())};
+ box.oninput=pv;box.onchange=pv;pv();
+ $('mad_add').onclick=()=>{const m=$('e_m'),x=M.f(val());m.value=(m.value.trim()?m.value.trim()+' ':'')+x;toast('Added to the meaning')};
+ $('mad_rep').onclick=()=>{$('e_m').value=M.f(val());toast('Meaning replaced')}}
 function modal(h){$('mbox').innerHTML=h;$('modal').classList.add('show')}
 function close(){$('modal').classList.remove('show')}
 $('modal').onclick=e=>{if(e.target.id==='modal')close()};
@@ -134,12 +159,13 @@ function edit(id){const t=id?GL.byId(G,id):null,tv=t?t.type:(S.type||'tag'),isTa
   <div class="lab">Call from the left hash / right hash (optional)</div><div style="display:flex;gap:8px"><input type="text" id="e_owl" style="flex:1" value="${esc(h.L||'')}" placeholder="Left hash"><input type="text" id="e_owr" style="flex:1" value="${esc(h.R||'')}" placeholder="Right hash"></div>
   <div class="lab">Adds this play tag (optional)</div><input type="text" id="e_owg" style="width:100%" value="${esc(w.tg||'')}">
   <div class="lab">Analysis name (optional)</div><input type="text" id="e_owa" style="width:100%" value="${esc(w.an||'')}"></div>`})()}
+ <div id="e_mad" style="border:1px dashed var(--line);border-radius:10px;padding:8px 10px;margin-top:8px"></div>
  <div class="lab">Meaning</div><textarea id="e_m">${t?esc(t.meaning.text||''):''}</textarea>
  ${t&&t.code!=null?`<div class="lab">Technique code</div><input type="text" id="e_c" style="width:100%" value="${esc(t.code)}">`:''}
  ${t&&t.type==='coverage'?`<div class="lab">Means (coarse tags)</div><div class="chips">${G.terms.filter(x=>x.type==='shell'&&x.status==='active').map(x=>`<label class="chip"><input type="checkbox" class="e_mp" value="${esc(x.id)}" ${(t.links.maps_to||[]).includes(x.id)?'checked':''}> ${esc(x.name)}</label>`).join('')}</div>`:''}
  ${t?`<p class="note">id ${esc(t.id)} · added ${esc(t.added||'')} (${esc(t.source||'')})${t.history.length>1?' · '+t.history.length+' versions: '+t.history.map(h=>esc(h.since+' '+h.name)).join(' → '):''}</p>`:''}
  <p style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px"><button class="btn pri" id="e_s">${t&&t.needsReview?'Approve and save':'Save'}</button>${t?`<button class="btn ${t.status==='active'?'bad':''}" id="e_r">${t.status==='active'?'Retire':'Bring back'}</button>`:''}<button class="btn" id="e_x">Cancel</button></p>`);
- $('e_x').onclick=close;{const ts=$('e_t');if(ts)ts.onchange=()=>{$('e_ow').style.display=ts.value==='oneword'?'block':'none'}}
+ $('e_x').onclick=close;madRender(tv,t);{const ts=$('e_t');if(ts)ts.onchange=()=>{$('e_ow').style.display=ts.value==='oneword'?'block':'none';madRender(ts.value,null)}}
  const uses=()=>{const r=$('e_ur');return r?[r.checked&&'run',$('e_up').checked&&'pass'].filter(Boolean):null};
  $('e_s').onclick=()=>{load();let n=$('e_n').value.trim();if(!n){toast('Give it a name');return}
   const al=$('e_a').value.split(',').map(x=>x.trim()).filter(Boolean),mt=$('e_m').value;let term=t&&GL.byId(G,t.id);const old=term?term.name:null;
