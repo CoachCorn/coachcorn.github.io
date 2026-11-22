@@ -162,7 +162,7 @@ function samplePlan(){const cols=[['Play 1',''],['Play 2',''],['Play 3',''],['Pl
  const mk=(name,pers,pd,data,lines,tw)=>{const d=baseDraw();if(tw)tw(d.t);d.l=lines||[];const cells={};
   data.forEach((r,ri)=>r.forEach((v,ci)=>{if(!v)return;const sl=Array.isArray(v)?{ftag:v[0],motion:v[1],concept:v[2],tag:v[3]}:{concept:v};Object.keys(sl).forEach(k=>{if(!sl[k])delete sl[k]});cells[rows[ri].id+'|'+cols[ci].id]={s:sl,n:''}}));
   return{id:uid('b'),name,pers,pd,draw:d,cells}};
- return{id:uid('p'),upd:Date.now(),sample:true,name:'Sample week (edit or delete)',cols,rows,blocks:[
+ return{id:uid('p'),upd:Date.now(),sample:true,dv:3,name:'Sample week (edit or delete)',cols,rows,blocks:[
   mk('Demo formation 1','11',{box:'',front:'',cov:'',blitz:''},[
     [['Tight','','Inside Zone',''],['','Jet','Inside Zone','Split'],['Bunch','','Power',''],'Draw'],
     ['Power',['','Orbit','Power','Bubble'],['Stack','','Counter',''],['','','Iso','Split']],
@@ -428,6 +428,7 @@ $('ed').addEventListener('click',e=>{const b=e.target.closest('[data-e]');if(!b|
 /* ---------- boot ---------- */
 function boot(){ST=readStore();try{cur=localStorage.getItem('gp_cur')||null}catch(e){}
  if(signedIn()&&ST.rows.some(p=>p.sample)){ST.rows=ST.rows.filter(p=>!p.sample);writeStore()}   // signed in: the demo plan goes away, the coaches' plans load from sync
+ if(!signedIn()&&ST.rows.some(p=>p.sample&&p.dv!==3)){ST.rows=ST.rows.filter(p=>!(p.sample&&p.dv!==3));ST.rows.unshift(samplePlan());writeStore()}   // demo vocabulary changed: swap an out-of-date sample week for the current one, leave the coach's own plans alone
  if(!signedIn()&&!ST.rows.length&&!(ST.deleted||[]).length){ST.rows.push(samplePlan());writeStore()}
  render()}
 addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.gameplan==='changed'&&!E&&!$('modal').classList.contains('show')){ST=readStore();render()}});
