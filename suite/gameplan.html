@@ -274,11 +274,42 @@ const LOOK={
   FLY:{g:1,fn:(t,L)=>{const h=on(t,'H',385,128),d=dir(t),x1=d<0?HASHX-30:HASHR+30;L.push({pts:[[h.x,h.y],[x1,h.y]],dot:1,arrow:1,col:'#3b9cff'})}},
   ORBIT:{g:1,fn:(t,L)=>{const h=on(t,'B',260,205),d=h.x<t.Q.x?1:-1,x1=d>0?HASHR+10:HASHX-10;L.push({pts:[[h.x,h.y],[t.Q.x,Q_B(t)],[x1,t.Q.y+8]],dot:1,arrow:1,col:'#3b9cff'})}}}};
 const Q_B=t=>t.Q.y+48;
-function lookFor(b,c){const d=clone(b.draw||baseDraw());d.l=[];const t=d.t,L=d.l,s=(c&&c.s)||{},did=[],guess=[],not=[],none=[];
- for(const k of ['ftag','motion']){const v=s[k];if(!v)continue;let r=LOOK[k][String(v).toUpperCase()];if(!r){none.push(v);continue}
-  const fn=typeof r==='function'?r:r.fn;try{fn(t,L)}catch(e){none.push(v);continue}(r.g?guess:did).push(v)}
- for(const k of ['concept','tag'])if(s[k])not.push(s[k]);
- return{d,did,guess,not,none}}
+/* ---- read the glossary wording: plain sentences turned into moves. Anything it cannot read is reported back, never guessed. ---- */
+const PNAME={'left tackle':'LT','right tackle':'RT','left guard':'LG','right guard':'RG','center':'C','quarterback':'Q'};
+const PTOK='(LT|LG|RG|RT|Q|X|Z|M|H|Y|F|A|B|T|C)';
+function normDef(x){let t=String(x||'').replace(/\([^)]*\)/g,' ');for(const k in PNAME)t=t.replace(new RegExp('\\b'+k+'\\b','gi'),PNAME[k]);t=t.replace(/\b(?:boundary|field)\s+(?=(?:LT|LG|RG|RT|Q|X|Z|M|H|Y|F|A|B|T|C)\b)/gi,'');return t.replace(/,/g,' ').replace(/\s+/g,' ').trim()}
+const SIDEX=sd=>/^(left|boundary)$/i.test(sd)?HASHX:HASHR;
+function parseDef(text){const ok=[],bad=[],steps=[];let subj=null;
+ const clauses=normDef(text).split(/\s*(?:;|\.\s|\.$|\bthen\b)\s*/i).map(x=>x.trim()).filter(Boolean);
+ const players=str=>(str.match(new RegExp('\\b'+PTOK+'\\b','g'))||[]);
+ for(let cl of clauses){let m,P;
+  if(/\b(snaps?|snapped)\b|^tackle over$|^the mirror/i.test(cl)){ok.push(cl);continue}
+  if((m=cl.match(new RegExp('^((?:'+PTOK+'(?:/|\\s*and\\s*)?)+)\\s+(?:moves?|goes|slides?|lines? up|shifts?|aligns?|sets?)\\s+(?:over\\s+)?(?:to|on|at)\\s+(?:the\\s+)?(left|right|field|boundary)(?:\\s+(?:side|hash))?(.*)$')))){
+   P=players(m[1]);const sd=m[2],ball=/on the (?:ball|line)/i.test(m[3]||'');subj=P[P.length-1];
+   steps.push((t)=>{P.forEach((k,i)=>{const p=on(t,k,235,LOS);
+    if(/^(LT|LG|RG|RT|C)$/.test(k)){const xs=OLK.filter(o=>o!==k).map(o=>t[o].x);p.x=/^(left|boundary)$/i.test(sd)?Math.min(...xs)-30:Math.max(...xs)+30;p.y=LOS}
+    else{const out=/^(left|boundary)$/i.test(sd)?-1:1,n=P.length-1-i;p.x=SIDEX(sd)+out*(n*32)+(out>0?8:-8)+(P.length>1?0:0);if(ball)p.y=LOS}})});ok.push(cl);continue}
+  if((m=cl.match(new RegExp('^'+PTOK+'\\s+(?:in|into)\\s+the\\s+backfield\\s+(beside|next to|behind)\\s+'+PTOK)))){subj=m[1];const A=m[1],B=m[3],how=m[2];
+   steps.push(t=>{const p=on(t,A,t[B].x,t[B].y);p.x=how==='behind'?t[B].x:t[B].x+30;p.y=how==='behind'?t[B].y+28:t[B].y});ok.push(cl);continue}
+  if((m=cl.match(new RegExp('^'+PTOK+'\\s+(?:stacked\\s+)?(behind|beside|next to|inside|outside)\\s+'+PTOK)))){subj=m[1];const A=m[1],how=m[2],B=m[3];
+   steps.push(t=>{const q=t[B],p=on(t,A,q.x,q.y),side=q.x>=t.Q.x?1:-1;p.x=how==='behind'?q.x:how==='inside'?q.x-side*28:how==='outside'?q.x+side*28:q.x+side*28;p.y=how==='behind'?q.y+24:q.y});ok.push(cl);continue}
+  if((m=cl.match(new RegExp('^'+PTOK+'\\s+(?:starts?|begins?|lines? up)\\s+(?:on the other side|opposite)')))){subj=m[1];const A=m[1];steps.push(t=>{const p=on(t,A,235,150);p.x=2*t.Q.x-p.x});ok.push(cl);continue}
+  if((m=cl.match(new RegExp('^'+PTOK+'\\s+on\\s+the\\s+(?:line|ball)')))){subj=m[1];const A=m[1];steps.push(t=>{on(t,A,235,LOS).y=LOS});ok.push(cl);continue}
+  if((m=cl.match(new RegExp('^(?:'+PTOK+'\\s+)?(?:fast\\s+|quick\\s+)?(?:motions?|runs|goes)\\s+(?:in motion\\s+)?(?:to|across|toward)\\s+(?:the\\s+)?(left|right|field|boundary|landing spot|spot|call)?')))){const A=m[1]||subj;if(!A){bad.push(cl);continue}const sd=m[2];
+   steps.push((t,L)=>{const p=on(t,A,385,128);let x1;if(!sd||/landing|spot|call/i.test(sd))x1=HASHR+5*YD;else x1=SIDEX(sd)+(/^(left|boundary)$/i.test(sd)?-45:5*YD);L.push({pts:[[p.x,p.y],[x1,Math.max(p.y,LOS+20)]],dot:1,arrow:1,col:'#3b9cff'})});ok.push(cl);continue}
+  bad.push(cl)}
+ return{steps,ok,bad}}
+const SLOTT={ftag:['ftag'],motion:['motion'],concept:['run','pass','oneword'],tag:['tag']};
+function defOf(k,v){const g=glossary();if(!g)return null;for(const ty of SLOTT[k]){const x=GL.find(g,ty,v);if(x)return(x.meaning&&x.meaning.text||'').trim()}return null}
+function lookFor(b,c){const d=clone(b.draw||baseDraw());d.l=[];const t=d.t,L=d.l,s=(c&&c.s)||{},did=[],guess=[],not=[],none=[],gl=[],part=[],defs=[];
+ for(const k of ['ftag','motion','concept','tag']){const v=s[k];if(!v)continue;const df=defOf(k,v);defs.push({k,v,df});
+  if(k==='concept'||k==='tag'){not.push(v);continue}
+  const pr=df?parseDef(df):null,B=LOOK[k][String(v).toUpperCase()],bf=B&&(typeof B==='function'?B:B.fn);
+  if(pr&&pr.steps.length&&!pr.bad.length){try{pr.steps.forEach(fn=>fn(t,L));gl.push(v);continue}catch(e){}}
+  if(bf){try{bf(t,L);(B.g?guess:did).push(v);if(pr&&pr.bad.length)part.push({v,bad:pr.bad});continue}catch(e){}}
+  if(pr&&pr.steps.length){try{pr.steps.forEach(fn=>fn(t,L));part.push({v,bad:pr.bad,applied:1});continue}catch(e){}}
+  none.push(v);if(pr&&pr.bad.length)part.push({v,bad:pr.bad})}
+ return{d,did,guess,not,none,gl,part,defs}}
 $('looks').onclick=()=>{const p=plan();if(!p||!p.blocks.length)return toast('Start a plan first');
  const cards=[];p.blocks.forEach(b=>p.rows.forEach(r=>p.cols.forEach(c=>{const cell=b.cells[r.id+'|'+c.id],t=callText(cell);if(!t)return;cards.push({b,r,c,t,L:lookFor(b,cell)})})));
  if(!cards.length)return toast('No calls in the grid yet');
@@ -286,9 +317,10 @@ $('looks').onclick=()=>{const p=plan();if(!p||!p.blocks.length)return toast('Sta
  let last=null,h='';
  cards.forEach(k=>{if(k.b!==last){last=k.b;h+=`<h4 style="margin:16px 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--acc)">${esc(k.b.name||'Formation')}</h4>`}
   const L=k.L;h+=`<div style="background:#111c28;border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:10px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline"><b style="text-transform:uppercase">${esc(k.t)}</b><span class="note">${esc(k.r.label)} · ${esc(k.c.head)}</span></div>${svg(L.d)}
-   <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:5px;align-items:center">${L.did.length?'<span class="note">Drawn</span>'+ch(L.did,'border-color:var(--ok)'):''}${L.guess.length?'<span class="note">Drawn (my guess, please correct)</span>'+ch(L.guess,'border-color:var(--warn)'):''}${L.none.length?'<span class="note">No rule yet</span>'+ch(L.none,'border-color:var(--bad)'):''}${L.not.length?'<span class="note">Not drawn yet (routes)</span>'+ch(L.not,''):''}${!(L.did.length+L.guess.length+L.none.length+L.not.length)?'<span class="note">Base alignment only</span>':''}</div></div>`});
+   <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:5px;align-items:center">${L.gl.length?'<span class="note">Drawn from your glossary</span>'+ch(L.gl,'border-color:var(--ok);background:#1d3a2b'):''}${L.did.length?'<span class="note">Drawn (rule you taught me in chat)</span>'+ch(L.did,'border-color:var(--ok)'):''}${L.guess.length?'<span class="note">Drawn (my guess, please correct)</span>'+ch(L.guess,'border-color:var(--warn)'):''}${L.none.length?'<span class="note">No rule yet</span>'+ch(L.none,'border-color:var(--bad)'):''}${L.not.length?'<span class="note">Not drawn yet (routes)</span>'+ch(L.not,''):''}${!(L.gl.length+L.did.length+L.guess.length+L.none.length+L.not.length)?'<span class="note">Base alignment only</span>':''}</div>
+   <div style="margin-top:8px;font-size:12px;color:var(--mut)">${L.defs.map(x=>`<div><b style="color:var(--tx)">${esc(x.v)}</b> · ${x.df?esc(x.df):'<span style="color:var(--warn)">no definition in your glossary yet</span>'}${(L.part.find(q=>q.v===x.v)||{bad:[]}).bad.length?'<div style="color:var(--warn)">I could not read: “'+esc(L.part.find(q=>q.v===x.v).bad.join('”, “'))+'”</div>':''}</div>`).join('')}</div></div>`});
  $('mbox').style.width='min(980px,96vw)';
- $('mbox').innerHTML=`<h3>Draw all looks</h3><div class="note">First version: each call starts from its formation's drawing, then applies its formation tag and motion. Concepts and play tags are not drawn yet. Tell me what is wrong and I will fix the rule.</div>${h}<div style="margin-top:10px"><button class="btn" id="lk_x">Close</button></div>`;
+ $('mbox').innerHTML=`<h3>Draw all looks</h3><div class="note">First version: each call starts from its formation's drawing, then applies its formation tag and motion. Your glossary wording is read first; if I cannot read a sentence, I say which one. Concepts and play tags are not drawn yet. Tell me what is wrong and I will fix it.</div>${h}<div style="margin-top:10px"><button class="btn" id="lk_x">Close</button></div>`;
  $('modal').classList.add('show');$('mbox').onclick=null;$('mbox').onkeydown=null;$('lk_x').onclick=()=>{$('modal').classList.remove('show');$('mbox').style.width=''}}
 $('prn').onclick=()=>{try{window.print()}catch(e){toast('Print is not available here')}};
 
