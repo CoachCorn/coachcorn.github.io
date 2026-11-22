@@ -106,13 +106,13 @@
   /* the demo (sample) plan is only for a device that is not signed in: signing in removes it and loads the coaches' plans */
   if(local&&(local.rows||[]).some(r=>r.sample)){local={rows:local.rows.filter(r=>!r.sample),deleted:local.deleted||[]};try{localStorage.setItem(GPK(),JSON.stringify(local))}catch(e){}gpNotify()}
   const sv=list.find(d=>d.key==='gameplan');const lh=local?hash(JSON.stringify(local)):'';
-  if(!sv){if(local&&(local.rows.length||(local.deleted||[]).length)){const r=await call('PUT','/doc',{key:'gameplan',baseRev:0,body:local,device:device()});if(r.status===200){s.gpRev=r.data.rev;s.gpH=lh}}return}
+  if(!sv){if(local&&(local.rows.length||(local.deleted||[]).length)){const r=await call('PUT','/doc',{key:'gameplan',baseRev:0,body:local,device:device()});if(r.status===200){s.gpRev=r.data.rev;s.gpH=lh}else throw new Error('Gameplans did not sync: '+((r.data&&r.data.error)||r.status))}return}
   if(sv.rev===s.gpRev&&lh===s.gpH)return;
   for(let t=0;t<3;t++){const r=await call('GET','/doc?key=gameplan');if(r.status!==200)return;const srv=r.data.body||{rows:[],deleted:[]};
    const m=local?mergePlans(local,srv):srv,mh=hash(JSON.stringify(m));
    if(mh!==lh){localStorage.setItem(GPK(),JSON.stringify(m));local=m;gpNotify()}
    if(mh===hash(JSON.stringify(srv))){s.gpRev=r.data.rev;s.gpH=mh;return}
-   const p=await call('PUT','/doc',{key:'gameplan',baseRev:r.data.rev,body:m,device:device()});if(p.status===200){s.gpRev=p.data.rev;s.gpH=mh;return}if(p.status!==409)return}}
+   const p=await call('PUT','/doc',{key:'gameplan',baseRev:r.data.rev,body:m,device:device()});if(p.status===200){s.gpRev=p.data.rev;s.gpH=mh;return}if(p.status!==409)throw new Error('Gameplans did not sync: '+((p.data&&p.data.error)||p.status))}}
 
  /* --- Film Room: one document per game (newest save wins); finished games too; deletions stick --- */
  const J=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}};
