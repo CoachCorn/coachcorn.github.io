@@ -301,7 +301,7 @@ function parseDef(text){const ok=[],bad=[],steps=[];let subj=null;
  return{steps,ok,bad}}
 const SLOTT={ftag:['ftag'],motion:['motion'],concept:['run','pass','oneword'],tag:['tag']};
 function defOf(k,v){const g=glossary();if(!g)return null;for(const ty of SLOTT[k]){const x=GL.find(g,ty,v);if(x)return(x.meaning&&x.meaning.text||'').trim()}return null}
-function lookFor(b,c){const d=clone(b.draw||baseDraw());d.l=[];const t=d.t,L=d.l,s=(c&&c.s)||{},did=[],guess=[],not=[],none=[],gl=[],part=[],defs=[];
+function lookFor(b,c){if(c&&c.look&&c.look.d)return{d:c.look.d,did:[],guess:[],not:[],none:[],gl:[],part:[],defs:[],saved:1};const d=clone(b.draw||baseDraw());d.l=[];const t=d.t,L=d.l,s=(c&&c.s)||{},did=[],guess=[],not=[],none=[],gl=[],part=[],defs=[];
  for(const k of ['ftag','motion','concept','tag']){const v=s[k];if(!v)continue;const df=defOf(k,v);defs.push({k,v,df});
   if(k==='concept'||k==='tag'){not.push(v);continue}
   const pr=df?parseDef(df):null,B=LOOK[k][String(v).toUpperCase()],bf=B&&(typeof B==='function'?B:B.fn);
@@ -311,17 +311,21 @@ function lookFor(b,c){const d=clone(b.draw||baseDraw());d.l=[];const t=d.t,L=d.l
   none.push(v);if(pr&&pr.bad.length)part.push({v,bad:pr.bad})}
  return{d,did,guess,not,none,gl,part,defs}}
 $('looks').onclick=()=>{const p=plan();if(!p||!p.blocks.length)return toast('Start a plan first');
- const cards=[];p.blocks.forEach(b=>p.rows.forEach(r=>p.cols.forEach(c=>{const cell=b.cells[r.id+'|'+c.id],t=callText(cell);if(!t)return;cards.push({b,r,c,t,L:lookFor(b,cell)})})));
+ const cards=[];p.blocks.forEach(b=>p.rows.forEach(r=>p.cols.forEach(c=>{const cell=b.cells[r.id+'|'+c.id],t=callText(cell);if(!t)return;cards.push({b,r,c,t,key:r.id+'|'+c.id,L:lookFor(b,cell)})})));
  if(!cards.length)return toast('No calls in the grid yet');
  const svg=d=>svgOf(d).replace('<svg viewBox','<svg style="width:100%;height:auto;display:block;border-radius:8px" viewBox'),ch=(a,c)=>a.map(x=>`<span class="chip" style="${c}">${esc(x)}</span>`).join('');
  let last=null,h='';
  cards.forEach(k=>{if(k.b!==last){last=k.b;h+=`<h4 style="margin:16px 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--acc)">${esc(k.b.name||'Formation')}</h4>`}
-  const L=k.L;h+=`<div style="background:#111c28;border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:10px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline"><b style="text-transform:uppercase">${esc(k.t)}</b><span class="note">${esc(k.r.label)} · ${esc(k.c.head)}</span></div>${svg(L.d)}
+  const L=k.L;h+=`<div style="background:#111c28;border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:10px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline"><b style="text-transform:uppercase">${esc(k.t)}</b><span class="note">${esc(k.r.label)} · ${esc(k.c.head)}</span></div>${svg(L.d)}<div style="margin-top:6px;display:flex;gap:6px;align-items:center">${L.saved?'<span class="chip" style="border-color:var(--ok)">Saved to plan</span><button class="btn sm" data-lk="redo" data-b="'+p.blocks.indexOf(k.b)+'" data-k="'+esc(k.key)+'">Redraw</button>':'<button class="btn sm" data-lk="keep" data-b="'+p.blocks.indexOf(k.b)+'" data-k="'+esc(k.key)+'">Save this one</button>'}</div>
    <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:5px;align-items:center">${L.gl.length?'<span class="note">Drawn from your glossary</span>'+ch(L.gl,'border-color:var(--ok);background:#1d3a2b'):''}${L.did.length?'<span class="note">Drawn (rule you taught me in chat)</span>'+ch(L.did,'border-color:var(--ok)'):''}${L.guess.length?'<span class="note">Drawn (my guess, please correct)</span>'+ch(L.guess,'border-color:var(--warn)'):''}${L.none.length?'<span class="note">No rule yet</span>'+ch(L.none,'border-color:var(--bad)'):''}${L.not.length?'<span class="note">Not drawn yet (routes)</span>'+ch(L.not,''):''}${!(L.gl.length+L.did.length+L.guess.length+L.none.length+L.not.length)?'<span class="note">Base alignment only</span>':''}</div>
    <div style="margin-top:8px;font-size:12px;color:var(--mut)">${L.defs.map(x=>`<div><b style="color:var(--tx)">${esc(x.v)}</b> · ${x.df?esc(x.df):'<span style="color:var(--warn)">no definition in your glossary yet</span>'}${(L.part.find(q=>q.v===x.v)||{bad:[]}).bad.length?'<div style="color:var(--warn)">I could not read: “'+esc(L.part.find(q=>q.v===x.v).bad.join('”, “'))+'”</div>':''}</div>`).join('')}</div></div>`});
  $('mbox').style.width='min(980px,96vw)';
- $('mbox').innerHTML=`<h3>Draw all looks</h3><div class="note">First version: each call starts from its formation's drawing, then applies its formation tag and motion. Your glossary wording is read first; if I cannot read a sentence, I say which one. Concepts and play tags are not drawn yet. Tell me what is wrong and I will fix it.</div>${h}<div style="margin-top:10px"><button class="btn" id="lk_x">Close</button></div>`;
- $('modal').classList.add('show');$('mbox').onclick=null;$('mbox').onkeydown=null;$('lk_x').onclick=()=>{$('modal').classList.remove('show');$('mbox').style.width=''}}
+ $('mbox').innerHTML=`<h3>Draw all looks</h3><div class="note">First version: each call starts from its formation's drawing, then applies its formation tag and motion. Your glossary wording is read first; if I cannot read a sentence, I say which one. Concepts and play tags are not drawn yet. Tell me what is wrong and I will fix it.</div>${h}<div style="margin-top:10px;display:flex;gap:8px"><button class="btn pri" id="lk_all">Save all unsaved to plan</button><button class="btn" id="lk_x">Close</button></div>`;
+ $('modal').classList.add('show');$('mbox').onkeydown=null;const again=()=>{const y=$('mbox').scrollTop||$('modal').scrollTop;$('looks').onclick();$('mbox').scrollTop=y};
+ $('mbox').onclick=e=>{const x=e.target.closest('[data-lk]');if(!x)return;const bl=p.blocks[+x.dataset.b],c=bl&&bl.cells[x.dataset.k];if(!c)return;
+  if(x.dataset.lk==='keep'){c.look={d:lookFor(bl,Object.assign({},c,{look:null})).d,at:Date.now()}}else delete c.look;touch(p);again()};
+ $('lk_all').onclick=()=>{let n=0;cards.forEach(k=>{const c=k.b.cells[k.key];if(c&&!c.look){c.look={d:lookFor(k.b,Object.assign({},c,{look:null})).d,at:Date.now()};n++}});touch(p);again();toast(n?'Saved '+n+' drawings to this plan':'Nothing new to save')};
+ $('lk_x').onclick=()=>{$('modal').classList.remove('show');$('mbox').style.width=''}}
 $('prn').onclick=()=>{try{window.print()}catch(e){toast('Print is not available here')}};
 
 
@@ -431,7 +435,7 @@ function mrCards(p,o){const out=[],names=[...new Set(p.blocks.map(b=>b.name).fil
  const texts=[...new Set(calls.map(k=>k.t))],some=(a,n)=>a.slice().sort(()=>Math.random()-.5).slice(0,n);
  if(o.forms)p.blocks.forEach(b=>{if(!b.name)return;const img=svgImg(b.draw);if(img.length>45000)return;
   out.push({pos:'ALL',q:'What formation is this?',a:b.name,wrong:some(names.filter(n=>n!==b.name),3),expl:digits(b.pers)?'Personnel '+digits(b.pers):'',img})});
- if(o.calls)calls.forEach(k=>{const img=svgImg(k.b.draw);out.push({pos:'ALL',q:`${k.b.name} · ${k.r.label} · ${k.c.head||'column'}: what is the call?`,a:k.t,wrong:some(texts.filter(t=>t!==k.t),3),expl:'',img:img.length>45000?'':img})});
+ if(o.calls)calls.forEach(k=>{const lk=(k.b.cells[k.r.id+'|'+k.c.id]||{}).look,img=svgImg(lk&&lk.d?lk.d:k.b.draw);out.push({pos:'ALL',q:`${k.b.name} · ${k.r.label} · ${k.c.head||'column'}: what is the call?`,a:k.t,wrong:some(texts.filter(t=>t!==k.t),3),expl:'',img:img.length>45000?'':img})});
  return out}
 function mrEndpoint(){let e='';try{e=localStorage.getItem('gp.mrurl')||''}catch(x){}return e||'https://script.google.com/macros/s/AKfycbyeNCmURP7bIelclh1GqoAqswhVThJL77XvsgsepuOQfiXSIKqOveFCdhTe1weY4js/exec'}
 $('mr').onclick=()=>{const p=plan();if(!p)return toast('Start a plan first');let code='';try{code=localStorage.getItem('cs.code')||''}catch(e){}if(!signedIn())code='demo';
@@ -473,7 +477,7 @@ function openCell(bi,key){const p=plan(),b=p.blocks[bi],r=p.rows.find(x=>x.id===
  $('mbox').onclick=e=>{const pk=e.target.closest('[data-pick]');
   if(pk){const k=pk.dataset.pick,v=pk.dataset.v;if(C.s[k]===v)delete C.s[k];else C.s[k]=v;$('ch_'+k).innerHTML=chips(k);return}
   const x=e.target.closest('[data-x]');if(!x)return;
-  if(x.dataset.x==='save'){C.n=$('cn').value.trim();Object.keys(C.s).forEach(k=>{if(!C.s[k])delete C.s[k]});if(Object.keys(C.s).length||C.n)b.cells[key]={s:C.s,n:C.n};else delete b.cells[key];touch(p)}
+  if(x.dataset.x==='save'){C.n=$('cn').value.trim();Object.keys(C.s).forEach(k=>{if(!C.s[k])delete C.s[k]});if(Object.keys(C.s).length||C.n){const old=b.cells[key],keep=old&&old.look&&JSON.stringify(old.s)===JSON.stringify(C.s);b.cells[key]=keep?{s:C.s,n:C.n,look:old.look}:{s:C.s,n:C.n}}else delete b.cells[key];touch(p)}
   if(x.dataset.x==='clear'){delete b.cells[key];touch(p)}
   m.classList.remove('show');render()};
  $('mbox').onkeydown=null}
