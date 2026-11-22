@@ -71,6 +71,11 @@ td .cc.empty{color:#3e5163;font-size:20px}
 .sw{width:34px;height:34px;border-radius:50%;border:3px solid transparent;display:inline-block;margin:4px 6px 0 0}.sw.on{border-color:var(--acc2)}
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#000d;padding:10px 16px;border-radius:10px;z-index:60;display:none;max-width:90vw;text-align:center}
 .empty{padding:30px;color:var(--mut);text-align:center}
+.hint{background:#111c28;border:1px solid var(--acc);border-radius:10px;padding:8px 10px;margin-bottom:12px}.hint .k{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--acc);margin-bottom:6px}
+.hrow{display:flex;gap:8px;align-items:flex-start;padding:4px 0}.hl{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);min-width:78px;padding-top:4px}.hcs{display:flex;flex-wrap:wrap;gap:6px}
+.hc{background:#18232f;border:1px solid var(--line);border-radius:8px;padding:3px 8px;font-size:13px}.hc b{text-transform:uppercase}.hc i{font-style:normal;font-weight:700}.hc i.g{color:var(--ok)}.hc i.r{color:var(--bad)}
+@media print{.hint,.bhint{display:none}}
+.hmore summary{font-size:12px;color:var(--mut);margin:6px 0 2px;cursor:pointer}.bhint{margin-top:8px;padding-top:6px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:6px;align-items:center}.bhint .hl{min-width:0;padding:0}
 .look{display:flex;justify-content:space-between;gap:8px;align-items:baseline;border-top:1px solid var(--line);padding:5px 0;font-size:14px}.look:first-of-type{border-top:0}
 .look b{text-transform:uppercase}.look .p{color:var(--mut);font-size:12px;white-space:nowrap}.fb2{color:var(--warn);font-size:12px}
 @media print{
@@ -186,12 +191,12 @@ function render(){const p=plan();
   $('mk0').onclick=()=>newPlan(false);if($('mk1'))$('mk1').onclick=()=>newPlan(true);return}
  cur=p.id;try{localStorage.setItem('gp_cur',cur)}catch(e){}
  const fm=terms(['formation']),sc=scoutFor(p);
- $('main').innerHTML=(p.sample?'<div class="note" style="margin-bottom:10px;padding:8px 10px;border:1px dashed var(--line);border-radius:10px">This is a sample plan. It goes away when you sign in. To keep a copy, use <b>Plans</b> then <b>Duplicate plan</b>.</div>':'')+`<datalist id="fm">${fm.map(n=>`<option value="${esc(n)}">`).join('')}</datalist>`+
+ $('main').innerHTML=(p.sample?'<div class="note" style="margin-bottom:10px;padding:8px 10px;border:1px dashed var(--line);border-radius:10px">This is a sample plan. It goes away when you sign in. To keep a copy, use <b>Plans</b> then <b>Duplicate plan</b>.</div>':'')+hintHTML(sc)+`<datalist id="fm">${fm.map(n=>`<option value="${esc(n)}">`).join('')}</datalist>`+
  (p.blocks.length?p.blocks.map((b,bi)=>`<div class="block" data-b="${bi}">
   <div class="bh"><input class="nm" data-f="name" value="${esc(b.name)}" list="fm" placeholder="Formation name"><input class="ps" data-f="pers" value="${esc(b.pers)}" placeholder="Personnel"><span class="sp"></span>
    <span class="act"><button class="btn sm" data-a="up">↑</button> <button class="btn sm" data-a="dn">↓</button> <button class="btn sm" data-a="dup">Copy</button> <button class="btn sm bad" data-a="del">Delete</button></span></div>
   <div class="bm"><div class="thumb" data-a="draw">${svgOf(b.draw)}<span class="tag">Edit drawing</span></div>
-   <div class="pd"><div class="k">Predicted defense</div>${pdHTML(b,sc)}<div style="margin-top:6px"><label class="note">Note</label><input data-pd="box" value="${esc((b.pd||{}).box)}" placeholder="Anything you want to remember (box count, a tell)" style="width:100%;padding:6px"></div></div></div>
+   <div class="pd"><div class="k">Predicted defense</div>${pdHTML(b,sc)}${blockHint(b,sc)}<div style="margin-top:6px"><label class="note">Note</label><input data-pd="box" value="${esc((b.pd||{}).box)}" placeholder="Anything you want to remember (box count, a tell)" style="width:100%;padding:6px"></div></div></div>
   <div class="tw"><table><colgroup><col style="width:92px">${p.cols.map(()=>'<col>').join('')}</colgroup>
    <tr><th class="rl"></th>${p.cols.map((c,ci)=>`<th><div class="h" data-ch="${ci}">${esc(c.head)||'&nbsp;'}<span class="s">${esc(c.sub)}</span></div></th>`).join('')}</tr>
    ${p.rows.map((r,ri)=>`<tr><td class="rl" data-rh="${ri}">${esc(r.label)}</td>${p.cols.map(c=>`<td class="c" data-cell="${r.id}|${c.id}">${cellHTML(b.cells[r.id+'|'+c.id])}</td>`).join('')}</tr>`).join('')}
@@ -270,6 +275,9 @@ function demoScout(){if(DEMOSC)return DEMOSC;let sd=20270128;const rnd=()=>{sd|=
   'ACE':{ps:'12',n:20,cv:[['COVER 3',60],['MAN FREE',40]],fr:[['HEAVY',50],['BASE',50]],rs:[['4',75],['5',25]]},
   'EMPTY':{ps:'10',n:16,cv:[['QUARTERS',50],['MAN FREE',50]],fr:[['TITE',60],['OVER',40]],rs:[['4',50],['5',50]]}};
  const rows=[];let pn=1;for(const fm in prof){const q=prof[fm];for(let i=0;i<q.n;i++){const L=q.lk?wp(q.lk.map(x=>[x,x[3]])):null;rows.push({pn:pn++,dn:1+Math.floor(rnd()*3),di:1+Math.floor(rnd()*10),h:'',f:null,fm,ps:q.ps,fr:L?L[1]:wp(q.fr),rs:L?L[2]:wp(q.rs),cv:L?L[0]:wp(q.cv),ef:0,ex:0,gn:null,pt:'',cn:''})}}
+ // outcomes against the made-up defense: each concept has a built-in strength, a couple play better into one coverage
+ const CP={'MESH':[.60,.12,'MAN FREE'],'STICK':[.56,.12,'COVER 3'],'FOUR VERTS':[.40,.30,'COVER 2'],'Y-CROSS':[.52,.16,'QUARTERS'],'INSIDE ZONE':[.40,.08,'COVER 2'],'OUTSIDE ZONE':[.47,.12,'COVER 3'],'POWER':[.43,.10,''],'COUNTER':[.52,.18,'QUARTERS'],'DRAW':[.34,.06,''],'ISO':[.32,.05,'']},CK=Object.keys(CP);
+ for(const r of rows){const k=CK[Math.floor(rnd()*CK.length)],c=CP[k],b=c[2]&&r.cv===c[2]?.16:0,e=rnd()<c[0]+b,x=rnd()<c[1]+b/2;r.cn=k;r.pt=/ZONE|POWER|COUNTER|DRAW|ISO/.test(k)?'Run':'Pass';r.ef=e?1:0;r.ex=x?1:0;r.gn=x?16+Math.floor(rnd()*14):e?5+Math.floor(rnd()*6):Math.floor(rnd()*4)-1}
  return DEMOSC={name:'Demo opponent (made up)',rows,from:'Demo scout (made up)'}}
 function scoutFor(p){if(!p||!window.SCOUT)return null;const src=p.scoutSrc||'auto';if(src==='none')return null;
  if(!signedIn()&&src==='auto'){const G0=almGames();if(!G0.length&&!ownScout(p))return demoScout()}
@@ -280,6 +288,24 @@ function scoutFor(p){if(!p||!window.SCOUT)return null;const src=p.scoutSrc||'aut
   if(!g){const A=almData();g=G.find(x=>A&&x.id===A.cur)||null}
   if(!g){const o=ownScout(p);if(o)return{name:o.name,rows:o.rows,from:'Loaded in Gameplan'}}}
  return g?{name:g.scout.name,rows:g.scout.rows,from:'Almanac · '+g.opp}:null}
+/* ---- "Start here": what gives this opponent's defense trouble, by the scout data ---- */
+const HMIN=5;   // fewest plays a concept or formation needs before it is ranked
+const baseOf=rows=>{const n=rows.length||1;return{e:rows.filter(x=>x.ef).length/n,x:rows.filter(x=>x.ex).length/n,n:rows.length}};
+function trouble(rows,keyf,base){const m={};rows.forEach(x=>{const k=keyf(x);if(k)(m[k]=m[k]||[]).push(x)});
+ return Object.entries(m).filter(([k,a])=>a.length>=HMIN).map(([k,a])=>{const n=a.length,e=a.filter(x=>x.ef).length/n,x=a.filter(x=>x.ex).length/n;return{k,n,de:Math.round((e-base.e)*100),dx:Math.round((x-base.x)*100),sc:(e-base.e)+(x-base.x)}}).filter(r=>r.sc>0).sort((a,b)=>b.sc-a.sc)}
+const hn=v=>`<i class="${v>0?'g':v<0?'r':''}">${v>0?'+':v<0?'−':''}${Math.abs(v)}%</i>`;
+const hchip=r=>`<span class="hc"><b>${esc(r.k)}</b> ${hn(r.de)} eff ${hn(r.dx)} expl <span class="mut">n=${r.n}</span></span>`;
+function hintHTML(sc){if(!sc)return'';const rows=sc.rows||[];
+ if(!rows.some(x=>x.ef||x.ex))return`<div class="hint"><div class="k">Start here</div><div class="note">This scout has no EFF or EXPLOSIVE columns, so it cannot rank what hurts them.</div></div>`;
+ const base=baseOf(rows),C=trouble(rows,x=>x.cn&&x.cn.toUpperCase(),base),F=trouble(rows,x=>x.fm,base);
+ if(!C.length&&!F.length)return`<div class="hint"><div class="k">Start here</div><div class="note">Nothing in this scout has ${HMIN}+ plays above their average yet.</div></div>`;
+ const line=(l,a,m)=>a.length?`<div class="hrow"><span class="hl">${l}</span><span class="hcs">${a.slice(0,m).map(hchip).join('')}</span></div>`:'';
+ const more=(C.length>4||F.length>3)?`<details class="hmore"><summary>See the full list</summary>${line('Concepts',C,12)}${line('Formations',F,12)}</details>`:'';
+ return`<div class="hint"><div class="k">Start here · what gives ${esc(sc.name||'this defense')} trouble</div>${line('Concepts',C,4)}${line('Formations',F,3)}${more}
+  <div class="note" style="margin-top:6px">Compared with their scout average (${Math.round(base.e*100)}% efficient, ${Math.round(base.x*100)}% explosive over ${base.n} plays). Only ${HMIN}+ plays count. Green = better for you.</div></div>`}
+function blockHint(b,sc){if(!sc)return'';const r=predict(b,sc);if(!r||!r.looks||!r.looks.length)return'';const cv=r.looks[0].cv,rows=sc.rows.filter(x=>x.cv===cv);
+ if(!rows.some(x=>x.ef||x.ex))return'';const C=trouble(rows,x=>x.cn&&x.cn.toUpperCase(),baseOf(rows)).slice(0,2);if(!C.length)return'';
+ return`<div class="bhint"><span class="hl">Into ${esc(cv)}</span> ${C.map(hchip).join('')}</div>`}
 const digits=x=>String(x==null?'':x).replace(/\D/g,'');
 function predict(b,sc){if(!sc||!b.name)return null;const fm=SCOUT.normFm(b.name),rows=sc.rows.filter(x=>x.cv&&x.fr&&x.rs!==''),N=5;
  const lv=[['formation',x=>x.fm===fm]];if(digits(b.pers))lv.push(['personnel '+digits(b.pers),x=>digits(x.ps)===digits(b.pers)]);lv.push(['all plays in the scout',()=>true]);
