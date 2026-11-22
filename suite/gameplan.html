@@ -300,14 +300,19 @@ const drawOf=b=>(typeof E!=='undefined'&&E&&$('ed').classList.contains('show')&&
 function ftPicker(bi,after){const g=glossary(),p=plan(),b=p.blocks[bi];if(!g)return toast('No glossary on this device yet');b.ftags=b.ftags||[];let q='';
  const all=()=>GL.active(g,'ftag').map(t=>t.name).sort((a,b2)=>a.localeCompare(b2));const has=n=>b.ftags.some(x=>x.toUpperCase()===n.toUpperCase());
  const draw=()=>{const u=q.trim().toUpperCase(),rows=all().filter(n=>!u||n.toUpperCase().includes(u)),ex=all().some(n=>n.toUpperCase()===u);
-  $('mbox').innerHTML=`<h3>Formation tags for ${esc(b.name||'this formation')}</h3><p class="note">These apply to every call in this block. Tap to turn on or off.</p><input type="text" id="ftq" value="${esc(q)}" placeholder="Search or type a new tag" autocapitalize="off" autocorrect="off" style="width:100%">
+  $('mbox').innerHTML=`<h3>Formation tags for ${esc(b.name||'this formation')}</h3><p class="note">These apply to every call in this block. Tap to turn on or off, or type one and press Enter.</p><input type="text" id="ftq" value="${esc(q)}" placeholder="Search or type a new tag" autocapitalize="off" autocorrect="off" style="width:100%">
   <div class="chips" style="margin:10px 0">${rows.map(n=>`<button class="chip ${has(n)?'on':''}" data-ftt="${esc(n)}">${esc(n)}</button>`).join('')||'<span class="note">No formation tags in your glossary yet. Type one above to add it.</span>'}${u&&!ex?`<button class="chip" data-ftn="1">Add “${esc(q.trim())}”</button>`:''}</div>
   <div class="row"><button class="btn" data-ftd="1">Done</button><button class="btn pri" data-ftd="2">Done and make these the default for this formation</button></div>`;
-  const i=$('ftq');i.oninput=()=>{q=i.value;const pos=i.selectionStart;draw();const n=$('ftq');n.focus();n.setSelectionRange(pos,pos)}};
+  const i=$('ftq');i.oninput=()=>{q=i.value;const pos=i.selectionStart;draw();const n=$('ftq');n.focus();n.setSelectionRange(pos,pos)};
+  /* Enter: blank box = Done; exact or only match = turn that tag on; otherwise add the typed tag */
+  i.onkeydown=e=>{if(e.key!=='Enter')return;e.preventDefault();const u=q.trim().toUpperCase();if(!u){const d=$('mbox').querySelector('[data-ftd="1"]');if(d)d.click();return}
+   const L=all(),hit=L.find(n=>n.toUpperCase()===u)||(()=>{const m=L.filter(n=>n.toUpperCase().includes(u));return m.length===1?m[0]:null})();
+   if(hit){if(!has(hit)){b.ftags.push(hit);tagDraw(drawOf(b),hit,true)}}else{const nm=q.trim();GL.add(g,{type:'ftag',name:nm,source:'gameplan'});GL.save(g);if(!has(nm)){b.ftags.push(nm);tagDraw(drawOf(b),nm,true)}}
+   touch(p);q='';draw();const n=$('ftq');if(n)n.focus()}};
  $('mbox').style.width='min(520px,94vw)';draw();$('modal').classList.add('show');
  $('mbox').onclick=e=>{const t=e.target.closest('[data-ftt]'),n=e.target.closest('[data-ftn]'),d=e.target.closest('[data-ftd]');
-  if(t){const nm=t.dataset.ftt,was=has(nm);b.ftags=was?b.ftags.filter(x=>x.toUpperCase()!==nm.toUpperCase()):[...b.ftags,nm];tagDraw(drawOf(b),nm,!was);draw();return}
-  if(n){const nm=q.trim();GL.add(g,{type:'ftag',name:nm,source:'gameplan'});GL.save(g);if(!has(nm)){b.ftags.push(nm);tagDraw(drawOf(b),nm,true)}q='';draw();return}
+  if(t){const nm=t.dataset.ftt,was=has(nm);b.ftags=was?b.ftags.filter(x=>x.toUpperCase()!==nm.toUpperCase()):[...b.ftags,nm];tagDraw(drawOf(b),nm,!was);touch(p);draw();return}
+  if(n){const nm=q.trim();GL.add(g,{type:'ftag',name:nm,source:'gameplan'});GL.save(g);if(!has(nm)){b.ftags.push(nm);tagDraw(drawOf(b),nm,true)}touch(p);q='';draw();return}
   if(d){if(d.dataset.ftd==='2'){const base=fmParse(b.name).base;let tm=fmTerm(g,b.name);if(!tm&&base&&!/^new formation$/i.test(base))tm=GL.add(g,{type:'formation',name:base,source:'gameplan'}).term;if(tm){tm.ftags=clone(b.ftags);GL.touch(tm);GL.save(g);toast('Saved as the default tags for '+base)}else toast('Name the formation first')}
    touch(p);$('modal').classList.remove('show');$('mbox').style.width='';if(after)after();else render()}}}
 function fmPicker(){const g=glossary();let q='',side='';const all=GL.active(g,'formation').slice().sort((a,b)=>a.name.localeCompare(b.name));
