@@ -628,6 +628,8 @@ function climbLine(D1,D2,cx,col){const dx=D1.x-D2.x,dy=D1.y-D2.y,m=Math.hypot(dx
 /* Personnel from the players on the field: first digit = backs (B, T), second = tight ends (M, A, F); wide receivers (X, Z, H, Y) must fill the rest of the 5 */
 function persOf(d){const A=almData(),L=(A&&A.lists)||{},pl=(k,df)=>(L[k]&&L[k].length?L[k]:df).map(x=>String(x).toUpperCase()),t=(d&&d.t)||{},n=a=>a.filter(k=>t[k]&&t[k].on&&!t[k].df).length,rb=n(pl('pRB',['B','T'])),te=n(pl('pTE',['M','A','F'])),wr=n(pl('pWR',['X','Z','H','Y']));return{code:''+rb+te,rb,te,wr,ok:wr===5-rb-te}}
 function snap(){E.hist.push(JSON.stringify(E.d));E.redo=[];if(E.hist.length>60)E.hist.shift()}
+/* a near-horizontal or near-vertical segment snaps straight, like the freehand tool */
+function snapSeg(a,p){const dx=p.x-a[0],dy=p.y-a[1];if(Math.hypot(dx,dy)<12)return p;const ang=Math.atan2(Math.abs(dx),Math.abs(dy))*180/Math.PI;return ang<10?{x:a[0],y:p.y}:ang>80?{x:p.x,y:a[1]}:p}
 function delSh(i){const h=E.d.sh[i];E.d.sh.splice(i,1);if(h&&h.k==='pos')E.d.l=E.d.l.filter(l=>l.mv!==h.p)}
 function edUndo(){if(E.cur){E.cur=null;return}if(!E.hist.length)return;(E.redo||(E.redo=[])).push(JSON.stringify(E.d));E.d=JSON.parse(E.hist.pop());E.selL=null;E.selS=null;E.combo=null}
 function edRedo(){if(!E.redo||!E.redo.length)return;E.hist.push(JSON.stringify(E.d));E.d=JSON.parse(E.redo.pop());E.selL=null}
@@ -660,7 +662,7 @@ $('ed').addEventListener('pointerdown',e=>{const cv=e.target.closest('#cv');if(!
  if(E.mode==='free'){let st=null;if(g){E.sel=g.dataset.k}const t=g&&E.d.t[E.sel];if(t&&t.on)st=[t.x,t.y];E.cur={pts:st?[st]:[[p0.x,p0.y]],dot:E.dot,arrow:E.arrow&&!E.blk,blk:E.blk,curve:!!E.curve,col:E.col,free:1};E.selL=null;E.drag={kind:'free',p0};cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);redrawCanvas();e.preventDefault();return}
  if(E.mode==='shift'){const T=E.d.t,ok=k=>k&&T[k]&&T[k].on&&!T[k].df&&!OLK.includes(k)&&!(E.d.sh||[]).some(h=>h.k==='pos'&&h.p===k),k=g&&g.dataset.k;
   if(ok(k)&&k!==E.shk){E.shk=k;E.sel=k}else if(k&&k===E.shk){E.shk=null;E.sel=null}
-  else if(E.shk&&!ok(k)){const t=T[E.shk];snap();E.d.l.push({pts:[[t.x,t.y],[p0.x,p0.y]],dot:0,arrow:0,col:E.col,mv:E.shk});(E.d.sh||(E.d.sh=[])).push({k:'pos',p:E.shk,x:p0.x,y:p0.y,col:E.col});E.shk=null;E.sel=null;E.selS=null;E.selL=null}
+  else if(E.shk&&!ok(k)){const t=T[E.shk];const q=snapSeg([t.x,t.y],p0);p0.x=q.x;p0.y=q.y;snap();E.d.l.push({pts:[[t.x,t.y],[p0.x,p0.y]],dot:0,arrow:0,col:E.col,mv:E.shk});(E.d.sh||(E.d.sh=[])).push({k:'pos',p:E.shk,x:p0.x,y:p0.y,col:E.col});E.shk=null;E.sel=null;E.selS=null;E.selL=null}
   redrawCanvas();edRender();e.preventDefault();return}
  if(E.mode==='shape'){const dt=g&&E.d.t[g.dataset.k];if(dt&&dt.df&&dt.on){snap();(E.d.sh||(E.d.sh=[])).push({k:E.shape,x:dt.x,y:dt.y,col:E.col});E.selS=null;E.sel=null;E.selL=null;E.mode='move';redrawCanvas();edRender();e.preventDefault();return}if(!g){snap();(E.d.sh||(E.d.sh=[])).push({k:E.shape,x:p0.x,y:p0.y,col:E.col});E.selS=null;E.sel=null;E.selL=null;E.mode='move';redrawCanvas();edRender()}e.preventDefault();return}
  if(E.mode==='move'){const h=e.target.closest('[data-h]'),ln=e.target.closest('[data-l]');
@@ -680,7 +682,7 @@ $('ed').addEventListener('pointerdown',e=>{const cv=e.target.closest('#cv');if(!
  // line mode
  if(g&&!E.cur){E.sel=(E.sel===g.dataset.k)?null:g.dataset.k;E.selL=null;redrawCanvas();edRender();return}
  if(!E.cur){if(!E.sel||!E.d.t[E.sel]||!E.d.t[E.sel].on){if(E.selL!=null||E.selS!=null){E.selL=null;E.selS=null;redrawCanvas();edRender()}return}const t=E.d.t[E.sel];E.cur={pts:[[t.x,t.y]],dot:E.dot,arrow:E.arrow&&!E.blk,blk:E.blk,curve:E.curve,col:E.col}}
- E.cur.pts.push([p0.x,p0.y]);E.cur.dot=E.dot;E.cur.arrow=E.arrow&&!E.blk;E.cur.blk=E.blk;E.cur.curve=E.curve;E.cur.col=E.col;finishLine();E.selL=null;E.sel=null;redrawCanvas();edRender();e.preventDefault()});
+ {const la=E.cur.pts[E.cur.pts.length-1],q=snapSeg(la,p0);p0.x=q.x;p0.y=q.y}E.cur.pts.push([p0.x,p0.y]);E.cur.dot=E.dot;E.cur.arrow=E.arrow&&!E.blk;E.cur.blk=E.blk;E.cur.curve=E.curve;E.cur.col=E.col;finishLine();E.selL=null;E.sel=null;redrawCanvas();edRender();e.preventDefault()});
 $('ed').addEventListener('pointermove',e=>{if(!E||!E.drag)return;const d=E.drag,p1=pt(e),dx=p1.x-d.p0.x,dy=p1.y-d.p0.y;
  if(d.kind==='free'){const P=E.cur&&E.cur.pts,l=P&&P[P.length-1];if(l&&Math.hypot(p1.x-l[0],p1.y-l[1])>=4){P.push([p1.x,p1.y]);redrawCanvas()}return}
  if(d.kind==='sh'){const H=E.d.sh[d.si];H.x=Math.max(16,Math.min(VW-16,d.ox+dx));H.y=Math.max(VT+18,Math.min(VH-16,d.oy+dy));if(H.k==='pos'){const L=E.d.l.find(l=>l.mv===H.p);if(L)L.pts[L.pts.length-1]=[H.x,H.y]}}
