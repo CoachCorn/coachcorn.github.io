@@ -73,9 +73,12 @@ td .cc.empty{color:#3e5163;font-size:20px}
 .empty{padding:30px;color:var(--mut);text-align:center}
 .hint{background:#111c28;border:1px solid var(--acc);border-radius:10px;padding:8px 10px;margin-bottom:12px}.hint .k{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--acc);margin-bottom:6px}
 .hrow{display:flex;gap:8px;align-items:flex-start;padding:4px 0}.hl{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);min-width:78px;padding-top:4px}.hcs{display:flex;flex-wrap:wrap;gap:6px}
-.hc{background:#18232f;border:1px solid var(--line);border-radius:8px;padding:3px 8px;font-size:13px}.hc b{text-transform:uppercase}.hc i{font-style:normal;font-weight:700}.hc i.g{color:var(--ok)}.hc i.r{color:var(--bad)}
+.hc{background:#18232f;border:1px solid var(--line);border-radius:999px;padding:2px 9px;font-size:13px}.hc b{text-transform:uppercase}.hc i{font-style:normal;font-weight:700}.hc i.g{color:var(--ok)}.hc i.r{color:var(--bad)}
 @media print{.hint,.bhint{display:none}}
 .hc.ng{border-color:var(--warn)}.hc em{font-style:normal;color:var(--warn);font-size:11px;text-transform:uppercase;letter-spacing:.04em}.dont{display:flex;gap:8px;align-items:flex-start;padding:4px 0 8px;margin-bottom:4px;border-bottom:1px solid var(--line)}.dont .hl{color:var(--warn)}
+.hint summary{cursor:pointer;list-style:none}.hint summary::-webkit-details-marker{display:none}.hint summary .k{margin:0}.hint summary::after{content:' ▾';color:var(--mut)}.hint:not([open]) .ht,.hint:not([open]) .hmore,.hint:not([open]) .note{display:none}.hint[open] .hmore{display:none}.hint .hrow:first-of-type{margin-top:6px}
+.hint .ht{width:100%;min-width:0;table-layout:auto;border-collapse:collapse;font-size:13px;margin-top:6px}.hint .ht th,.hint .ht td{border:0;background:none}.ht th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);padding:6px 0 2px}.hint .ht td{padding:3px 0;border-top:1px solid var(--line)}.ht td:not(:first-child),.ht th:not(:first-child){text-align:right;padding-left:10px}.ht em{font-style:normal;color:var(--warn);font-size:11px;text-transform:uppercase}
+.hint .ht i{font-style:normal;font-weight:700}.hint i.g{color:var(--ok)}.hint i.r{color:var(--bad)}
 .hmore summary{font-size:12px;color:var(--mut);margin:6px 0 2px;cursor:pointer}.bhint{margin-top:8px;padding-top:6px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:6px;align-items:center}.bhint .hl{min-width:0;padding:0}
 .look{display:flex;justify-content:space-between;gap:8px;align-items:baseline;border-top:1px solid var(--line);padding:5px 0;font-size:14px}.look:first-of-type{border-top:0}
 .look b{text-transform:uppercase}.look .p{color:var(--mut);font-size:12px;white-space:nowrap}.fb2{color:var(--warn);font-size:12px}
@@ -252,7 +255,7 @@ function editRow(i){const p=plan(),r=p.rows[i];dialog({title:'Row',fields:[{labe
  {t:'↑ Move',fn:()=>{if(i>0){[p.rows[i-1],p.rows[i]]=[p.rows[i],p.rows[i-1]];touch(p);render()}}},{t:'Move ↓',fn:()=>{if(i<p.rows.length-1){[p.rows[i+1],p.rows[i]]=[p.rows[i],p.rows[i+1]];touch(p);render()}}},
  {t:'Delete row',cls:'bad',fn:()=>{p.rows.splice(i,1);touch(p);render()}},{t:'Cancel'}]})}
 $('alm').onclick=()=>{const p=plan();if(!p)return toast('Make a plan first');if(window.parent===window)return toast('Open Gameplan from the suite to send it to the Almanac');parent.postMessage({toAlmanac:p.id},location.origin)};
-for(const [id,msg] of [['looks','Draw all looks needs the tag rules (Outside, Heavy, Lite, Stooge, Map) filled into the glossary first. Coming next.']])$(id).onclick=()=>toast(msg);
+for(const [id,msg] of [['looks','Draw all looks is not built yet.']])$(id).onclick=()=>toast(msg);
 $('prn').onclick=()=>{try{window.print()}catch(e){toast('Print is not available here')}};
 
 
@@ -309,15 +312,19 @@ function hintHTML(sc,p){if(!sc)return'';const rows=sc.rows||[];
  if(!hasOut(rows))return`<div class="hint"><div class="k">Start here</div><div class="note">This scout has no gain (GN/LS) column to work out efficiency and explosives from, so it cannot rank what hurts them.</div></div>`;
  const base=baseOf(rows),C=trouble(rows,x=>x.cn&&x.cn.toUpperCase(),base),F=trouble(rows,x=>x.fm,base);
  if(!C.length&&!F.length)return`<div class="hint"><div class="k">Start here</div><div class="note">Nothing in this scout has ${HMIN}+ plays above their average yet.</div></div>`;
- HW=planWords(p);const miss=[...C.map(r=>({...r,t:'concept'})),...F.map(r=>({...r,t:'formation'}))].filter(r=>!onGrid(HW,r.k)).sort((a,b)=>b.sc-a.sc).slice(0,4),
-  dont=miss.length?`<div class="dont"><span class="hl">Don't forget</span><span class="hcs">${miss.map(r=>`<span class="hc ng"><b>${esc(r.k)}</b> <span class="mut">${r.t}</span> ${hn(r.de)} eff ${hn(r.dx)} expl <span class="mut">n=${r.n}</span></span>`).join('')}</span></div>`:(p&&p.blocks&&p.blocks.length?'<div class="note" style="margin:2px 0 6px">Everything that hurts them is already on your grid.</div>':'');
- const line=(l,a,m)=>a.length?`<div class="hrow"><span class="hl">${l}</span><span class="hcs">${a.slice(0,m).map(hchip).join('')}</span></div>`:'';
- const more=(C.length>4||F.length>3)?`<details class="hmore"><summary>See the full list</summary>${line('Concepts',C,12)}${line('Formations',F,12)}</details>`:'';
- return`<div class="hint"><div class="k">Start here · what gives ${esc(sc.name||'this defense')} trouble</div>${dont}${line('Concepts',C,4)}${line('Formations',F,3)}${more}
-  <div class="note" style="margin-top:6px">Compared with their scout average (${Math.round(base.e*100)}% efficient, ${Math.round(base.x*100)}% explosive over ${base.n} plays). Explosive = ${hset().run===hset().pass?hset().run+'+ yards on any play':hset().run+'+ run, '+hset().pass+'+ pass'} (your Almanac setting). Only ${HMIN}+ plays count. Green = better for you.</div></div>`}
-function blockHint(b,sc){if(!sc)return'';HW=planWords(plan());const r=predict(b,sc);if(!r||!r.looks||!r.looks.length)return'';const cv=r.looks[0].cv,rows=sc.rows.filter(x=>x.cv===cv);
+ const W=planWords(p),has=p&&p.blocks&&p.blocks.length,miss=[...C,...F].filter(r=>!onGrid(W,r.k)).sort((a,b)=>b.sc-a.sc).slice(0,4);
+ const nm=a=>a.map(r=>`<span class="hc"><b>${esc(r.k)}</b></span>`).join('');
+ const T=r=>`<tr><td><b>${esc(r.k)}</b>${onGrid(W,r.k)?'':' <em>not on grid</em>'}</td><td>${hn(r.de)}</td><td>${hn(r.dx)}</td><td class="mut">${r.n}</td></tr>`;
+ const tb=(t,a)=>a.length?`<tr><th colspan="4">${t}</th></tr>`+a.slice(0,12).map(T).join(''):'';
+ return`<details class="hint"><summary><span class="k">Start here · what hurts ${esc(sc.name||'this defense')}</span></summary>
+  ${miss.length?`<div class="hrow"><span class="hl" style="color:var(--warn)">Don't forget</span><span class="hcs">${nm(miss).replace(/class="hc"/g,'class="hc ng"')}</span></div>`:(has?'<div class="note" style="margin:4px 0">Everything that hurts them is already on your grid.</div>':'')}
+  <div class="hrow"><span class="hl">Hurts them</span><span class="hcs">${nm(C.slice(0,4))}${nm(F.slice(0,2))}</span></div>
+  <div class="hmore"><div class="mut" style="font-size:12px;margin:6px 0 2px">Tap Start here for the numbers</div></div>
+  <table class="ht"><tr><th></th><th>Eff</th><th>Expl</th><th>n</th></tr>${tb('Concepts',C)}${tb('Formations',F)}</table>
+  <div class="note" style="margin-top:6px">Versus their average (${Math.round(base.e*100)}% efficient, ${Math.round(base.x*100)}% explosive, ${base.n} plays). Explosive = ${hset().run===hset().pass?hset().run+'+ yards on any play':hset().run+'+ run, '+hset().pass+'+ pass'} (Almanac setting). ${HMIN}+ plays only. Green = better for you.</div></details>`}
+function blockHint(b,sc){if(!sc)return'';const r=predict(b,sc);if(!r||!r.looks||!r.looks.length)return'';const cv=r.looks[0].cv,rows=sc.rows.filter(x=>x.cv===cv);
  if(!hasOut(rows))return'';const C=trouble(rows,x=>x.cn&&x.cn.toUpperCase(),baseOf(rows)).slice(0,2);if(!C.length)return'';
- return`<div class="bhint"><span class="hl">Into ${esc(cv)}</span> ${C.map(hchip).join('')}</div>`}
+ return`<div class="bhint"><span class="hl">Into ${esc(cv)}</span>${C.map(r=>`<span class="hc"><b>${esc(r.k)}</b></span>`).join('')}</div>`}
 const digits=x=>String(x==null?'':x).replace(/\D/g,'');
 function predict(b,sc){if(!sc||!b.name)return null;const fm=SCOUT.normFm(b.name),rows=sc.rows.filter(x=>x.cv&&x.fr&&x.rs!==''),N=5;
  const lv=[['formation',x=>x.fm===fm]];if(digits(b.pers))lv.push(['personnel '+digits(b.pers),x=>digits(x.ps)===digits(b.pers)]);lv.push(['all plays in the scout',()=>true]);
