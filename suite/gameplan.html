@@ -552,11 +552,13 @@ function climbLine(D1,D2,cx,col){const dx=D1.x-D2.x,dy=D1.y-D2.y,m=Math.hypot(dx
   C={x:D2.x+u[0]*L,y:D2.y+u[1]*L},E={x:D2.x+u[0]*14,y:D2.y+u[1]*14},cm=Math.hypot(C.x-D1.x,C.y-D1.y)||1,S={x:D1.x+(C.x-D1.x)/cm*14,y:D1.y+(C.y-D1.y)/cm*14},R=Math.round,pts=[];
   [0,.16,.32,.48,.64,.8,.92,.98,1].forEach(t=>{const a=(1-t)*(1-t),b=2*t*(1-t),c=t*t;pts.push([R(a*S.x+b*C.x+c*E.x),R(a*S.y+b*C.y+c*E.y)])});
   return{pts,curve:true,blk:1,col}}
+/* Personnel from the players on the field: first digit = backs (B, T), second = tight ends (M, A, F); wide receivers (X, Z, H, Y) must fill the rest of the 5 */
+function persOf(d){const t=(d&&d.t)||{},n=a=>a.filter(k=>t[k]&&t[k].on&&!t[k].df).length,rb=n(['B','T']),te=n(['M','A','F']),wr=n(['X','Z','H','Y']);return{code:''+rb+te,rb,te,wr,ok:wr===5-rb-te}}
 function snap(){E.hist.push(JSON.stringify(E.d));E.redo=[];if(E.hist.length>60)E.hist.shift()}
 function edUndo(){if(E.cur){E.cur=null;return}if(!E.hist.length)return;(E.redo||(E.redo=[])).push(JSON.stringify(E.d));E.d=JSON.parse(E.hist.pop());E.selL=null;E.selS=null;E.combo=null}
 function edRedo(){if(!E.redo||!E.redo.length)return;E.hist.push(JSON.stringify(E.d));E.d=JSON.parse(E.redo.pop());E.selL=null}
 function edRender(){const p=plan(),b=p.blocks[E.bi];
- $('ed').innerHTML=`<div class="fh"><b style="text-transform:uppercase">${esc(b.name||'Formation')}</b><span class="mut">${esc(b.pers||'')}</span><span class="sp"></span><button class="btn" data-e="undo">Undo</button><button class="btn" data-e="redo">Redo</button><button class="btn" data-e="cancel">Cancel</button><button class="btn pri" data-e="save">Save drawing</button></div>
+ $('ed').innerHTML=`<div class="fh"><b style="text-transform:uppercase">${esc(b.name||'Formation')}</b><span class="mut">${esc(b.pers||'')}</span>${(()=>{const q=persOf(E.d),same=digits(b.pers)===q.code;return `<span class="chip" style="min-height:0;padding:3px 9px;${q.ok?'':'border-color:var(--warn);color:var(--warn)'}" title="Backs ${q.rb}, TEs ${q.te}, WRs ${q.wr}">Drawing: ${q.code}p${q.ok?'':' (check players)'}${b.pers&&!same?' · box says '+esc(b.pers):''}</span>`})()}<span class="sp"></span><button class="btn" data-e="undo">Undo</button><button class="btn" data-e="redo">Redo</button><button class="btn" data-e="cancel">Cancel</button><button class="btn pri" data-e="save">Save drawing</button></div>
  ${(()=>{const k=E.look&&E.look.key;if(!k)return'';const cell=b.cells[k],[rid,cid]=k.split('|'),r=p.rows.find(x=>x.id===rid),c=p.cols.find(x=>x.id===cid),t=cell?callText(cell):'';return t?`<div style="padding:8px 14px;background:#101c28;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:baseline;flex-wrap:wrap"><b style="font-size:17px;text-transform:uppercase">${esc(t)}</b><span class="mut">${esc(b.name||'')}${r?' · '+esc(r.label):''}${c?' · '+esc(c.head):''}</span></div>`:''})()}
  <div class="fb"><div class="cv" id="cv">${svgOf(E.d,E.sel,E.cur,E.selL)}</div><div class="pn">
   <div class="g"><div class="k">Players on the field</div><div class="chips">${SK.map(k=>`<button class="chip ${E.d.t[k]&&E.d.t[k].on?'on':'off'}" data-e="pl" data-k="${k}">${k}</button>`).join('')}</div></div>
@@ -609,7 +611,7 @@ const endDrag=()=>{if(E&&E.drag&&E.drag.kind==='free'){E.drag=null;finishFree();
 $('ed').addEventListener('pointerup',endDrag);$('ed').addEventListener('pointercancel',endDrag);
 $('ed').addEventListener('click',e=>{const b=e.target.closest('[data-e]');if(!b||!E)return;const a=b.dataset.e,t=E.d.t;
  if(a==='cancel'){const lk=E.look;E=null;$('ed').classList.remove('show');if(lk)$('looks').onclick();return}
- if(a==='save'){finishLine();const p=plan(),lk=E.look;if(lk){const c=p.blocks[E.bi].cells[lk.key];if(c){const was=c.look||{};c.look=Object.assign({},was,{d:E.d,gen:lk.gen,edited:true,at:Date.now()})}}else p.blocks[E.bi].draw=E.d;touch(p);E=null;$('ed').classList.remove('show');render();if(lk)$('looks').onclick();return}
+ if(a==='save'){finishLine();const p=plan(),lk=E.look;if(lk){const c=p.blocks[E.bi].cells[lk.key];if(c){const was=c.look||{};c.look=Object.assign({},was,{d:E.d,gen:lk.gen,edited:true,at:Date.now()})}}else{const bl=p.blocks[E.bi];bl.draw=E.d;const q=persOf(E.d);if(q.ok){if(!digits(bl.pers))bl.pers=q.code;else if(digits(bl.pers)!==q.code)setTimeout(()=>toast('Personnel box says '+bl.pers+' but the drawing shows '+q.code+'p'),50)}}touch(p);E=null;$('ed').classList.remove('show');render();if(lk)$('looks').onclick();return}
  if(a==='pl'){const k=b.dataset.k;snap();t[k].on=t[k].on?0:1;if(E.sel===k&&!t[k].on)E.sel=null}
  else if(a==='grp')E.grp=true;else if(a==='one')E.grp=false;
  else if(a==='lite'){snap();t.LT.x=t.RT.x+OLSP;t.LT.y=LOS}
