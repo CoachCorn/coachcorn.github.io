@@ -160,7 +160,7 @@ function svgOf(d,sel,cur,selL){const n=++svgN,used=new Set(),edit=selL!==undefin
  const lines=(d.l||[]).concat(cur?[cur]:[]);lines.forEach(l=>used.add(l.col||'#ffffff'));
  let s=`<svg viewBox="0 ${VT} ${VW} ${VH-VT}" xmlns="http://www.w3.org/2000/svg"><defs>`+[...used].map(c=>`<marker id="a${n}${c.slice(1)}" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L8 4L0 8z" fill="${c}"/></marker>`).join('')+`</defs>`;
  s+=`<rect y="${VT}" width="${VW}" height="${VH-VT}" fill="#101c14"/>`;
- const lab=(x,y,t,an)=>`<text x="${x}" y="${y}" fill="#ffffff66" font-size="9" font-family="sans-serif" text-anchor="${an||'middle'}">${t}</text>`;
+ const ylab=(x,y,t,an)=>`<text x="${x}" y="${y}" fill="#ffffff66" font-size="9" font-family="sans-serif" text-anchor="${an||'middle'}">${t}</text>`;
  for(let k=-14;k<=12;k++){const y=LOS+k*5*YD;if(y>VT+2&&y<VH-2)s+=`<line x1="0" x2="${VW}" y1="${y}" y2="${y}" stroke="#ffffff14"/>`}   // 5-yard lines
  // numbers: 6 ft tall, top 9 yards in, bottom 7 yards in, both sides
  s+=`<line x1="1" x2="1" y1="${VT}" y2="${VH}" stroke="#ffffff77" stroke-width="2"/><line x1="${VW-1}" x2="${VW-1}" y1="${VT}" y2="${VH}" stroke="#ffffff77" stroke-width="2"/>`;
