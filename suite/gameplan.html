@@ -64,7 +64,7 @@ td .cc.empty{color:#3e5163;font-size:20px}
 .fh{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 12px;background:#0b1118;border-bottom:1px solid var(--line)}
 .fb{flex:1;overflow:auto;display:flex;gap:12px;padding:12px;flex-wrap:wrap;align-items:flex-start}
 .cv{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#101c14;touch-action:none}
-.cv svg{display:block;width:100%;height:auto;touch-action:none}
+.cv svg{display:block;width:100%;height:auto;touch-action:none}.lc .cv svg{max-height:calc(100vh - 330px);min-height:230px}
 .lc{flex:1 1 560px;min-width:300px}.lc .cv{margin-bottom:10px}.ftr{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 8px}.ftr .chip{min-height:0;padding:3px 9px;font-size:11px}.ub{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px}.ur{display:flex;align-items:center;gap:10px;margin-bottom:8px}.ur .k{flex:0 0 62px;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--mut)}.ur .chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.ur .chip{min-height:36px;padding:5px 11px;font-size:12px}.ur .sw{width:30px;height:30px;margin:0}.ub .note{font-size:12px;color:var(--mut);margin-top:2px}.pn{flex:0 1 320px;min-width:260px}
 .lc .g{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 10px;margin-bottom:10px}.lc .g .k{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--mut)}
 .pn .g{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 10px;margin-bottom:10px}
@@ -137,7 +137,7 @@ const TC={Q:'#ffffff',X:'#5aa9ff',Z:'#5aa9ff',M:'#f2b632',H:'#2fbf71',Y:'#c58bff
 /* The drawing is the whole field width: 160 ft (high school), 4.4 px per foot. The left hash sits where the center lines up (53'4" from the sideline).
    Noah asked for the hashes drawn farther apart than real: HASHR puts the right hash 66 ft from the left one (real is 53'4"). Change the 66 to change it.
    Numbers are 6 ft tall: top 9 yards (27 ft) from the sideline, bottom 21 ft. */
-const PXFT=4.4,YD=3*PXFT,LOS=110+OFF,VW=Math.round(160*PXFT),VH=250+OFF,HASHX=Math.round(53.333*PXFT),HASHR=HASHX+Math.round(66*PXFT),NSHIFT=4,NB=Math.round((21-NSHIFT)*PXFT),NT=Math.round((27-NSHIFT)*PXFT); // numbers drawn NSHIFT ft closer to the sideline than the NFHS spec, at Noah's request
+const PXFT=4.4,YD=3*PXFT,LOS=110+OFF,VW=Math.round(160*PXFT),VH=250+OFF,VT=-70,HASHX=Math.round(53.333*PXFT),HASHR=HASHX+Math.round(66*PXFT),NSHIFT=4,NB=Math.round((21-NSHIFT)*PXFT),NT=Math.round((27-NSHIFT)*PXFT); // numbers drawn NSHIFT ft closer to the sideline than the NFHS spec, at Noah's request
 const L1=LOS-28,L2=LOS-58,L3=LOS-100,DP={
  '4-3-4':[['DE1','DE',163,L1],['DT1','DT',211,L1],['DT2','DT',259,L1],['DE2','DE',307,L1],['WL','W',170,L2],['ML','M',235,L2],['SL','S',300,L2],['CB1','CB',40,LOS-55],['CB2','CB',450,LOS-55],['FS','FS',205,L3],['SS','SS',265,L3]],
  '3-4-4':[['DE1','DE',163,L1],['NT','NT',235,L1],['DE2','DE',307,L1],['OL1','W',105,LOS-40],['IL1','M',205,L2],['IL2','M',265,L2],['OL2','S',365,LOS-40],['CB1','CB',40,LOS-55],['CB2','CB',450,LOS-55],['FS','FS',205,L3],['SS','SS',265,L3]],
@@ -154,14 +154,14 @@ function pathD(pts,curve){const P=pts.map(p=>[+p[0],+p[1]]);if(!curve||P.length<
  for(let i=0;i<P.length-1;i++){const p0=P[i-1]||P[i],p1=P[i],p2=P[i+1],p3=P[i+2]||p2;d+=' C'+(p1[0]+(p2[0]-p0[0])/6)+' '+(p1[1]+(p2[1]-p0[1])/6)+','+(p2[0]-(p3[0]-p1[0])/6)+' '+(p2[1]-(p3[1]-p1[1])/6)+','+p2[0]+' '+p2[1]}return d}
 function svgOf(d,sel,cur,selL){const n=++svgN,used=new Set(),edit=selL!==undefined;
  const lines=(d.l||[]).concat(cur?[cur]:[]);lines.forEach(l=>used.add(l.col||'#ffffff'));
- let s=`<svg viewBox="0 0 ${VW} ${VH}" xmlns="http://www.w3.org/2000/svg"><defs>`+[...used].map(c=>`<marker id="a${n}${c.slice(1)}" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L8 4L0 8z" fill="${c}"/></marker>`).join('')+`</defs>`;
- s+=`<rect width="${VW}" height="${VH}" fill="#101c14"/>`;
+ let s=`<svg viewBox="0 ${VT} ${VW} ${VH-VT}" xmlns="http://www.w3.org/2000/svg"><defs>`+[...used].map(c=>`<marker id="a${n}${c.slice(1)}" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L8 4L0 8z" fill="${c}"/></marker>`).join('')+`</defs>`;
+ s+=`<rect y="${VT}" width="${VW}" height="${VH-VT}" fill="#101c14"/>`;
  const lab=(x,y,t,an)=>`<text x="${x}" y="${y}" fill="#ffffff66" font-size="9" font-family="sans-serif" text-anchor="${an||'middle'}">${t}</text>`;
- for(let k=-12;k<=12;k++){const y=LOS+k*5*YD;if(y>2&&y<VH-2)s+=`<line x1="0" x2="${VW}" y1="${y}" y2="${y}" stroke="#ffffff14"/>`}   // 5-yard lines
+ for(let k=-14;k<=12;k++){const y=LOS+k*5*YD;if(y>VT+2&&y<VH-2)s+=`<line x1="0" x2="${VW}" y1="${y}" y2="${y}" stroke="#ffffff14"/>`}   // 5-yard lines
  // numbers: 6 ft tall, top 9 yards in, bottom 7 yards in, both sides
- s+=`<line x1="1" x2="1" y1="0" y2="${VH}" stroke="#ffffff77" stroke-width="2"/><line x1="${VW-1}" x2="${VW-1}" y1="0" y2="${VH}" stroke="#ffffff77" stroke-width="2"/>`;
+ s+=`<line x1="1" x2="1" y1="${VT}" y2="${VH}" stroke="#ffffff77" stroke-width="2"/><line x1="${VW-1}" x2="${VW-1}" y1="${VT}" y2="${VH}" stroke="#ffffff77" stroke-width="2"/>`;
  // hash marks, a tick every yard, longer every 5
- for(const hx of [HASHX,HASHR])for(let k=-12;k<=12;k++){const y=LOS+k*YD;if(y<3||y>VH-2)continue;const w=k%5===0?18:9;s+=`<line x1="${hx-w/2}" x2="${hx+w/2}" y1="${y}" y2="${y}" stroke="#ffffff66" stroke-width="1.4"/>`}
+ for(const hx of [HASHX,HASHR])for(let k=-16;k<=12;k++){const y=LOS+k*YD;if(y<VT+3||y>VH-2)continue;const w=k%5===0?18:9;s+=`<line x1="${hx-w/2}" x2="${hx+w/2}" y1="${y}" y2="${y}" stroke="#ffffff66" stroke-width="1.4"/>`}
  // yard numerals (6 ft tall), both read bottom to top: 4 on the bottom, 0 on top
  for(const [cx,rot] of [[(NB+NT)/2,-90],[VW-(NB+NT)/2,-90]])s+=`<text x="${cx}" y="${LOS}" transform="rotate(${rot} ${cx} ${LOS})" fill="#ffffff26" font-size="36" font-weight="700" font-family="sans-serif" text-anchor="middle" dominant-baseline="central" letter-spacing="3">40</text>`;
  s+=`<line x1="0" x2="${VW}" y1="${LOS}" y2="${LOS}" stroke="#ffffff55" stroke-dasharray="6 5"/>`;
@@ -184,6 +184,8 @@ let GLO=null;function glossary(){try{GLO=window.GL?GL.load(PROGRAM):null}catch(e
 function fmParse(name){const m=String(name||'').trim().match(/^(.*?)\s+(LT|RT|LEFT|RIGHT)$/i);if(!m)return{base:String(name||'').trim(),side:''};const x=m[2].toUpperCase();return{base:m[1].trim(),side:(x==='LT'||x==='LEFT')?'LT':'RT'}}
 /* Lite and Heavy are formation tags that move the tackle: adding the tag moves him, removing it puts him back */
 function tagDraw(d,name,on){const u=String(name).toUpperCase(),t=d&&d.t;if(!t||!t.LT||!t.RT)return;if(u!=='LITE'&&u!=='HEAVY')return;if(typeof E!=='undefined'&&E&&d===E.d)snap();if(on)LOOK.ftag[u](t);else{const bd=baseDraw().t,k=u==='LITE'?'LT':'RT';t[k].x=bd[k].x;t[k].y=bd[k].y}}
+const SEQ0=['ftag','motion','formation','tag','concept'];
+function seqKeys(){const A=almData(),q=(A&&A.lists&&A.lists.callSeq)||[],o=q.filter(k=>SEQ0.includes(k));SEQ0.forEach(k=>{if(!o.includes(k))o.push(k)});return o}
 const bTags=(b,s)=>((b&&b.ftags)||[]).filter(x=>String(x).toUpperCase()!==String((s&&s.ftag)||'').toUpperCase());
 function fmTerm(g,name){if(!g)return null;const{base}=fmParse(name);return GL.find(g,'formation',name)||(base?GL.find(g,'formation',base):null)}
 function mirrorDraw(d){const o=clone(d),m=x=>Math.round(VW-x);for(const k in o.t)o.t[k].x=m(o.t[k].x);[['LT','RT'],['LG','RG']].forEach(([a,b])=>{if(o.t[a]&&o.t[b]){const x=o.t[a].x,y=o.t[a].y;o.t[a].x=o.t[b].x;o.t[a].y=o.t[b].y;o.t[b].x=x;o.t[b].y=y}});(o.l||[]).forEach(l=>l.pts=l.pts.map(q=>[m(q[0]),q[1]]));(o.sh||[]).forEach(h=>h.x=m(h.x));return o}
@@ -217,9 +219,11 @@ function samplePlan(){const cols=[['Play 1',''],['Play 2',''],['Play 3',''],['Pl
    [],t=>{t.RT.x=t.LT.x-OLSP;t.RT.y=LOS;t.Y.on=0;t.M.on=1;t.H.on=1})]}}
 
 /* ---------- main render ---------- */
-function cellHTML(c,b){if(!c)return`<div class="cc empty">+</div>`;const s=c.s||{},main=s.concept||s.tag||s.formation||'',extra=SLOTS.filter(x=>s[x[0]]&&s[x[0]]!==main).map(x=>s[x[0]]);const bt=bTags(b,s);if(bt.length&&(main||extra.length))extra.unshift(...bt);
- const parts=[];if(!main&&!extra.length&&!c.n)return`<div class="cc empty">+</div>`;
- return`<div class="cc"><b>${esc(main||extra.shift()||'')}</b>${extra.length?`<span>${esc(extra.join(' · '))}</span>`:''}${c.n?`<span style="text-transform:none">${esc(c.n)}</span>`:''}</div>`}
+function cellHTML(c,b){if(!c)return`<div class="cc empty">+</div>`;const s=c.s||{},it=[];bTags(b,s).forEach(v=>it.push(['bt',v]));seqKeys().forEach(k=>{if(s[k])it.push([k,s[k]])});
+ if(!it.length&&!c.n)return`<div class="cc empty">+</div>`;
+ let mi=it.findIndex(x=>x[0]==='concept');if(mi<0)mi=it.findIndex(x=>x[0]==='tag');if(mi<0)mi=it.findIndex(x=>x[0]==='formation');if(mi<0)mi=it.length-1;
+ const bef=it.slice(0,Math.max(mi,0)).map(x=>x[1]),aft=it.slice(mi+1).map(x=>x[1]),main=mi>=0&&it[mi]?it[mi][1]:'';
+ return`<div class="cc">${bef.length?`<span>${esc(bef.join(', '))}</span>`:''}<b>${esc(main)}</b>${aft.length?`<span>${esc(aft.join(', '))}</span>`:''}${c.n?`<span style="text-transform:none">${esc(c.n)}</span>`:''}</div>`}
 function render(){const p=plan();
  $('plan').innerHTML=ST.rows.map(x=>`<option value="${x.id}" ${p&&x.id===p.id?'selected':''}>${esc(x.name)}</option>`).join('');
  if(!p){$('main').innerHTML='<div class="empty">No gameplan yet.<br><br><button class="btn pri" id="mk0">Start a plan</button> '+(signedIn()?'':'<button class="btn" id="mk1">Start with the sample</button>')+'</div>';
@@ -532,8 +536,8 @@ $('scout').onclick=()=>{const p=plan();if(!p)return toast('Start a plan first');
   }catch(err){box.innerHTML='<p style="color:var(--bad)">'+esc(err.message||err)+'</p>'}}};
 
 /* ---------- send to Mental Reps ---------- */
-const callText=(c,b)=>{if(!c)return'';const s=c.s||{},w=SLOTS.map(x=>s[x[0]]).filter(Boolean);return w.length?[...bTags(b,s),...w].join(' '):''};
-function svgImg(d){const m=svgOf(d).replace('<svg viewBox','<svg width="'+VW+'" height="'+VH+'" viewBox');return'data:image/svg+xml;base64,'+btoa(unescape(encodeURIComponent(m)))}
+const callText=(c,b)=>{if(!c)return'';const s=c.s||{},w=seqKeys().map(k=>s[k]).filter(Boolean);return w.length?[...bTags(b,s),...w].join(' '):''};
+function svgImg(d){const m=svgOf(d).replace('<svg viewBox','<svg width="'+VW+'" height="'+(VH-VT)+'" viewBox');return'data:image/svg+xml;base64,'+btoa(unescape(encodeURIComponent(m)))}
 function mrCards(p,o){const out=[],names=[...new Set(p.blocks.map(b=>b.name).filter(Boolean))],calls=[];
  p.blocks.forEach(b=>p.rows.forEach(r=>p.cols.forEach(c=>{const t=callText(b.cells[r.id+'|'+c.id],b);if(t)calls.push({b,r,c,t})})));
  const texts=[...new Set(calls.map(k=>k.t))],some=(a,n)=>a.slice().sort(()=>Math.random()-.5).slice(0,n);
@@ -626,7 +630,7 @@ function edRender(){const p=plan(),b=p.blocks[E.bi];
    <div class="k" style="margin-top:8px">Formation tags</div><div class="chips">${(b.ftags||[]).map((x,i)=>`<button class="chip on" data-e="ftrm" data-i="${i}" title="Tap to remove">${esc(x)} ✕</button>`).join('')}<button class="chip" data-e="ftadd">+ Add tag</button></div>
    <div class="note" style="margin-top:6px">Tags and the standard are saved on this formation in your glossary, so picking it later fills them in.</div></div>
  </div></div>`}
-function pt(ev){const sv=$('cv').querySelector('svg'),m=sv.getScreenCTM();if(!m)return{x:0,y:0};const q=sv.createSVGPoint();q.x=ev.clientX;q.y=ev.clientY;const r=q.matrixTransform(m.inverse());return{x:Math.max(8,Math.min(VW-8,Math.round(r.x))),y:Math.max(8,Math.min(VH-8,Math.round(r.y)))}}
+function pt(ev){const sv=$('cv').querySelector('svg'),m=sv.getScreenCTM();if(!m)return{x:0,y:0};const q=sv.createSVGPoint();q.x=ev.clientX;q.y=ev.clientY;const r=q.matrixTransform(m.inverse());return{x:Math.max(8,Math.min(VW-8,Math.round(r.x))),y:Math.max(VT+8,Math.min(VH-8,Math.round(r.y)))}}
 function finishLine(){if(E.cur&&E.cur.pts.length>1){snap();E.d.l.push(E.cur)}E.cur=null}
 function redrawCanvas(){const cv=$('cv');if(cv)cv.innerHTML=svgOf(E.d,E.sel,E.cur,E.selL)}
 $('ed').addEventListener('pointerdown',e=>{const cv=e.target.closest('#cv');if(!cv||!E)return;const g=e.target.closest('[data-k]'),p0=pt(e);
@@ -654,10 +658,10 @@ $('ed').addEventListener('pointerdown',e=>{const cv=e.target.closest('#cv');if(!
  E.cur.pts.push([p0.x,p0.y]);E.cur.dot=E.dot;E.cur.arrow=E.arrow&&!E.blk;E.cur.blk=E.blk;E.cur.curve=E.curve;E.cur.col=E.col;finishLine();E.selL=null;E.sel=null;redrawCanvas();edRender();e.preventDefault()});
 $('ed').addEventListener('pointermove',e=>{if(!E||!E.drag)return;const d=E.drag,p1=pt(e),dx=p1.x-d.p0.x,dy=p1.y-d.p0.y;
  if(d.kind==='free'){const P=E.cur&&E.cur.pts,l=P&&P[P.length-1];if(l&&Math.hypot(p1.x-l[0],p1.y-l[1])>=4){P.push([p1.x,p1.y]);redrawCanvas()}return}
- if(d.kind==='sh'){const H=E.d.sh[d.si];H.x=Math.max(16,Math.min(VW-16,d.ox+dx));H.y=Math.max(18,Math.min(VH-16,d.oy+dy))}
+ if(d.kind==='sh'){const H=E.d.sh[d.si];H.x=Math.max(16,Math.min(VW-16,d.ox+dx));H.y=Math.max(VT+18,Math.min(VH-16,d.oy+dy))}
  else if(d.kind==='pt')E.d.l[d.li].pts[d.pi]=[p1.x,p1.y];
- else if(d.kind==='ln'){const xs=d.orig.map(q=>q[0]),ys=d.orig.map(q=>q[1]),mx=Math.max(8-Math.min(...xs),Math.min(VW-8-Math.max(...xs),dx)),my=Math.max(8-Math.min(...ys),Math.min(VH-8-Math.max(...ys),dy));E.d.l[d.li].pts=d.orig.map(q=>[q[0]+mx,q[1]+my])}
- else for(const k in d.start){const s0=d.start[k],t=E.d.t[k];t.x=Math.max(8,Math.min(VW-8,s0.x+dx));t.y=Math.max(8,Math.min(VH-8,s0.y+dy))}
+ else if(d.kind==='ln'){const xs=d.orig.map(q=>q[0]),ys=d.orig.map(q=>q[1]),mx=Math.max(8-Math.min(...xs),Math.min(VW-8-Math.max(...xs),dx)),my=Math.max(VT+8-Math.min(...ys),Math.min(VH-8-Math.max(...ys),dy));E.d.l[d.li].pts=d.orig.map(q=>[q[0]+mx,q[1]+my])}
+ else for(const k in d.start){const s0=d.start[k],t=E.d.t[k];t.x=Math.max(8,Math.min(VW-8,s0.x+dx));t.y=Math.max(VT+8,Math.min(VH-8,s0.y+dy))}
  redrawCanvas()});
 const endDrag=()=>{if(E&&E.drag&&E.drag.kind==='free'){E.drag=null;finishFree();E.sel=null;E.selL=null;E.selS=null;redrawCanvas();edRender();return}if(E&&E.drag){const dg=E.drag,k=dg.kind;E.drag=null;if(E.hist.length&&JSON.stringify(E.d)===E.hist[E.hist.length-1]){E.hist.pop();if(k==='tok'&&dg.was){E.sel=null;redrawCanvas()}}else{E.sel=null;E.selL=null;E.selS=null;redrawCanvas()}edRender()}};
 $('ed').addEventListener('pointerdown',e=>{if(!E||!e.target.isConnected||e.target.closest('button,.chip,.sw,input,#cv,.fh'))return;if(E.sel||E.selL!=null||E.selS!=null){E.sel=null;E.selL=null;E.selS=null;E.cur=null;redrawCanvas();edRender()}});
