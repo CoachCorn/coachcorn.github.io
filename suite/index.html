@@ -134,7 +134,7 @@ function theirD(opp){try{const A=JSON.parse(localStorage.getItem(ALMK()));const 
  const g=A.games.find(g=>g.scout&&(U(g.opp)===U(opp)||U(g.scout.name).includes(U(opp))));if(!g)return null;const R=g.scout.rows.filter(r=>r.cv);if(!R.length)return null;
  const m={};R.forEach(r=>m[r.cv]=(m[r.cv]||0)+1);const top=Object.entries(m).sort((a,b)=>b[1]-a[1])[0];const rr=g.scout.rows.filter(r=>r.rs!=='');
  const pr=rr.length?Math.round(100*rr.filter(r=>+r.rs>=4).length/rr.length):null;return{cov:top[0],covP:Math.round(100*top[1]/R.length),pr,n:g.scout.rows.length}}catch(e){return null}}
-function nextGame(){try{const p=(JSON.parse(localStorage.getItem('suite_sync'))||{}).program||'deer-creek';const S=JSON.parse(localStorage.getItem('schedule_v1_'+p));if(!S)return null;
+function nextGame(){try{const sy=JSON.parse(localStorage.getItem('suite_sync')),signed=!!(sy&&sy.token&&sy.exp>Date.now()),p=signed?(sy.program||'deer-creek'):'demo';const S=JSON.parse(localStorage.getItem('schedule_v1_'+p));if(!S)return null;
  const today=new Date(new Date().toDateString()+' 12:00');const r=S.rows.find(r=>r.date&&new Date(r.date+'T12:00')>=today&&!(r.us!==''&&r.us!=null));if(!r)return null;
  const d=Math.round((new Date(r.date+'T12:00')-today)/864e5);return{opp:r.opp,ha:r.ha,date:r.date,logo:r.logo,color:r.color,when:d===0?'Today':d===1?'Tomorrow':'in '+d+' days'}}catch(e){return null}}
 function renderHome(){const s=SUITESYNC.status(),n=reviewCount(),ai=almInfo(),ng=nextGame();
