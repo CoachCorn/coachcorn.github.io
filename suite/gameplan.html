@@ -459,7 +459,7 @@ function libOpen(){const g=glossary();if(!g)return toast('No glossary on this de
  const exact=all.some(t=>t.name.toUpperCase()===u);
  $('mbox').style.width='min(760px,96vw)';
  $('mbox').innerHTML=`<h3>Formation library <span class="mut" style="font-weight:400">${drawn} of ${all.length} drawn</span></h3>
- <div class="note">Every formation in your glossary. Tap Draw to set its standard drawing; the grid, Draw all looks and new blocks start from it. Tick formations to print them.</div>
+ <div class="note">Every formation in your glossary. Tap Draw to set its standard drawing; the grid, Draw all looks and new blocks start from it. Select formations to print them.</div>
  <input id="lb_q" value="${esc(LIB.q)}" placeholder="Search, or type a new formation name" autocomplete="off" style="width:100%;padding:10px;margin:6px 0">
  ${u&&!exact?`<button class="btn pri" data-ladd="1" style="width:100%;margin-bottom:6px">Add “${esc(LIB.q.trim())}” as a new formation</button>`:''}
  <div class="chips" style="margin-bottom:6px">${fchip('all','All')}${fchip('todo','Not drawn')}${fchip('done','Drawn')}${pers.map(x=>fchip(x,x+'p')).join('')}</div>
@@ -487,7 +487,7 @@ function libOpen(){const g=glossary();if(!g)return toast('No glossary on this de
    E={bi:-1,lb:{name:t.name,pers:libPers(t),ftags:clone(t.ftags||[]),cells:{},draw:null},look:null,d:libDraw(t)||baseDraw(),sel:null,selL:null,mode:'move',cur:null,dot:false,arrow:true,col:COLS[0],grp:true,hist:[],drag:null};$('ed').classList.add('show');return edRender()}
   if(T('[data-lprn]'))return libPrint()};
  $('mbox').onkeydown=null}
-function libPrint(){const g=glossary(),ts=libTerms().filter(t=>LIB.sel.has(t.id)&&libDraw(t));if(!ts.length)return toast('Tick the formations to print first');
+function libPrint(){const g=glossary(),ts=libTerms().filter(t=>LIB.sel.has(t.id)&&libDraw(t));if(!ts.length)return toast('Select the formations to print first');
  const n=LIB.pp,cols=n<=4?2:n<=10?2:n<=20?4:5;let h='';for(let i=0;i<ts.length;i+=n)h+=`<div class="pg" style="grid-template-columns:repeat(${cols},1fr)">${ts.slice(i,i+n).map(t=>`<div class="fc"><b>${esc(t.name)}${libPers(t)?' · '+esc(libPers(t))+'p':''}</b>${svgOf(libDraw(t))}</div>`).join('')}</div>`;
  let el=$('libprint');if(!el){el=document.createElement('div');el.id='libprint';document.body.appendChild(el)}el.innerHTML=h;
  document.body.classList.add('libp');const done=()=>{document.body.classList.remove('libp');removeEventListener('afterprint',done)};addEventListener('afterprint',done);

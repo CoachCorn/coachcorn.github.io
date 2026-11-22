@@ -521,7 +521,7 @@ async function aiTag(idx){
       p.conf='low';p.note='AI read failed ('+((e&&e.code)||'error')+')'}
     refresh();if(S.sel===i)renderDetail();
   }
-  {const sk=S.plays.filter(p=>p.skip&&p.src==='ai').length;$('#aiStatus').textContent=done?`Read ${done} play${done>1?'s':''}${sk?`; ${sk} skipped as not our offense (untick "Not a snap" on any it got wrong)`:''}. Work the review queue.`:''}$('#aiStop').hidden=true;$('#aiAll').disabled=!S.sample;S.aiCtl=null;refresh();if(S.sel>=0)renderDetail();
+  {const sk=S.plays.filter(p=>p.skip&&p.src==='ai').length;$('#aiStatus').textContent=done?`Read ${done} play${done>1?'s':''}${sk?`; ${sk} skipped as not our offense (clear "Not a snap" on any it got wrong)`:''}. Work the review queue.`:''}$('#aiStop').hidden=true;$('#aiAll').disabled=!S.sample;S.aiCtl=null;refresh();if(S.sel>=0)renderDetail();
 }
 $('#aiAll').onclick=()=>aiTag(S.plays.map((p,i)=>i).filter(i=>!S.plays[i].conf&&S.plays[i].src!=='human'&&!S.plays[i].skip));
 $('#aiStop').onclick=()=>S.aiCtl&&S.aiCtl.abort();
@@ -771,7 +771,7 @@ function buildG(){compute();const c=CFG(),R=rosterMap(),QB=new Set(c.qbs);
   return {id:CUR,local:true,clipBase:cloudBase(CUR),kind:KIND(),view:'staff',title:c.game||(TEAM+' vs '+(c.opp||'opponent')),opponent:c.opp||'Opponent',final:{us:us??'–',them:them??'–',result:res},
     scoreTimeline:us!=null?[{when:'Final',us,them}]:[],goals:{eff:c.goalEff,expl:c.goalExp},plays,drives,stats,byDown,explosives,turningPoints,summary,
     why:autoWhy(plays,drives,s,c,R,QB),notes:[S.alm.length?'Tags: film plus almanac (down, distance and spot from the almanac; hash and checks from film).':'Tags: film only (opponent scout mode); down and distance are worked out from the spots.',
-      nRev?`${nRev} plays still flagged for review in Film Tagger.`:'Review queue is clear.','"Plays that turned the tide" are picked automatically; tick or untick "Turned the tide" on a play to change them.'],accuracy:null};
+      nRev?`${nRev} plays still flagged for review in Film Tagger.`:'Review queue is clear.','"Plays that turned the tide" are picked automatically; select or clear "Turned the tide" on a play to change them.'],accuracy:null};
 }
 function statBlock(P,R,QB){const sn=P.filter(x=>x.result&&x.result!=='Timeout'),pl=sn.filter(x=>x.result!=='Penalty'),pen=sn.filter(x=>x.result==='Penalty');
   const isR=x=>/^Rush|^Scramble/.test(x.result),isC=x=>/^Complete/.test(x.result),isA=x=>/^(Complete|Incomplete|Interception)/.test(x.result),isS=x=>x.result==='Sack';
