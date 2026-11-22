@@ -535,9 +535,11 @@ function openCell(bi,key){const p=plan(),b=p.blocks[bi],r=p.rows.find(x=>x.id===
 let E=null;
 function openDraw(bi,look){const p=plan(),b=p.blocks[bi];E={bi,look:look||null,d:clone(look?look.d:(b.draw||baseDraw())),sel:null,selL:null,mode:'move',cur:null,dot:false,arrow:true,col:COLS[0],grp:true,hist:[],drag:null};
  if(!E.d.t)E.d=baseDraw();$('ed').classList.add('show');edRender()}
-function snap(){E.hist.push(JSON.stringify(E.d));if(E.hist.length>60)E.hist.shift()}
+function snap(){E.hist.push(JSON.stringify(E.d));E.redo=[];if(E.hist.length>60)E.hist.shift()}
+function edUndo(){if(E.cur){E.cur=null;return}if(!E.hist.length)return;(E.redo||(E.redo=[])).push(JSON.stringify(E.d));E.d=JSON.parse(E.hist.pop());E.selL=null;E.combo=null}
+function edRedo(){if(!E.redo||!E.redo.length)return;E.hist.push(JSON.stringify(E.d));E.d=JSON.parse(E.redo.pop());E.selL=null}
 function edRender(){const p=plan(),b=p.blocks[E.bi];
- $('ed').innerHTML=`<div class="fh"><b style="text-transform:uppercase">${esc(b.name||'Formation')}</b><span class="mut">${esc(b.pers||'')}</span><span class="sp"></span><button class="btn" data-e="cancel">Cancel</button><button class="btn pri" data-e="save">Save drawing</button></div>
+ $('ed').innerHTML=`<div class="fh"><b style="text-transform:uppercase">${esc(b.name||'Formation')}</b><span class="mut">${esc(b.pers||'')}</span><span class="sp"></span><button class="btn" data-e="undo">Undo</button><button class="btn" data-e="redo">Redo</button><button class="btn" data-e="cancel">Cancel</button><button class="btn pri" data-e="save">Save drawing</button></div>
  <div class="fb"><div class="cv" id="cv">${svgOf(E.d,E.sel,E.cur,E.selL)}</div><div class="pn">
   <div class="g"><div class="k">Players on the field</div><div class="chips">${SK.map(k=>`<button class="chip ${E.d.t[k]&&E.d.t[k].on?'on':'off'}" data-e="pl" data-k="${k}">${k}</button>`).join('')}</div></div>
   <div class="g"><div class="k">Offensive line</div><div class="chips"><button class="chip ${E.grp?'on':''}" data-e="grp">Move as group</button><button class="chip ${!E.grp?'on':''}" data-e="one">Move one at a time</button></div>
@@ -546,7 +548,7 @@ function edRender(){const p=plan(),b=p.blocks[E.bi];
   <div class="g"><div class="k">Tap to</div><div class="chips"><button class="chip ${E.mode==='move'?'on':''}" data-e="mm">Move / edit</button><button class="chip ${E.mode==='line'?'on':''}" data-e="ml">Draw a line</button><button class="chip ${E.mode==='combo'?'on':''}" data-e="mc">Combo block</button></div>
    <div class="note" style="margin-top:6px">${E.mode==='move'?(E.selL!=null?'Line selected: drag a purple dot to reshape, lengthen or shorten it, drag the line to move it, or delete it. Color and style buttons change it.':'Drag a player where he lines up. Tap a line to edit it.'):(E.mode==='combo'?(!Object.values(E.d.t).some(x=>x.df&&x.on)?'Turn on a defense first (Defense, below), then tap a lineman.':!(E.combo&&E.combo.a)?'Combo: tap the offensive lineman.':!E.combo.b?'Now tap the defender he blocks.':!E.combo.c?'Now tap the lineman he is combo-ing with.':'Both blocks are drawn. Tap the field to send the climb up to the next level, or tap another lineman to start a new combo.'):E.cur?'Tap the field to add points. Tap Done when the route ends.':(E.sel?'Tap the field to start a line from '+E.sel+'.':'Tap a player first, then tap the field.'))}</div>
    ${E.mode==='line'?`<div class="chips"><button class="chip" data-e="done">Done with line</button></div>`:''}</div>
-  <div class="g"><div class="k">Line style</div><div class="chips"><button class="chip ${!E.dot?'on':''}" data-e="solid">Solid</button><button class="chip ${E.dot?'on':''}" data-e="dotted">Dotted (motion / shift)</button><button class="chip ${E.arrow&&!E.blk?'on':''}" data-e="arrow">Arrowhead</button><button class="chip ${E.blk?'on':''}" data-e="blk">Block |—</button><button class="chip ${E.curve?'on':''}" data-e="curve">Curved</button></div><div class="note">Select a line, then drag a dashed dot on it to bend it.</div>
+  <div class="g"><div class="k">Line style</div><div class="chips"><button class="chip ${!E.dot?'on':''}" data-e="solid">Solid</button><button class="chip ${E.dot?'on':''}" data-e="dotted">Dotted (motion / shift)</button><button class="chip ${E.arrow&&!E.blk?'on':''}" data-e="arrow">Arrowhead</button><button class="chip ${E.blk?'on':''}" data-e="blk">Block</button><button class="chip ${E.curve?'on':''}" data-e="curve">Curved</button></div><div class="note">Select a line, then drag a dashed dot on it to bend it.</div>
    <div>${COLS.map(c=>`<span class="sw ${E.col===c?'on':''}" data-e="col" data-c="${c}" style="background:${c}"></span>`).join('')}</div></div>
   <div class="g"><div class="k">Defense</div><div class="chips">${['4-3-4','3-4-4','3-3-5','4-2-5'].map(q=>`<button class="chip ${E.d.dp===q&&Object.values(E.d.t).some(x=>x.df&&x.on)?'on':''}" data-e="defp" data-p="${q}">${q}</button>`).join('')}<button class="chip" data-e="defoff">Hide defense</button></div><div class="note" style="margin-top:6px">Tap a preset to put that defense on the field. Drag any defender to move him.</div></div>
   <div class="g"><div class="k">Edit</div><div class="chips"><button class="chip" data-e="undo">Undo</button><button class="chip ${E.selL!=null?'on':''}" data-e="dellsel">Delete selected line</button><button class="chip" data-e="dellast">Delete last line</button><button class="chip" data-e="clear">Clear all lines</button></div></div>
@@ -561,6 +563,7 @@ $('ed').addEventListener('pointerdown',e=>{const cv=e.target.closest('#cv');if(!
   if(h){const[li,pi]=h.dataset.h.split(':').map(Number);snap();E.drag={kind:'pt',p0,li,pi};cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);e.preventDefault();return}
   if(g){const k=g.dataset.k;E.sel=k;E.selL=null;snap();const start={};const ids=(OLK.includes(k)&&E.grp)?OLK:[k];ids.forEach(i=>start[i]={x:E.d.t[i].x,y:E.d.t[i].y});E.drag={kind:'tok',p0,start};cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);redrawCanvas();e.preventDefault();return}
   if(ln){const li=+ln.dataset.l,L=E.d.l[li];E.selL=li;E.sel=null;E.dot=!!L.dot;E.arrow=!!L.arrow;E.blk=!!L.blk;E.curve=!!L.curve;E.col=L.col||COLS[0];snap();E.drag={kind:'ln',p0,li,orig:clone(L.pts)};cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);redrawCanvas();e.preventDefault();return}
+  if(E.sel&&E.d.t[E.sel]&&E.d.t[E.sel].on&&!(e.target.closest('[data-l]'))){const t=E.d.t[E.sel];snap();E.d.l.push({pts:[[t.x,t.y],[p0.x,p0.y]],dot:E.dot,arrow:E.arrow&&!E.blk,blk:E.blk,curve:E.curve,col:E.col});E.selL=E.d.l.length-1;E.sel=null;redrawCanvas();edRender();return}
   E.sel=null;E.selL=null;redrawCanvas();edRender();return}
  if(E.mode==='combo'){const k=g&&g.dataset.k,C=E.combo||(E.combo={a:null,b:null,c:null}),T=E.d.t,isD=k=>k&&T[k]&&T[k].df;
   const edge=(from,to,r)=>{const dx=to.x-from.x,dy=to.y-from.y,m=Math.hypot(dx,dy)||1;return[Math.round(from.x+dx/m*r),Math.round(from.y+dy/m*r)]};
@@ -599,12 +602,13 @@ $('ed').addEventListener('click',e=>{const b=e.target.closest('[data-e]');if(!b|
  else if(a==='defp'){snap();E.d.dp=addDefense(t,b.dataset.p)}else if(a==='defoff'){snap();Object.values(t).forEach(x=>{if(x.df)x.on=0});if(E.sel&&String(E.sel).indexOf('D_')===0)E.sel=null}
  else if(a==='col'){E.col=b.dataset.c;if(E.cur)E.cur.col=E.col;if(E.selL!=null){snap();E.d.l[E.selL].col=E.col}}
  else if(a==='dellsel'){if(E.selL!=null){snap();E.d.l.splice(E.selL,1);E.selL=null}}
- else if(a==='undo'){if(E.cur){E.cur=null}else if(E.hist.length){E.d=JSON.parse(E.hist.pop());E.selL=null}}
+ else if(a==='undo')edUndo();else if(a==='redo')edRedo()
  else if(a==='dellast'){snap();E.d.l.pop();E.selL=null}
  else if(a==='clear'){snap();E.d.l=[];E.cur=null;E.selL=null}
  edRender()});
 
 addEventListener('keydown',e=>{if(!E||!$('ed').classList.contains('show'))return;if(/^(INPUT|TEXTAREA|SELECT)$/.test((e.target||{}).tagName||''))return;
+ if((e.metaKey||e.ctrlKey)&&!e.altKey&&/^[zy]$/i.test(e.key)){e.preventDefault();if(e.key.toLowerCase()==='y'||e.shiftKey)edRedo();else edUndo();redrawCanvas();edRender();return}
  if((e.key==='Backspace'||e.key==='Delete')&&E.selL!=null&&E.d.l[E.selL]){e.preventDefault();snap();E.d.l.splice(E.selL,1);E.selL=null;redrawCanvas();edRender()}});
 /* ---------- boot ---------- */
 function boot(){ST=readStore();try{cur=localStorage.getItem('gp_cur')||null}catch(e){}
