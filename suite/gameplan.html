@@ -646,11 +646,11 @@ $('ed').addEventListener('pointerdown',e=>{const cv=e.target.closest('#cv');if(!
   if(isO(k)){if(!C.a||C.c){E.combo={a:k,b:null,c:null};E.sel=k}else if(!C.b&&k!==C.a){C.b=k;E.sel=k}else if(!C.c){C.a=k;C.b=null;E.sel=k}else{E.combo={a:k,b:null,c:null};E.sel=k}}
   else if(isD(k)){if(C.a&&C.b&&!C.c){C.c=k;snap();E.d.l.push(blkLine(T[C.a],T[k],E.col),blkLine(T[C.b],T[k],E.col));E.sel=k}
    else if(C.c&&k!==C.c){snap();E.d.l.push(climbLine(T[C.c],T[k],T.C?T.C.x:T[C.c].x,E.col));fin()}}
-  else if(!k&&C.c)fin();
+  else if(!k&&C.c)fin();else if(!k&&(E.selL!=null||E.selS!=null)){E.selL=null;E.selS=null}
   redrawCanvas();edRender();e.preventDefault();return}
  // line mode
  if(g&&!E.cur){E.sel=g.dataset.k;redrawCanvas();edRender();return}
- if(!E.cur){if(!E.sel||!E.d.t[E.sel]||!E.d.t[E.sel].on)return;const t=E.d.t[E.sel];E.cur={pts:[[t.x,t.y]],dot:E.dot,arrow:E.arrow&&!E.blk,blk:E.blk,curve:E.curve,col:E.col}}
+ if(!E.cur){if(!E.sel||!E.d.t[E.sel]||!E.d.t[E.sel].on){if(E.selL!=null||E.selS!=null){E.selL=null;E.selS=null;redrawCanvas();edRender()}return}const t=E.d.t[E.sel];E.cur={pts:[[t.x,t.y]],dot:E.dot,arrow:E.arrow&&!E.blk,blk:E.blk,curve:E.curve,col:E.col}}
  E.cur.pts.push([p0.x,p0.y]);E.cur.dot=E.dot;E.cur.arrow=E.arrow&&!E.blk;E.cur.blk=E.blk;E.cur.curve=E.curve;E.cur.col=E.col;finishLine();E.selL=E.d.l.length-1;E.sel=null;redrawCanvas();edRender();e.preventDefault()});
 $('ed').addEventListener('pointermove',e=>{if(!E||!E.drag)return;const d=E.drag,p1=pt(e),dx=p1.x-d.p0.x,dy=p1.y-d.p0.y;
  if(d.kind==='free'){const P=E.cur&&E.cur.pts,l=P&&P[P.length-1];if(l&&Math.hypot(p1.x-l[0],p1.y-l[1])>=4){P.push([p1.x,p1.y]);redrawCanvas()}return}
