@@ -34,17 +34,17 @@ main{padding:12px;max-width:1200px;margin:0 auto}
 .pdg input{width:100%;padding:6px}
 .tw{overflow-x:auto;-webkit-overflow-scrolling:touch;border-top:1px solid var(--line)}
 table{border-collapse:collapse;width:100%;table-layout:fixed;min-width:560px}
-th,td{border:1px solid var(--line);padding:0;vertical-align:top}
-th{background:#111c28;text-align:left}
+th,td{border:1px solid var(--line);padding:0;vertical-align:middle}
+th{background:#111c28;text-align:center}
 th .h{padding:7px 8px;font-weight:800;text-transform:uppercase;font-size:13px;cursor:pointer}
 th .s{font-weight:500;color:var(--mut);font-size:11px;text-transform:none;display:block;min-height:13px}
 th.rl{width:92px}
 td.c{height:46px;cursor:pointer}td.c:active{background:#223140}
-td .cc{padding:6px 8px;min-height:44px}
+td .cc{padding:6px 8px;min-height:44px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center}
 td .cc b{display:block;font-size:14px;text-transform:uppercase;letter-spacing:.02em}
 td .cc span{display:block;font-size:11px;color:var(--mut);text-transform:uppercase}
 td .cc.empty{color:#3e5163;font-size:20px}
-.rl{background:#111c28;cursor:pointer;padding:7px 8px;font-weight:700;font-size:12px;text-transform:uppercase;color:var(--mut)}
+.rl{text-align:center;vertical-align:middle;background:#111c28;cursor:pointer;padding:7px 8px;font-weight:700;font-size:12px;text-transform:uppercase;color:var(--mut)}
 .addrow{padding:8px 12px}
 .modal{position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;z-index:30}
 .modal.show{display:flex}
@@ -547,6 +547,11 @@ function finishFree(){const c=E.cur;E.cur=null;if(!c||c.pts.length<2)return;let 
  let eps=c.curve?3:11,P=rdp(c.pts,eps);while(P.length>(c.curve?22:8)&&eps<30){eps+=1.5;P=rdp(c.pts,eps)}
  if(!c.curve&&P.length===2){const a=P[0],z=P[1],dx=z[0]-a[0],dy=z[1]-a[1],ang=Math.atan2(Math.abs(dx),Math.abs(dy))*180/Math.PI;if(ang<7)P=[a,[a[0],z[1]]];else if(ang>83)P=[a,[z[0],a[1]]]}
  P=P.map(q=>[Math.round(q[0]),Math.round(q[1])]);snap();E.d.l.push({pts:P,dot:c.dot,arrow:c.arrow,blk:c.blk,curve:!!c.curve&&P.length>=3,col:c.col});E.selL=E.d.l.length-1;E.sel=null}
+const blkLine=(from,to,col)=>{const edge=(a,b,r)=>{const dx=b.x-a.x,dy=b.y-a.y,m=Math.hypot(dx,dy)||1;return[Math.round(a.x+dx/m*r),Math.round(a.y+dy/m*r)]};return{pts:[edge(from,to,12),edge(to,from,14)],blk:1,col}};
+function climbLine(D1,D2,cx,col){const dx=D1.x-D2.x,dy=D1.y-D2.y,m=Math.hypot(dx,dy)||1,wx=dx/m,wy=dy/m,side=D1.x>=cx?1:-1,A=55*Math.PI/180,rot=a=>[wx*Math.cos(a)-wy*Math.sin(a),wx*Math.sin(a)+wy*Math.cos(a)],u1=rot(A),u2=rot(-A),u=(u1[0]*side>=u2[0]*side)?u1:u2,L=Math.max(34,m*.75),
+  C={x:D2.x+u[0]*L,y:D2.y+u[1]*L},E={x:D2.x+u[0]*14,y:D2.y+u[1]*14},cm=Math.hypot(C.x-D1.x,C.y-D1.y)||1,S={x:D1.x+(C.x-D1.x)/cm*14,y:D1.y+(C.y-D1.y)/cm*14},R=Math.round,pts=[];
+  [0,.16,.32,.48,.64,.8,.92,.98,1].forEach(t=>{const a=(1-t)*(1-t),b=2*t*(1-t),c=t*t;pts.push([R(a*S.x+b*C.x+c*E.x),R(a*S.y+b*C.y+c*E.y)])});
+  return{pts,curve:true,blk:1,col}}
 function snap(){E.hist.push(JSON.stringify(E.d));E.redo=[];if(E.hist.length>60)E.hist.shift()}
 function edUndo(){if(E.cur){E.cur=null;return}if(!E.hist.length)return;(E.redo||(E.redo=[])).push(JSON.stringify(E.d));E.d=JSON.parse(E.hist.pop());E.selL=null;E.selS=null;E.combo=null}
 function edRedo(){if(!E.redo||!E.redo.length)return;E.hist.push(JSON.stringify(E.d));E.d=JSON.parse(E.redo.pop());E.selL=null}
@@ -559,7 +564,7 @@ function edRender(){const p=plan(),b=p.blocks[E.bi];
    <div class="chips"><button class="chip" data-e="lite">Lite</button><button class="chip" data-e="heavy">Heavy</button><button class="chip" data-e="reset">Reset to base</button></div>
    <div class="note" style="margin-top:6px">Heavy: right tackle over to the left side. Lite: left tackle over to the right side.</div></div>
   <div class="g"><div class="k">Tap to</div><div class="chips"><button class="chip ${E.mode==='move'?'on':''}" data-e="mm">Move / edit</button><button class="chip ${E.mode==='line'?'on':''}" data-e="ml">Draw a line</button><button class="chip ${E.mode==='combo'?'on':''}" data-e="mc">Combo block</button><button class="chip ${E.mode==='free'?'on':''}" data-e="mf">Freehand</button><button class="chip ${E.mode==='shape'&&E.shape==='tri'?'on':''}" data-e="rt">Run read ▲</button><button class="chip ${E.mode==='shape'&&E.shape==='cir'?'on':''}" data-e="rc">Throw read ●</button></div>
-   <div class="note" style="margin-top:6px">${E.mode==='free'?'Freehand: drag the route with your finger (start on a player or anywhere), then lift. It straightens automatically. Turn on Curved in Line style to keep it as a smooth curve. Dotted, arrow, block and color apply. Tap Move / edit to change a line afterward.':E.mode==='shape'?'Tap the field to place the '+(E.shape==='tri'?'run read (dotted triangle)':'throw read (dotted circle)')+'. Then drag it to move it.':E.mode==='move'?(E.selL!=null?'Line selected: drag a purple dot to reshape, lengthen or shorten it, drag the line to move it, or delete it. Color and style buttons change it.':'Drag a player where he lines up. Tap a line to edit it.'):(E.mode==='combo'?(!Object.values(E.d.t).some(x=>x.df&&x.on)?'Turn on a defense first (Defense, below), then tap a lineman.':!(E.combo&&E.combo.a)?'Combo: tap the first lineman.':!E.combo.b?'Now tap the lineman he is combo-ing with.':!E.combo.c?'Now tap the defender they both block.':'Tap a second defender for the climb. Tap the field if you are done.'):(E.sel?'Tap the field where the line ends from '+E.sel+'. It is finished when you tap. To bend it, tap the line and drag a dot.':'Tap a player first, then tap the field.'))}</div>
+   <div class="note" style="margin-top:6px">${E.mode==='free'?'Freehand: drag the route with your finger (start on a player or anywhere), then lift. It straightens automatically. Turn on Curved in Line style to keep it as a smooth curve. Dotted, arrow, block and color apply. Tap Move / edit to change a line afterward.':E.mode==='shape'?'Tap the field to place the '+(E.shape==='tri'?'run read (dotted triangle)':'throw read (dotted circle)')+'. Then drag it to move it.':E.mode==='move'?(E.selL!=null?'Line selected: drag a purple dot to reshape, lengthen or shorten it, drag the line to move it, or delete it. Color and style buttons change it.':'Drag a player where he lines up. Tap a line to edit it.'):(E.mode==='combo'?(!Object.values(E.d.t).some(x=>x.df&&x.on)?'Turn on a defense first (Defense, below), then tap a blocker.':!(E.combo&&E.combo.a)?'Combo: tap the first blocker (any offensive player).':!E.combo.b?'Now tap the player he is combo-ing with.':!E.combo.c?'Now tap the defender they both block.':'Tap a second defender for the climb. Tap the field if you are done.'):(E.sel?'Tap the field where the line ends from '+E.sel+'. It is finished when you tap. To bend it, tap the line and drag a dot.':'Tap a player first, then tap the field.'))}</div>
 </div>
   <div class="g"><div class="k">Line style</div><div class="chips"><button class="chip ${!E.dot?'on':''}" data-e="solid">Solid</button><button class="chip ${E.dot?'on':''}" data-e="dotted">Dotted (motion / shift)</button><button class="chip ${E.arrow&&!E.blk?'on':''}" data-e="arrow">Arrowhead</button><button class="chip ${E.blk?'on':''}" data-e="blk">Block</button><button class="chip ${E.curve?'on':''}" data-e="curve">Curved</button></div><div class="note">Select a line, then drag a dashed dot on it to bend it.</div>
    <div class="chips" style="margin-bottom:6px">${LKEY.map(k=>`<button class="chip ${E.col===k[0]?'on':''}" data-e="col" data-c="${k[0]}" style="border-left:6px solid ${k[0]}">${k[1]}</button>`).join('')}</div>
@@ -571,6 +576,7 @@ function pt(ev){const sv=$('cv').querySelector('svg'),m=sv.getScreenCTM();if(!m)
 function finishLine(){if(E.cur&&E.cur.pts.length>1){snap();E.d.l.push(E.cur)}E.cur=null}
 function redrawCanvas(){const cv=$('cv');if(cv)cv.innerHTML=svgOf(E.d,E.sel,E.cur,E.selL)}
 $('ed').addEventListener('pointerdown',e=>{const cv=e.target.closest('#cv');if(!cv||!E)return;const g=e.target.closest('[data-k]'),p0=pt(e);
+ if(E.blk&&!E.cur&&(E.mode==='line'||E.mode==='move')&&g&&E.sel&&E.d.t[E.sel]&&E.d.t[E.sel].on&&!E.d.t[E.sel].df&&E.d.t[g.dataset.k]&&E.d.t[g.dataset.k].df){snap();E.d.l.push(blkLine(E.d.t[E.sel],E.d.t[g.dataset.k],E.col));E.selL=E.d.l.length-1;E.sel=null;redrawCanvas();edRender();e.preventDefault();return}
  if((E.mode==='line'||E.mode==='combo'||E.mode==='shape')&&!E.cur&&!g&&(e.target.closest('[data-l]')||e.target.closest('[data-s]'))){E.mode='move';E.combo=null}
  if(E.mode==='free'){let st=null;if(g){E.sel=g.dataset.k}const t=g&&E.d.t[E.sel];if(t&&t.on)st=[t.x,t.y];E.cur={pts:st?[st]:[[p0.x,p0.y]],dot:E.dot,arrow:E.arrow&&!E.blk,blk:E.blk,curve:!!E.curve,col:E.col,free:1};E.selL=null;E.drag={kind:'free',p0};cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);redrawCanvas();e.preventDefault();return}
  if(E.mode==='shape'){if(!g){snap();(E.d.sh||(E.d.sh=[])).push({k:E.shape,x:p0.x,y:p0.y,col:E.col});E.selS=E.d.sh.length-1;E.sel=null;E.selL=null;E.mode='move';redrawCanvas();edRender()}e.preventDefault();return}
@@ -582,14 +588,10 @@ $('ed').addEventListener('pointerdown',e=>{const cv=e.target.closest('#cv');if(!
   if(ln){E.selS=null;const li=+ln.dataset.l,L=E.d.l[li];E.selL=li;E.sel=null;E.dot=!!L.dot;E.arrow=!!L.arrow;E.blk=!!L.blk;E.curve=!!L.curve;E.col=L.col||COLS[0];snap();E.drag={kind:'ln',p0,li,orig:clone(L.pts)};cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);redrawCanvas();e.preventDefault();return}
   if(E.sel&&E.d.t[E.sel]&&E.d.t[E.sel].on&&!(e.target.closest('[data-l]'))){const t=E.d.t[E.sel];snap();E.d.l.push({pts:[[t.x,t.y],[p0.x,p0.y]],dot:E.dot,arrow:E.arrow&&!E.blk,blk:E.blk,curve:E.curve,col:E.col});E.selL=E.d.l.length-1;E.sel=null;redrawCanvas();edRender();return}
   E.sel=null;E.selL=null;E.selS=null;redrawCanvas();edRender();return}
- if(E.mode==='combo'){const k=g&&g.dataset.k,C=E.combo||(E.combo={a:null,b:null,c:null}),T=E.d.t,isD=k=>k&&T[k]&&T[k].df,fin=()=>{E.combo={a:null,b:null,c:null};E.sel=null};
-  const edge=(from,to,r)=>{const dx=to.x-from.x,dy=to.y-from.y,m=Math.hypot(dx,dy)||1;return[Math.round(from.x+dx/m*r),Math.round(from.y+dy/m*r)]};
-  const blk=(from,to)=>({pts:[edge(from,to,12),edge(to,from,14)],blk:1,col:E.col});
-  const climb=(D1,D2)=>{const cx=T.C?T.C.x:D1.x,dx=D2.x-D1.x,dy=D2.y-D1.y,m=Math.hypot(dx,dy)||1,side=D1.x>=cx?1:-1,nx=-dy/m,ny=dx/m,sg=(nx*side>=0)?1:-1,off=Math.max(26,m*.6),M={x:(D1.x+D2.x)/2+nx*sg*off,y:(D1.y+D2.y)/2+ny*sg*off},ux=M.x-D2.x,uy=M.y-D2.y,um=Math.hypot(ux,uy)||1,R=x=>Math.round(x);
-   return{pts:[edge(D1,M,14),[R(M.x),R(M.y)],[R(D2.x+ux/um*30),R(D2.y+uy/um*30)],[R(D2.x+ux/um*14),R(D2.y+uy/um*14)]],curve:true,blk:1,col:E.col}};
-  if(k&&OLK.includes(k)){if(!C.a||C.c){E.combo={a:k,b:null,c:null};E.sel=k}else if(!C.b&&k!==C.a){C.b=k;E.sel=k}else if(!C.c){C.a=k;C.b=null;E.sel=k}else{E.combo={a:k,b:null,c:null};E.sel=k}}
-  else if(isD(k)){if(C.a&&C.b&&!C.c){C.c=k;snap();E.d.l.push(blk(T[C.a],T[k]),blk(T[C.b],T[k]));E.sel=k}
-   else if(C.c&&k!==C.c){snap();E.d.l.push(climb(T[C.c],T[k]));fin()}}
+ if(E.mode==='combo'){const k=g&&g.dataset.k,C=E.combo||(E.combo={a:null,b:null,c:null}),T=E.d.t,isD=k=>k&&T[k]&&T[k].df,isO=k=>k&&T[k]&&T[k].on&&!T[k].df&&k!=='Q',fin=()=>{E.combo={a:null,b:null,c:null};E.sel=null};
+  if(isO(k)){if(!C.a||C.c){E.combo={a:k,b:null,c:null};E.sel=k}else if(!C.b&&k!==C.a){C.b=k;E.sel=k}else if(!C.c){C.a=k;C.b=null;E.sel=k}else{E.combo={a:k,b:null,c:null};E.sel=k}}
+  else if(isD(k)){if(C.a&&C.b&&!C.c){C.c=k;snap();E.d.l.push(blkLine(T[C.a],T[k],E.col),blkLine(T[C.b],T[k],E.col));E.sel=k}
+   else if(C.c&&k!==C.c){snap();E.d.l.push(climbLine(T[C.c],T[k],T.C?T.C.x:T[C.c].x,E.col));fin()}}
   else if(!k&&C.c)fin();
   redrawCanvas();edRender();e.preventDefault();return}
  // line mode
