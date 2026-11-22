@@ -373,9 +373,14 @@ function parseDef(text){const ok=[],bad=[],steps=[];let subj=null;
   bad.push(cl)}
  return{steps,ok,bad}}
 const SLOTT={ftag:['ftag'],motion:['motion'],concept:['run','pass','oneword'],tag:['tag']};
+/* a slot can hold several terms ("Sword Arc"); split it back into glossary terms, longest match first */
+function splitT(k,v){v=String(v||'').trim();if(!v)return[];const g=glossary();if(!g||!SLOTT[k])return[v];if(SLOTT[k].some(ty=>GL.find(g,ty,v)))return[v];
+ const names=[];SLOTT[k].forEach(ty=>GL.active(g,ty).forEach(x=>names.push(x.name.toLowerCase().split(/\s+/))));names.sort((a,b)=>b.length-a.length);
+ const tk=v.split(/\s+/),out=[];let rest=[];for(let i=0;i<tk.length;){const h=names.find(n=>i+n.length<=tk.length&&n.every((w,j)=>w===tk[i+j].toLowerCase()));if(h){if(rest.length){out.push(rest.join(' '));rest=[]}out.push(tk.slice(i,i+h.length).join(' '));i+=h.length}else{rest.push(tk[i]);i++}}
+ if(rest.length)out.push(rest.join(' '));return out}
 function defOf(k,v){const g=glossary();if(!g)return null;for(const ty of SLOTT[k]){const x=GL.find(g,ty,v);if(x)return(x.meaning&&x.meaning.text||'').trim()}return null}
 function lookFor(b,c){if(c&&c.look&&c.look.d)return{d:c.look.d,did:[],guess:[],not:[],none:[],gl:[],part:[],defs:[],saved:1};const d=clone(b.draw||baseDraw());d.l=[];const t=d.t,L=d.l,s=(c&&c.s)||{},did=[],guess=[],not=[],none=[],gl=[],part=[],defs=[];
- for(const k of ['ftag','motion','concept','tag']){const v=s[k];if(!v)continue;const df=defOf(k,v);defs.push({k,v,df});
+ for(const [k,v] of ['ftag','motion','concept','tag'].flatMap(k=>s[k]?splitT(k,s[k]).map(v=>[k,v]):[])){const df=defOf(k,v);defs.push({k,v,df});
   if(k==='concept'||k==='tag'){not.push(v);continue}
   const pr=df?parseDef(df):null,B=LOOK[k][String(v).toUpperCase()],bf=B&&(typeof B==='function'?B:B.fn);
   if(pr&&pr.steps.length&&!pr.bad.length){try{pr.steps.forEach(fn=>fn(t,L));gl.push(v);continue}catch(e){}}
@@ -428,7 +433,7 @@ $('looks').onclick=()=>{const p=plan();if(!p||!p.blocks.length)return toast('Sta
   if(x.dataset.lk==='redo'){delete c.look;touch(p);return again()}
   if(x.dataset.lk==='send'){x.disabled=true;await lookSend(p,bl,x.dataset.k);return again()}};
  $('lk_cp').onclick=()=>{const L=[],items=[];p.blocks.forEach(b=>p.rows.forEach(r=>p.cols.forEach(c=>{const x=b.cells[r.id+'|'+c.id];if(!x||!x.look||!x.look.edited||!x.look.gen)return;const df=lookDiff(x.look.gen,x.look.d);if(!df.length)return;
-   const defs=['ftag','motion'].map(k=>x.s[k]?x.s[k]+' = '+(defOf(k,x.s[k])||'(no definition)'):'').filter(Boolean),call=b.name+' · '+callText(x);items.push({call,gloss:defs.join(' | '),fix:df.join('\n')});L.push(call+(defs.length?'\n  Glossary: '+defs.join(' | '):'')+'\n  '+df.join('\n  '))})));
+   const defs=['ftag','motion'].flatMap(k=>splitT(k,x.s[k]).map(v=>v+' = '+(defOf(k,v)||'(no definition)'))),call=b.name+' · '+callText(x);items.push({call,gloss:defs.join(' | '),fix:df.join('\n')});L.push(call+(defs.length?'\n  Glossary: '+defs.join(' | '):'')+'\n  '+df.join('\n  '))})));
   const txt=L.length?'Corrections to Draw all looks:\n\n'+L.join('\n\n'):'No edited drawings yet.';const ta=$('lk_ta');ta.style.display='block';ta.value=txt;ta.select();
   let cp='';try{navigator.clipboard.writeText(txt).catch(()=>{});cp=' Also copied.'}catch(e){}
   if(!items.length)return toast('No edited drawings yet.');
@@ -578,36 +583,55 @@ function openCell(bi,key){const p=plan(),b=p.blocks[bi],r=p.rows.find(x=>x.id===
  const m=$('modal'),opts={};SLOTS.forEach(sl=>opts[sl[0]]=terms(sl[2]));
  /* the type bar: one line like "Stack Bubble Counter"; words found in the glossary go to their slot, anything left over is the play */
  const ORD=SEQ0.concat(SLOTS.map(x=>x[0]).filter(k=>!SEQ0.includes(k))),LAB={};SLOTS.forEach(sl=>LAB[sl[0]]=sl[1]);
+ const MULTI={ftag:1,motion:1,tag:1},hasW=(v,n)=>(' '+String(v||'').toUpperCase()+' ').includes(' '+String(n).toUpperCase()+' ');
  function parse(txt){const tk=String(txt).replace(/[(),;]/g,' ').split(/\s+/).filter(Boolean),o={},left=[],cand=[];
   ORD.forEach(k=>(opts[k]||[]).forEach(n=>cand.push([k,n,n.toLowerCase().split(/\s+/)])));cand.sort((a,b)=>b[2].length-a[2].length);
-  for(let i=0;i<tk.length;){let hit=null;for(const q of cand){const L=q[2].length;if(i+L>tk.length||o[q[0]])continue;if(q[2].every((w,j)=>w===tk[i+j].toLowerCase())){hit=q;break}}
-   if(hit){o[hit[0]]=hit[1];i+=hit[2].length}else{left.push(tk[i]);i++}}
-  let drop='';if(left.length){if(!o.concept)o.concept=left.join(' ');else drop=left.join(' ')}
-  return{s:o,drop}}
+  for(let i=0;i<tk.length;){let hit=null;for(const q of cand){const L=q[2].length;if(i+L>tk.length||(o[q[0]]&&!MULTI[q[0]])||(o[q[0]]&&hasW(o[q[0]],q[1])))continue;if(q[2].every((w,j)=>w===tk[i+j].toLowerCase())){hit=q;break}}
+   if(hit){o[hit[0]]=o[hit[0]]?o[hit[0]]+' '+hit[1]:hit[1];i+=hit[2].length}else{left.push([tk[i],i]);i++}}
+  let drop='',unk=left.map(x=>x[0]),tail=[];
+  if(left.length){if(!o.concept){let j=left.length-1;if(left[j][1]===tk.length-1){while(j>0&&left[j-1][1]===left[j][1]-1)j--;tail=left.slice(j).map(x=>x[0]);o.concept=tail.join(' ');drop=left.slice(0,j).map(x=>x[0]).join(' ')}else{o.concept=unk.join(' ');tail=unk.slice()}}else drop=unk.join(' ')}
+  return{s:o,drop,unk,tail}}
  const barText=sx=>ORD.filter(k=>sx[k]).map(k=>sx[k]).join(' ');
- function pv(drop){const o=ORD.filter(k=>C.s[k]).map(k=>`<span class="chip on" style="min-height:0;padding:3px 9px;cursor:default"><small style="opacity:.7">${LAB[k]}</small> ${esc(C.s[k])}</span>`).join(' ');return(o||'<span class="mut">Type the call, e.g. Stack Bubble Counter</span>')+(drop?` <span class="mut" style="color:var(--warn)">Not used: ${esc(drop)}</span>`:'')}
+ function pv(drop,unk){const o=ORD.filter(k=>C.s[k]).map(k=>`<span class="chip on" style="min-height:0;padding:3px 9px;cursor:default"><small style="opacity:.7">${LAB[k]}</small> ${esc(C.s[k])}</span>`).join(' ');return(o||'<span class="mut">Type the call, e.g. Stack Bubble Counter</span>')+(drop&&!(unk&&unk.length)?` <span class="mut" style="color:var(--warn)">Not used: ${esc(drop)}</span>`:'')+(unk&&unk.length?` <span class="mut" style="color:var(--warn)">New: ${esc(unk.join(', '))}</span>`:'')}
+ /* words the glossary does not know: ask what they are, define now or later, then save */
+ const NT=[['tag','Play tag'],['ftag','Formation tag'],['motion','Motion / Shift'],['formation','Formation'],['run','Run play'],['pass','Pass play'],['oneword','One word']];
+ function newTerms(then){const r=parse($('qb').value);if(!r.unk.length)return then();const txt=$('qb').value,keep=$('cn').value;
+  $('mbox').innerHTML=`<h3>New word${r.unk.length>1?'s':''} for the glossary</h3><div class="note">Not in your glossary yet. Pick what each one is. Type a definition now, or leave it blank and define it later (it shows in the glossary's review list).</div>
+  ${r.unk.map((w,i)=>`<div class="slot"><div class="top"><b style="text-transform:uppercase">${esc(w)}</b><select data-nt="${i}">${NT.map(t=>`<option value="${t[0]}" ${(r.tail.includes(w)?'run':'tag')===t[0]?'selected':''}>${t[1]}</option>`).join('')}</select></div><input type="text" data-nm="${i}" placeholder="Definition (optional)" style="width:100%"></div>`).join('')}
+  <div class="note">Words next to each other marked Run, Pass or One word are added as one play (for example "Arc Carolina").</div>
+  <div class="row"><button class="btn pri" data-nx="add">Add to glossary</button><button class="btn" data-nx="later">Add, define later</button><button class="btn" data-nx="skip">Save without adding</button></div>`;
+  $('mbox').onclick=e=>{const x=e.target.closest('[data-nx]');if(!x)return;const g=glossary();
+   if(x.dataset.nx!=='skip'&&g){const items=r.unk.map((w,i)=>({w,ty:$('mbox').querySelector(`[data-nt="${i}"]`).value,m:x.dataset.nx==='later'?'':$('mbox').querySelector(`[data-nm="${i}"]`).value.trim()})),grp=[];
+    for(const it of items){const pv0=grp[grp.length-1],cc=['run','pass','oneword'];if(pv0&&cc.includes(it.ty)&&pv0.ty===it.ty){pv0.w+=' '+it.w;if(it.m)pv0.m=(pv0.m?pv0.m+' ':'')+it.m}else grp.push(Object.assign({},it))}
+    for(const it of grp){const nm=it.ty==='formation'?it.w.toLowerCase().replace(/\b\w/g,c=>c.toUpperCase()):it.w.toUpperCase();GL.add(g,{type:it.ty,name:nm,side:'O',source:'gameplan',needsReview:!it.m,meaning:{text:it.m},uses:it.ty==='tag'?['run','pass']:[]})}
+    GL.save(g);SLOTS.forEach(sl=>opts[sl[0]]=terms(sl[2]));toast('Added to the glossary: '+grp.map(x=>x.w.toUpperCase()).join(', '))}
+   C.s=parse(txt).s;$('mbox').innerHTML='<input id="cn">';$('cn').value=keep;then()}}
  function doSave(){C.n=$('cn').value.trim();Object.keys(C.s).forEach(k=>{if(!C.s[k])delete C.s[k]});if(Object.keys(C.s).length||C.n){const old=b.cells[key],keep=old&&old.look&&JSON.stringify(old.s)===JSON.stringify(C.s);b.cells[key]=keep?{s:C.s,n:C.n,look:old.look}:{s:C.s,n:C.n}}else delete b.cells[key];touch(p)}
  function nextKey(){const ri=p.rows.indexOf(r),ci=p.cols.indexOf(c);if(ci+1<p.cols.length)return r.id+'|'+p.cols[ci+1].id;if(ri+1<p.rows.length)return p.rows[ri+1].id+'|'+p.cols[0].id;return null}
  function chips(k){const q=(C.q[k]||'').trim().toUpperCase(),list=opts[k].filter(n=>!q||n.toUpperCase().includes(q)).slice(0,40),cv=C.s[k];
-  let h=list.map(n=>`<button class="chip ${cv===n?'on':''}" data-pick="${k}" data-v="${esc(n)}">${esc(n)}</button>`).join('');
-  if(cv&&!list.includes(cv))h=`<button class="chip on" data-pick="${k}" data-v="${esc(cv)}">${esc(cv)}</button>`+h;
+  let h=list.map(n=>`<button class="chip ${(cv===n||(MULTI[k]&&hasW(cv,n)))?'on':''}" data-pick="${k}" data-v="${esc(n)}">${esc(n)}</button>`).join('');
+  if(cv&&!list.includes(cv)&&!MULTI[k])h=`<button class="chip on" data-pick="${k}" data-v="${esc(cv)}">${esc(cv)}</button>`+h;
   const typed=(C.q[k]||'').trim();if(typed&&!list.some(n=>n.toUpperCase()===typed.toUpperCase()))h+=`<button class="chip" data-pick="${k}" data-v="${esc(typed)}" style="border-style:dashed">Use “${esc(typed)}”</button>`;
   if(!opts[k].length&&!typed&&!cv)h+=`<span class="note">No ${k} words in the glossary yet. Type one above.</span>`;return h}
  $('mbox').innerHTML=`<h3>${esc(p.blocks[bi].name||'Formation')} · ${esc(r.label)} × ${esc(c.head||'column')}</h3>
  <input type="text" id="qb" value="${esc(barText(C.s))}" placeholder="Type the call: tags, formation, play" autocapitalize="off" autocorrect="off" autocomplete="off" enterkeyhint="next" style="font-size:20px;font-weight:700;padding:12px;margin:6px 0">
- <div id="qp" style="margin-bottom:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">${pv('')}</div>
+ <div id="qs" class="chips" style="margin-bottom:4px"></div><div id="qp" style="margin-bottom:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">${pv('')}</div>
  <div class="note">Words from your glossary land in their slot; anything else becomes the play. Press Enter to save and move to the next cell, or tap words below.</div>
  ${SLOTS.map(sl=>`<div class="slot"><div class="top"><b>${sl[1]}</b><input type="text" data-q="${sl[0]}" placeholder="Search or type" autocapitalize="off" autocorrect="off"></div><div class="chips" id="ch_${sl[0]}">${chips(sl[0])}</div></div>`).join('')}
  <div class="lab">Note</div><input type="text" id="cn" value="${esc(C.n)}" placeholder="Optional"><div class="row"><button class="btn pri" data-x="save">Save cell</button><button class="btn" data-x="clear">Clear cell</button><button class="btn" data-x="cancel">Cancel</button></div>`;
  m.classList.add('show');
+ const acList=()=>{const v=$('qb').value;if(/\s$/.test(v))return[];const t=(v.split(/\s+/).pop()||'').toLowerCase();if(t.length<2)return[];const out=[];ORD.forEach(k=>(opts[k]||[]).forEach(n=>{const l=n.toLowerCase();if(l.startsWith(t)&&l!==t&&!out.includes(n))out.push(n)}));return out.slice(0,8)};
+ const acShow=()=>{const L=acList();$('qs').innerHTML=L.map(n=>`<button class="chip" data-ac="${esc(n)}" style="border-style:dashed">${esc(n)}</button>`).join('')+(L.length?'<span class="note">Tab picks the first</span>':'')};
+ const acUse=n=>{const q=$('qb');q.value=q.value.replace(/\S*$/,n+' ');q.focus();q.dispatchEvent(new Event('input',{bubbles:true}))};
  const allChips=()=>SLOTS.forEach(sl=>$('ch_'+sl[0]).innerHTML=chips(sl[0]));
- $('mbox').oninput=e=>{if(e.target.id==='qb'){const r0=parse(e.target.value);if(C.s.glf&&!r0.s.glf)r0.s.glf=C.s.glf;C.s=r0.s;$('qp').innerHTML=pv(r0.drop);allChips();return}const k=e.target.dataset.q;if(!k)return;C.q[k]=e.target.value;$('ch_'+k).innerHTML=chips(k)};
- $('qb').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();doSave();m.classList.remove('show');render();const nk=nextKey();if(nk)openCell(bi,nk)}else if(e.key==='Escape'){m.classList.remove('show')}};
+ $('mbox').oninput=e=>{if(e.target.id==='qb'){const r0=parse(e.target.value);if(C.s.glf&&!r0.s.glf)r0.s.glf=C.s.glf;C.s=r0.s;$('qp').innerHTML=pv(r0.drop,r0.unk);acShow();allChips();return}const k=e.target.dataset.q;if(!k)return;C.q[k]=e.target.value;$('ch_'+k).innerHTML=chips(k)};
+ $('qb').onkeydown=e=>{if(e.key==='Tab'&&acList().length){e.preventDefault();acUse(acList()[0]);return}if(e.key==='Enter'){e.preventDefault();newTerms(()=>{doSave();m.classList.remove('show');render();const nk=nextKey();if(nk)openCell(bi,nk)})}else if(e.key==='Escape'){m.classList.remove('show')}};
  setTimeout(()=>{try{$('qb').focus();$('qb').select()}catch(e){}},50);
  $('mbox').onclick=e=>{const pk=e.target.closest('[data-pick]');
-  if(pk){const k=pk.dataset.pick,v=pk.dataset.v;if(C.s[k]===v)delete C.s[k];else C.s[k]=v;allChips();$('qb').value=barText(C.s);$('qp').innerHTML=pv('');return}
+  const ac=e.target.closest('[data-ac]');if(ac)return acUse(ac.dataset.ac);
+  if(pk){const k=pk.dataset.pick,v=pk.dataset.v;if(MULTI[k]&&C.s[k]&&C.s[k]!==v){if(hasW(C.s[k],v))C.s[k]=(' '+C.s[k]+' ').replace(new RegExp(' '+v.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+' ','i'),' ').trim();else C.s[k]+=' '+v}else if(C.s[k]===v)delete C.s[k];else C.s[k]=v;allChips();$('qb').value=barText(C.s);$('qp').innerHTML=pv('');return}
   const x=e.target.closest('[data-x]');if(!x)return;
-  if(x.dataset.x==='save')doSave();
+  if(x.dataset.x==='save')return newTerms(()=>{doSave();m.classList.remove('show');render()});
   if(x.dataset.x==='clear'){delete b.cells[key];touch(p)}
   m.classList.remove('show');render()};
  $('mbox').onkeydown=null}
