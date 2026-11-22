@@ -213,7 +213,7 @@ dropper($('#dropClips'),fs=>{const z=fs.find(f=>/\.zip$/i.test(f.name));z?loadZi
 $('#pickAlm').onclick=()=>$('#fAlm').click();
 function loadAlmText(txt){try{const rows=txt.replace(/\r/g,'').split('\n').map(l=>l.split('\t'));let name='';if(rows[0]&&String(rows[0][0]).trim().toUpperCase()==='ALMANAC'){name=(rows[0][1]||'').trim();rows.shift()}
   S.alm=parseAlm(rows);if(name){if(!$('#opp').value)$('#opp').value=name;if(!$('#game').value)$('#game').value=ABBR+' v. '+name}
-  $('#almStatus').textContent=`${S.alm.length} plays read from the Almanac app (${S.alm.filter(a=>a.nd).length} drives)`;save();refresh();toast('Almanac loaded');return true}catch(e){toast("Couldn't read that: "+e.message);return false}}
+  $('#almStatus').textContent=`${S.alm.filter(a=>!a.noplay).length} plays read from the Almanac app (${S.alm.filter(a=>a.nd).length} drives${S.alm.some(a=>a.noplay)?', '+S.alm.filter(a=>a.noplay).length+' timeout/no play':''})`;save();refresh();toast('Almanac loaded');return true}catch(e){toast("Couldn't read that: "+e.message);return false}}
 $('#pasteAlm').onclick=async()=>{let t='';try{t=await navigator.clipboard.readText()}catch(e){}
   if(t&&/(^|\n)(ALMANAC\t[^\n]*\n)?\s*(DOWN|DN)\t/i.test(t)&&loadAlmText(t))return;
   let box=$('#almPaste');if(!box){box=document.createElement('textarea');box.id='almPaste';box.placeholder='Paste the almanac here, then tap Load';box.style.minHeight='70px';const b=document.createElement('button');b.textContent='Load pasted almanac';b.id='almPasteGo';b.className='pri';$('#almStatus').before(box,b);b.onclick=()=>{if(loadAlmText(box.value)){box.remove();b.remove()}}}box.focus()};
@@ -229,7 +229,7 @@ async function loadAlm(file){
     const pickT=tabs.find(t=>want&&t.n.toLowerCase().includes(want))||tabs[0];
     const rows=pickT.rows; if(tabs.length>1)toast(`Read tab "${pickT.n}" (${tabs.length} tabs). Set Opponent first to pick another tab.`);
     S.alm=parseAlm(rows);
-    $('#almStatus').textContent=`${S.alm.length} plays read from "${file.name}" (${S.alm.filter(a=>a.nd).length} drives)`;
+    $('#almStatus').textContent=`${S.alm.filter(a=>!a.noplay).length} plays read from "${file.name}" (${S.alm.filter(a=>a.nd).length} drives${S.alm.some(a=>a.noplay)?', '+S.alm.filter(a=>a.noplay).length+' timeout/no play':''})`;
     save();refresh();
   }catch(e){toast("Couldn't read that almanac ("+e.message+")")}
 }
@@ -244,6 +244,7 @@ function parseAlm(rows){
   const out=[];let nd=true,h2=false;
   for(const r of rows.slice(hi+1)){
     const g=k=>C[k]>=0?String(r[C[k]]??'').trim():'';
+    if(r.some(c=>/^(NO PLAY|TIMEOUT)$/.test(String(c).trim().toUpperCase()))){out.push({i:out.length+1,noplay:true,dn:null,dist:null,motion:'',tag:'',run:'',pass:'',result:'NO PLAY',player:'',yl:null,nd:false,h2:false});continue}
     if(r.some(c=>String(c).trim().toUpperCase()==='NEW DRIVE')){nd=true;continue}
     if(r.some(c=>/^HALF ?TIME$/.test(String(c).trim().toUpperCase()))){nd=true;h2=true;continue}
     const dn=parseInt(g('dn')),ylRaw=g('yl').replace(/^-+/,'-'),yl=parseInt(ylRaw);
@@ -258,11 +259,11 @@ function parseAlm(rows){
 
 /* ================= align almanac rows to clips (sequence alignment on the spot) ================= */
 function align(){
-  const live=S.plays.filter(p=>!p.skip&&p.result!=='Timeout');
+  const live=S.plays.filter(p=>(!p.skip||p.skipAlm)&&p.result!=='Timeout');
   S.plays.forEach(p=>p._alm=null);
-  if(!S.alm.length)return;
+  if(!S.alm.length){S.plays.forEach(p=>{if(p.skipAlm){p.skip=false;p.skipAlm=false}});return}
   const A=S.alm, n=live.length, m=A.length, GAP=6;
-  const cost=(p,a)=>{ if(a.dn==null)return 9; const fy=p.film.yl; if(fy==null||a.yl==null)return 3;
+  const cost=(p,a)=>{ if(a.noplay)return 1; if(a.dn==null)return 9; const fy=p.film.yl; if(fy==null||a.yl==null)return 3;
     const d=Math.abs(pos(fy)-pos(a.yl)), d2=Math.abs(pos(-fy)-pos(a.yl))+2; return Math.min(Math.min(d,d2),25)/2.5 };
   // anchors: coach-set almanac rows split the problem into segments
   const anchors=[];live.forEach((p,i)=>{if(p.almRow){const j=A.findIndex(a=>a.i===+p.almRow);if(j>=0)anchors.push([i,j])}});
@@ -276,6 +277,8 @@ function align(){
   let pi=0,pj=0;
   for(const [ai,aj] of anchors){ if(ai<pi||aj<pj)continue; seg(pi,ai,pj,aj); live[ai]._alm=A[aj]; pi=ai+1; pj=aj+1; }
   seg(pi,n,pj,m);
+  // clips matched to an Almanac "No play" row (timeouts) are set aside automatically; unmatched ones come back
+  live.forEach(p=>{const np=p._alm&&p._alm.noplay;if(np&&!p.skip){p.skip=true;p.skipAlm=true}else if(!np&&p.skipAlm){p.skip=false;p.skipAlm=false}});
 }
 
 /* ================= reconciliation + engine ================= */
@@ -389,7 +392,7 @@ function renderDetail(){const i=S.sel,p=S.plays[i];if(!p)return;const c=p.calc||
   const tabs=`<div class="seg" id="angTabs">${ANGLES.map(n=>`<button data-a="${n}" class="${p.view===n?'on':''}" ${p.angles[n]?'':'disabled'}>${n}</button>`).join('')}</div>`;
   const vid=a&&a.url?`<video src="${a.url}" controls autoplay muted loop playsinline></video>`:'<div class="empty">Loading clip…</div>';
   const fr=p._frames?`<div class="frames">${p._frames.map(f=>`<img src="${f.u}" title="${esc(f.label)}">`).join('')}</div>`:'';
-  const almOpts=S.alm.length?`<label class="f">Almanac row<select id="almRow"><option value="">Auto${p._alm?' (row '+p._alm.i+')':' (none)'}</option>${S.alm.map(r=>`<option value="${r.i}" ${+p.almRow===r.i?'selected':''}>${r.i}: ${r.dn??'-'}&${r.dist??'-'} ${esc(r.run||r.pass)} ${esc(r.result)} @${ylTxt(r.yl)}</option>`).join('')}</select></label>`:'';
+  const almOpts=S.alm.length?`<label class="f">Almanac row<select id="almRow"><option value="">Auto${p._alm?' (row '+p._alm.i+')':' (none)'}</option>${S.alm.map(r=>r.noplay?`<option value="${r.i}" ${+p.almRow===r.i?'selected':''}>${r.i}: timeout / no play</option>`:`<option value="${r.i}" ${+p.almRow===r.i?'selected':''}>${r.i}: ${r.dn??'-'}&${r.dist??'-'} ${esc(r.run||r.pass)} ${esc(r.result)} @${ylTxt(r.yl)}</option>`).join('')}</select></label>`:'';
   $('#detail').innerHTML=`<div class="bar"><h3>Clip ${p.n}</h3><span style="flex:1"></span><button id="prev">◀</button><button id="next">▶</button><button id="aiOne" ${S.sample?'':'disabled'}>AI tag this play</button></div>
   ${tabs}${vid}${fr}
   <div class="grid" style="grid-template-columns:repeat(3,1fr)">
@@ -414,7 +417,7 @@ function renderDetail(){const i=S.sel,p=S.plays[i];if(!p)return;const c=p.calc||
   $('#ok').onclick=()=>{p.src='human';refresh();select(i+1)};
   const num=v=>v===''?null:+v;
   $('#yl').onchange=e=>edit({yl:num(e.target.value)});$('#gov').onchange=e=>edit({gainOverride:e.target.value});$('#be').onchange=e=>edit({ballEnd:num(e.target.value)});
-  ['td','nd','h2','skip','star'].forEach(k=>$('#'+k).onchange=e=>edit({[k]:e.target.checked},k==='star'));
+  ['td','nd','h2','skip','star'].forEach(k=>$('#'+k).onchange=e=>edit(k==='skip'?{skip:e.target.checked,skipAlm:false}:{[k]:e.target.checked},k==='star'));
   const ar=$('#almRow');if(ar)ar.onchange=e=>edit({almRow:e.target.value?+e.target.value:null},true);
   $$('#detail .seg[data-f]').forEach(s=>s.onclick=e=>{const v=e.target.dataset.v;if(!v)return;const f=s.dataset.f;edit({[f]:p[f]===v?'':v})});
   $$('#detail .frames img').forEach(im=>im.onclick=()=>{$('#zoom img').src=im.src;$('#zoom').style.display='flex'});
@@ -718,7 +721,7 @@ function openLocal(id,fresh,kind){CUR=id;S.kind=kind||(SAVED().find(g=>g.id===id
   $('#setupBox').open=fresh||!S.plays.length;
   G=buildG();
 }
-const TAGK=['yl','hash','type','result','td','nd','h2','gainOverride','skip','almRow','conf','src','note','star','carrier','ballEnd','film','box','mof','cov','press'];
+const TAGK=['yl','hash','type','result','td','nd','h2','gainOverride','skip','skipAlm','almRow','conf','src','note','star','carrier','ballEnd','film','box','mof','cov','press'];
 function mergeSaved(){ // new clips loaded: keep saved tags by clip number
   let s=null;try{s=JSON.parse(localStorage.getItem(LS())||'null')}catch(e){} if(!s||!s.plays)return;
   const by=new Map(s.plays.map(p=>[p.n,p]));let k=0;S.plays.forEach(p=>{const t=by.get(p.n);if(t){TAGK.forEach(x=>{if(t[x]!==undefined)p[x]=t[x]});k++}});if(k)toast('Kept saved tags for '+k+' plays')}

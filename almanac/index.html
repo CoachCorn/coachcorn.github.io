@@ -96,6 +96,7 @@ html,button,.chip,input,select{touch-action:manipulation;-webkit-tap-highlight-c
  <button class="btn" id="newdrive">New Drive</button>
  <button class="btn" id="qtr">QTR</button>
  <button class="btn" id="half">Halftime</button>
+ <button class="btn" id="noplay" title="Timeout or any clip that is not a play, so the film lines up">Timeout / No play</button>
  <button class="btn" id="undo">Undo</button>
  <span style="flex:1"></span>
  <button class="btn pri" id="stats">Stats</button>
@@ -282,7 +283,7 @@ function renderEntry(){const L=A.lists,e=edit!==null;
  h+=C('s12','Player','',`${sbox('plsrch','Search number — Enter picks',SQ.player)}<div class="chips scroll" id="plchips">${plyChipsHtml()}</div>`);
  const lp=G().plays.filter(x=>x.k==='p').pop();h+=`<div class="s12 logrow">${lp&&!e?`<div class="last"><b>Last</b> ${lp.down}&amp;${lp.dist} ${lp.tag?lp.tag+' ':''}${lp.owc||lp.call||''} <b>${lp.gain>0?'+':''}${lp.gain}</b></div>`:''}<button class="btn pri logbtn" data-a="log">${e?'Save changes':'Log play'}</button>${e?'<button class="btn" data-a="cancel">Cancel</button><button class="btn bad" data-a="del">Delete play</button>':''}</div></div>`;
  document.getElementById('entry').innerHTML=h;if(TFOC)FOCID='tsrch';TFOC=false;if(FOCID){const t=document.getElementById(FOCID);FOCID=null;if(t){t.focus();t.setSelectionRange(t.value.length,t.value.length)}}}
-function drivesOf(arr){const dr=[];let c=[];for(const p of arr){if(p.k!=='p'){if(c.length)dr.push(c);c=[]}else c.push(p)}if(c.length)dr.push(c);return dr}
+function drivesOf(arr){const dr=[];let c=[];for(const p of arr){if(p.k==='x')continue;if(p.k!=='p'){if(c.length)dr.push(c);c=[]}else c.push(p)}if(c.length)dr.push(c);return dr}
 function summary(){const P=plays(),pen=P.filter(p=>p.result!=='PEN');const E=pen.filter(p=>eff(p)==='Y').length,X=pen.filter(p=>expl(p)==='Y').length;
  const dr=drivesOf(G().plays);
  let hit=0;for(const c of dr){let fd=0;for(let i=1;i<c.length;i++)if(c[i].down===1&&c[i-1].down!==1&&c[i-1].result!=='PEN')fd++;if(fd>=2||c.some(p=>p.td))hit++}
@@ -291,7 +292,7 @@ function summary(){const P=plays(),pen=P.filter(p=>p.result!=='PEN');const E=pen
 function renderLog(){const g=G(),s=summary();
  let h=`<div class="dclose"><button class="btn" id="logclose">Close log</button></div><div class="tiles"><div class="tile"><b>${s.n}</b><span>Plays</span></div><div class="tile"><b>${s.eff}</b><span>Efficient (50)</span></div><div class="tile"><b>${s.exp}</b><span>Explosive (${A.lists.expRun===A.lists.expPass?A.lists.expRun+"+":A.lists.expRun+"/"+A.lists.expPass})</span></div><div class="tile"><b>${s.fd}</b><span>2FDOS drives</span></div></div>`;
  let dn=1;h+=`<div class="drive"><span>Drive 1</span></div>`;
- g.plays.forEach((p,i)=>{if(p.k==='q'){dn++;h+=`<div class="half">END Q${p.n}</div><div class="drive"><span>Drive ${dn}</span></div>`;return}if(p.k==='h'){dn++;h+=`<div class="half">HALFTIME</div><div class="drive"><span>Drive ${dn}</span></div>`;return}if(p.k==='d'){dn++;h+=`<div class="drive"><span>Drive ${dn}</span></div>`;return}
+ g.plays.forEach((p,i)=>{if(p.k==='q'){dn++;h+=`<div class="half">END Q${p.n}</div><div class="drive"><span>Drive ${dn}</span></div>`;return}if(p.k==='h'){dn++;h+=`<div class="half">HALFTIME</div><div class="drive"><span>Drive ${dn}</span></div>`;return}if(p.k==='d'){dn++;h+=`<div class="drive"><span>Drive ${dn}</span></div>`;return}if(p.k==='x'){h+=`<div class="drive"><span>Timeout / no play</span></div>`;return}
   const E=eff(p),X=expl(p),r=RESULTS.find(x=>x[0]===p.result);
   h+=`<div class="play ${edit===i?'sel':''}" data-i="${i}"><div><div class="dd">${p.down}&amp;${p.dist}</div><div class="yl">${ylFmt(p.f)}</div></div>
   <div><div class="call">${p.tag?p.tag+' ':''}${p.owc||p.call||'—'}${E==='Y'?'<span class="badge b-e">EFF</span>':''}${X==='Y'?'<span class="badge b-x">EXP</span>':''}</div>
@@ -360,11 +361,12 @@ document.getElementById('newdrive').onclick=()=>{G().plays.push({k:'d'});save();
 document.getElementById('qtr').onclick=()=>{const pl=G().plays,h=pl.some(p=>p.k==='h'),q1=pl.some(p=>p.k==='q'&&p.n===1),q3=pl.some(p=>p.k==='q'&&p.n===3);let m;
  if(!h&&!q1)m={k:'q',n:1};else if(!h)m={k:'h'};else if(!q3)m={k:'q',n:3};else{toast('All quarter breaks marked (use Undo to fix)');return}
  pl.push(m);d=freshDraft({down:1,dist:10,f:25});edit=null;save();renderAll();toast(m.k==='h'?'End of Q2 (halftime) marked':'End of Q'+m.n+' marked')};
+document.getElementById('noplay').onclick=()=>{G().plays.push({k:'x'});d=freshDraft(lastNext());edit=null;save();renderAll();toast('Timeout / no play marked')};
 document.getElementById('half').onclick=()=>{if(G().plays.some(p=>p.k==='h')){toast('Halftime already marked');return}G().plays.push({k:'h'});d=freshDraft({down:1,dist:10,f:25});edit=null;save();renderAll();toast('Halftime marked')};
-document.getElementById('undo').onclick=()=>{const pl=G().plays;if(pl.length){const x=pl.pop();tomb(G(),x);d=freshDraft(lastNext());edit=null;save();renderAll();toast('Undid '+(x.k==='q'?'quarter break':x.k==='h'?'halftime':x.k==='d'?'drive marker':'last play'))}else toast('Nothing to undo')};
+document.getElementById('undo').onclick=()=>{const pl=G().plays;if(pl.length){const x=pl.pop();tomb(G(),x);d=freshDraft(lastNext());edit=null;save();renderAll();toast('Undid '+(x.k==='q'?'quarter break':x.k==='h'?'halftime':x.k==='d'?'drive marker':x.k==='x'?'timeout / no play':'last play'))}else toast('Nothing to undo')};
 const HEAD=['DOWN','DISTANCE','JUMBO Y/N','SHIFT','MOTION','PLAY TAG','RUN CALL','PASS CALL','RGS Y/N','SHOT Y/N','RESULT','PLAYER','YARD LINE','GAIN/LOSS','<50','CROSS 50','>50','BCKWD CROSS 50','GAIN/LOSS','EXPLOSIVE','EFFICIENT','RUN SCHEME','PASS SCHEME','FORMATION','DIRECTION','PLAY TYPE','FORMATION TAG','CONCEPT','TARGET','ONE WORD','GLF','PASSER'];
 function resText(p){const r=p.result;if(r==='PEN')return'PENALTY';if(r==='INC')return'INC';if(r==='INT')return'INT';if(r==='FUM')return'FUM';if(r==='SACK')return'SACK';if(p.td)return p.gain+' YD TD';return String(p.gain)}
-function rows(){const out=[HEAD];for(const p of G().plays){if(p.k==='q'){out.push(['NEW DRIVE']);continue}if(p.k==='h'){out.push(['HALFTIME']);continue}if(p.k==='d'){out.push(['NEW DRIVE']);continue}
+function rows(){const out=[HEAD];for(const p of G().plays){if(p.k==='x'){out.push(['NO PLAY']);continue}if(p.k==='q'){out.push(['NEW DRIVE']);continue}if(p.k==='h'){out.push(['HALFTIME']);continue}if(p.k==='d'){out.push(['NEW DRIVE']);continue}
  out.push([p.down,p.dist,p.jumbo?'Y':'',p.shift?'Y':'',motionFull(p),p.tag||'',p.ptype==='run'?p.call||'':'',p.ptype==='pass'?p.call||'':'',p.rgs?'Y':'',p.shot?'Y':'',resText(p),p.player||'',ylFmt(p.f),p.gain,'','','','',p.gain,expl(p),eff(p),p.ptype==='run'?runScheme(p.call):'','',p.formation||'',p.dir||'',p.ptype==='run'?'Run':'Pass',p.ftag||(p.jumbo?'JUMBO':''),famOf(p.call),p.target||'',p.owc||'',p.glf?'Y':'',p.passer||''])}return out}
 const csv=()=>rows().map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
 
@@ -593,7 +595,7 @@ const HUDL_HEAD=['PLAY #','ODK','HASH','P & 10','DN','DIST','GN/LS','YARD LN','P
 const HUDL_RES={COMP:'Complete',INC:'Incomplete',RUSH:'Rush',SCRAM:'Scramble',SACK:'Sack',PEN:'Penalty',INT:'Interception',FUM:'Fumble Lost'};
 const RLDIR=c=>{if(!c)return'';c=String(c).toUpperCase();const pr=PAIRS.find(q=>q.includes(c));if(pr)return pr[0]===c?'Left':'Right';if(c==='PITTSBURGH')return'Left';return''};
 function hudlRows(){const out=[HUDL_HEAD];let first=true;
- for(const p of G().plays){if(p.k==='h'||p.k==='d'||p.k==='q'){first=true;continue}
+ for(const p of G().plays){if(p.k==='x')continue;if(p.k==='h'||p.k==='d'||p.k==='q'){first=true;continue}
   const run=p.ptype==='run',form=p.formation?[p.formation+(p.dir?' '+(p.dir==='RT'?'Rt':'Lt'):''),...(p.ftag?[p.ftag]:p.jumbo?['JUMBO']:[])].join(' '):'';
   out.push(['','O','',first?'Y':'',p.down,p.dist,p.gain,ylFmt(p.f),'',eff(p),p.result==='PEN'?'':(expl(p)==='Y'?'YES':'NO'),'',run?'Run':'Pass',(HUDL_RES[p.result]||'')+(p.td?' TD':''),form,'',motionFull(p),p.shift?'Y':'',p.call||'',p.tag||'',p.owc||'',p.target||'',p.player||'',p.passer||'',run?famOf(p.call):'',run?RLDIR(p.call):'',(!run&&p.owc&&(OW[p.owc]||{}).pp)?'BLACK/BROWN':'']);
   first=false}
@@ -726,8 +728,8 @@ let RF='all',RMODE='report';
 function rangePlays(){const a=G().plays;let r=a;
  if(RF==='1h'){const i=a.findIndex(p=>p.k==='h');r=i<0?a:a.slice(0,i)}
  else if(RF==='2h'){const i=a.findIndex(p=>p.k==='h');r=i<0?[]:a.slice(i+1)}
- else if(RF==='last'){let i=-1;a.forEach((p,j)=>{if(p.k!=='p')i=j});r=a.slice(i+1)}
- else if(RF==='last2'){const ix=[];a.forEach((p,j)=>{if(p.k!=='p')ix.push(j)});r=a.slice(ix.length>1?ix[ix.length-2]+1:0)}
+ else if(RF==='last'){let i=-1;a.forEach((p,j)=>{if(p.k!=='p'&&p.k!=='x')i=j});r=a.slice(i+1)}
+ else if(RF==='last2'){const ix=[];a.forEach((p,j)=>{if(p.k!=='p'&&p.k!=='x')ix.push(j)});r=a.slice(ix.length>1?ix[ix.length-2]+1:0)}
  else if(/^q[1-4]$/.test(RF)){const n=+RF[1];let e=0;r=[];for(const p of a){if(p.k==='q')e=Math.max(e,p.n);else if(p.k==='h')e=Math.max(e,2);else if(e+1===n)r.push(p)}}
  return r}
 function reportData(){const R=rangePlays(),P=R.filter(p=>p.k==='p'),N=P.filter(p=>p.result!=='PEN');
