@@ -694,7 +694,8 @@ function mgRemove(ids){if(!ids.length)return;
   renderMg();toast(ids.length>1?'Deleted '+ids.length+' games':'Game deleted')}
 const TABSETS={self:[['result','Game Result &amp; Why'],['fiftytwelve','50 / 12'],['stats','Stats'],['tagger','Film Tagger'],['hudl','Export to Hudl']],
   opp:[['overview','Their Defense'],['situation','By Situation'],['hurt','What Hurt Them'],['tagger','Film Tagger'],['hudl','Export to Hudl']]};
-function setTabs(){const set=TABSETS[G&&G.kind==='opp'?'opp':'self'];if(!set.some(t=>t[0]===TAB))TAB=set[0][0];
+function setTabs(){const set=TABSETS[G&&G.kind==='opp'?'opp':'self'].filter(t=>SIGNED||t[0]!=='fiftytwelve');   // 50 / 12 is not part of the booth demo
+  if(!set.some(t=>t[0]===TAB))TAB=set[0][0];
   $('#tabs').innerHTML=set.map(([k,l])=>`<button role="tab" data-tab="${k}" aria-selected="${k===TAB}">${l}</button>`).join('');
   $$('#tabs button').forEach(b=>b.onclick=()=>{TAB=b.dataset.tab;render()});
   document.body.classList.toggle('opp',!!(G&&G.kind==='opp'));$('#kindBadge').textContent=G&&G.kind==='opp'?'Opponent scout · their defense':'Self scout';}
