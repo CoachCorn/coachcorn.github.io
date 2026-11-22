@@ -310,21 +310,51 @@ function lookFor(b,c){if(c&&c.look&&c.look.d)return{d:c.look.d,did:[],guess:[],n
   if(pr&&pr.steps.length){try{pr.steps.forEach(fn=>fn(t,L));part.push({v,bad:pr.bad,applied:1});continue}catch(e){}}
   none.push(v);if(pr&&pr.bad.length)part.push({v,bad:pr.bad})}
  return{d,did,guess,not,none,gl,part,defs}}
+/* "Draw all looks" popup: each card has Edit drawing (the same drawing tool as the grid) and Send to Mental Reps. Edits are kept on the call cell so nothing is lost,
+   and the original machine drawing is kept beside them so the corrections can be read back (Copy corrections). */
+let LKCODE='';
+const yd=(t,p)=>({x:+(((p.x-(t.C?t.C.x:235))/YD)).toFixed(1),y:+(((p.y-LOS)/YD)).toFixed(1)});
+function lookDiff(gen,d){const out=[];const a=gen.t||{},b=d.t||{};for(const k of new Set([...Object.keys(a),...Object.keys(b)])){const p=a[k],q=b[k];if(!p||!q)continue;if(!!p.on!==!!q.on){out.push(k+': '+(q.on?'put on the field':'taken off the field'));continue}if(!q.on)continue;
+  if(Math.abs(p.x-q.x)>2||Math.abs(p.y-q.y)>2){const A=yd(a,p),B=yd(b,q);out.push(k+': drawn at '+A.x+' yds right of center, '+A.y+' yds off the ball; should be '+B.x+' right, '+B.y+' off the ball')}}
+ const ln=l=>(l.dot?'motion':'route')+' '+l.pts.map(q=>{const r=yd(b,{x:q[0],y:q[1]});return'('+r.x+','+r.y+')'}).join('→');const la=(gen.l||[]).map(ln),lb=(d.l||[]).map(ln);
+ la.filter(x=>!lb.includes(x)).forEach(x=>out.push('line I drew that you removed or changed: '+x));lb.filter(x=>!la.includes(x)).forEach(x=>out.push('line you drew: '+x));return out}
+function lookSend(p,bl,key,st){const cell=bl.cells[key];if(!cell)return Promise.resolve();
+ const name='Looks · '+String(p.sample?'Demo week':p.name).replace(/^_+/,'').slice(0,50);let code='';try{code=localStorage.getItem('cs.code')||''}catch(e){}if(!signedIn())code='demo';code=code||LKCODE;
+ if(!code){toast('Type the coach code at the top first');return Promise.resolve()}
+ if(!cell.look)cell.look={d:lookFor(bl,Object.assign({},cell,{look:null})).d,at:Date.now()};
+ cell.look.sentAt=Date.now()+1;cell.look.sent=true;touch(p);
+ const texts=[],all=[];p.blocks.forEach(b=>p.rows.forEach(r=>p.cols.forEach(c=>{const x=b.cells[r.id+'|'+c.id];const t=callText(x);if(t){texts.push(t);if(x.look&&x.look.sent)all.push({b,r,c,t,d:x.look.d})}})));
+ const uniq=[...new Set(texts)],some=(a,n)=>a.slice().sort(()=>Math.random()-.5).slice(0,n);
+ const cards=all.map(k=>({pos:'ALL',q:`${k.b.name} · ${k.r.label} · ${k.c.head}: what is the call?`,a:k.t,wrong:some(uniq.filter(t=>t!==k.t),3),expl:'',img:svgImg(k.d)}));
+ if(!signedIn()){try{const old=JSON.parse(localStorage.getItem('gp.demodeck')||'[]').filter(c=>c.deck!==name);cards.forEach(c=>old.push({deck:name,q:c.q,a:c.a,wrong:c.wrong,back:c.expl,img:c.img}));localStorage.setItem('gp.demodeck',JSON.stringify(old));toast('Added to the demo deck “'+name+'” ('+cards.length+' cards)');}catch(e){toast('Could not save the demo deck (storage full?)')}return Promise.resolve(true)}
+ return fetch(mrEndpoint(),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({type:'deck',code,name,cards})}).then(r=>r.text()).then(t=>{t=t.trim();if(/^ok:/.test(t)){toast('Sent. “'+name+'” now has '+t.slice(3)+' cards');return true}
+   cell.look.sent=false;touch(p);toast(t==='bad code'?'That coach code was not accepted':t==='exists'?'A tab called “'+name+'” already exists and was not made by Gameplan':'The sheet said: '+t);return false}).catch(()=>{cell.look.sent=false;touch(p);toast('Could not reach the Mental Reps sheet');return false})}
 $('looks').onclick=()=>{const p=plan();if(!p||!p.blocks.length)return toast('Start a plan first');
- const cards=[];p.blocks.forEach(b=>p.rows.forEach(r=>p.cols.forEach(c=>{const cell=b.cells[r.id+'|'+c.id],t=callText(cell);if(!t)return;cards.push({b,r,c,t,key:r.id+'|'+c.id,L:lookFor(b,cell)})})));
+ const cards=[];p.blocks.forEach((b,bi)=>p.rows.forEach(r=>p.cols.forEach(c=>{const cell=b.cells[r.id+'|'+c.id],t=callText(cell);if(!t)return;cards.push({b,bi,r,c,t,key:r.id+'|'+c.id,cell,L:lookFor(b,cell)})})));
  if(!cards.length)return toast('No calls in the grid yet');
  const svg=d=>svgOf(d).replace('<svg viewBox','<svg style="width:100%;height:auto;display:block;border-radius:8px" viewBox'),ch=(a,c)=>a.map(x=>`<span class="chip" style="${c}">${esc(x)}</span>`).join('');
+ const needCode=signedIn()&&!(()=>{try{return localStorage.getItem('cs.code')}catch(e){return''}})();
  let last=null,h='';
  cards.forEach(k=>{if(k.b!==last){last=k.b;h+=`<h4 style="margin:16px 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--acc)">${esc(k.b.name||'Formation')}</h4>`}
-  const L=k.L;h+=`<div style="background:#111c28;border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:10px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline"><b style="text-transform:uppercase">${esc(k.t)}</b><span class="note">${esc(k.r.label)} · ${esc(k.c.head)}</span></div>${svg(L.d)}<div style="margin-top:6px;display:flex;gap:6px;align-items:center">${L.saved?'<span class="chip" style="border-color:var(--ok)">Saved to plan</span><button class="btn sm" data-lk="redo" data-b="'+p.blocks.indexOf(k.b)+'" data-k="'+esc(k.key)+'">Redraw</button>':'<button class="btn sm" data-lk="keep" data-b="'+p.blocks.indexOf(k.b)+'" data-k="'+esc(k.key)+'">Save this one</button>'}</div>
-   <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:5px;align-items:center">${L.gl.length?'<span class="note">Drawn from your glossary</span>'+ch(L.gl,'border-color:var(--ok);background:#1d3a2b'):''}${L.did.length?'<span class="note">Drawn (rule you taught me in chat)</span>'+ch(L.did,'border-color:var(--ok)'):''}${L.guess.length?'<span class="note">Drawn (my guess, please correct)</span>'+ch(L.guess,'border-color:var(--warn)'):''}${L.none.length?'<span class="note">No rule yet</span>'+ch(L.none,'border-color:var(--bad)'):''}${L.not.length?'<span class="note">Not drawn yet (routes)</span>'+ch(L.not,''):''}${!(L.gl.length+L.did.length+L.guess.length+L.none.length+L.not.length)?'<span class="note">Base alignment only</span>':''}</div>
-   <div style="margin-top:8px;font-size:12px;color:var(--mut)">${L.defs.map(x=>`<div><b style="color:var(--tx)">${esc(x.v)}</b> · ${x.df?esc(x.df):'<span style="color:var(--warn)">no definition in your glossary yet</span>'}${(L.part.find(q=>q.v===x.v)||{bad:[]}).bad.length?'<div style="color:var(--warn)">I could not read: “'+esc(L.part.find(q=>q.v===x.v).bad.join('”, “'))+'”</div>':''}</div>`).join('')}</div></div>`});
+  const L=k.L,lk=k.cell.look,sent=lk&&lk.sent,stale=sent&&lk.at>(lk.sentAt||0);
+  h+=`<div style="background:#111c28;border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:10px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline"><b style="text-transform:uppercase">${esc(k.t)}</b><span class="note">${esc(k.r.label)} · ${esc(k.c.head)}</span></div>${svg(L.d)}
+   <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;align-items:center"><button class="btn sm" data-lk="edit" data-b="${k.bi}" data-k="${esc(k.key)}">Edit drawing</button><button class="btn sm pri" data-lk="send" data-b="${k.bi}" data-k="${esc(k.key)}">${stale?'Send update to Mental Reps':sent?'Sent ✓ · send again':'Send to Mental Reps'}</button>${lk&&lk.edited?'<span class="chip" style="border-color:var(--ok)">Your edit</span><button class="btn sm" data-lk="redo" data-b="'+k.bi+'" data-k="'+esc(k.key)+'">Redraw (drop my edit)</button>':''}</div>
+   <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:5px;align-items:center">${L.gl.length?'<span class="note">Drawn from your glossary</span>'+ch(L.gl,'border-color:var(--ok);background:#1d3a2b'):''}${L.did.length?'<span class="note">Drawn (rule you taught me in chat)</span>'+ch(L.did,'border-color:var(--ok)'):''}${L.guess.length?'<span class="note">Drawn (my guess, please correct)</span>'+ch(L.guess,'border-color:var(--warn)'):''}${L.none.length?'<span class="note">No rule yet</span>'+ch(L.none,'border-color:var(--bad)'):''}${L.not.length?'<span class="note">Not drawn yet (routes)</span>'+ch(L.not,''):''}</div>
+   <div style="margin-top:8px;font-size:12px;color:var(--mut)">${(L.defs||[]).map(x=>`<div><b style="color:var(--tx)">${esc(x.v)}</b> · ${x.df?esc(x.df):'<span style="color:var(--warn)">no definition in your glossary yet</span>'}${(L.part.find(q=>q.v===x.v)||{bad:[]}).bad.length?'<div style="color:var(--warn)">I could not read: “'+esc(L.part.find(q=>q.v===x.v).bad.join('”, “'))+'”</div>':''}</div>`).join('')}</div></div>`});
  $('mbox').style.width='min(980px,96vw)';
- $('mbox').innerHTML=`<h3>Draw all looks</h3><div class="note">First version: each call starts from its formation's drawing, then applies its formation tag and motion. Your glossary wording is read first; if I cannot read a sentence, I say which one. Concepts and play tags are not drawn yet. Tell me what is wrong and I will fix it.</div>${h}<div style="margin-top:10px;display:flex;gap:8px"><button class="btn pri" id="lk_all">Save all unsaved to plan</button><button class="btn" id="lk_x">Close</button></div>`;
- $('modal').classList.add('show');$('mbox').onkeydown=null;const again=()=>{const y=$('mbox').scrollTop||$('modal').scrollTop;$('looks').onclick();$('mbox').scrollTop=y};
- $('mbox').onclick=e=>{const x=e.target.closest('[data-lk]');if(!x)return;const bl=p.blocks[+x.dataset.b],c=bl&&bl.cells[x.dataset.k];if(!c)return;
-  if(x.dataset.lk==='keep'){c.look={d:lookFor(bl,Object.assign({},c,{look:null})).d,at:Date.now()}}else delete c.look;touch(p);again()};
- $('lk_all').onclick=()=>{let n=0;cards.forEach(k=>{const c=k.b.cells[k.key];if(c&&!c.look){c.look={d:lookFor(k.b,Object.assign({},c,{look:null})).d,at:Date.now()};n++}});touch(p);again();toast(n?'Saved '+n+' drawings to this plan':'Nothing new to save')};
+ $('mbox').innerHTML=`<h3>Draw all looks</h3><div class="note">Each call starts from its formation's drawing plus your glossary wording. Fix any drawing with <b>Edit drawing</b> (same tool as the grid), then <b>Send to Mental Reps</b> on that card when it is right. Concepts and play tags are not drawn yet.</div>
+  ${needCode?'<div class="lab">Coach code (needed to send)</div><input type="password" id="lk_code" autocapitalize="off" autocorrect="off" value="'+esc(LKCODE)+'">':''}${h}
+  <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="lk_cp">Copy my corrections</button><button class="btn" id="lk_x">Close</button></div><textarea id="lk_ta" style="display:none;width:100%;height:160px;margin-top:8px;font-size:12px"></textarea>`;
+ $('modal').classList.add('show');$('mbox').onkeydown=null;const y0=$('modal').scrollTop;
+ const again=()=>{const y=$('mbox').scrollTop;$('looks').onclick();$('mbox').scrollTop=y};
+ if($('lk_code'))$('lk_code').oninput=e=>{LKCODE=e.target.value};
+ $('mbox').onclick=async e=>{const x=e.target.closest('[data-lk]');if(!x)return;const bl=p.blocks[+x.dataset.b],c=bl&&bl.cells[x.dataset.k];if(!c)return;
+  if(x.dataset.lk==='edit'){const gen=lookFor(bl,Object.assign({},c,{look:null})).d;$('modal').classList.remove('show');$('mbox').style.width='';openDraw(+x.dataset.b,{key:x.dataset.k,gen,d:c.look&&c.look.d||lookFor(bl,c).d});return}
+  if(x.dataset.lk==='redo'){delete c.look;touch(p);return again()}
+  if(x.dataset.lk==='send'){x.disabled=true;await lookSend(p,bl,x.dataset.k);return again()}};
+ $('lk_cp').onclick=()=>{const L=[];p.blocks.forEach(b=>p.rows.forEach(r=>p.cols.forEach(c=>{const x=b.cells[r.id+'|'+c.id];if(!x||!x.look||!x.look.edited||!x.look.gen)return;const df=lookDiff(x.look.gen,x.look.d);if(!df.length)return;
+   const defs=['ftag','motion'].map(k=>x.s[k]?x.s[k]+' = '+(defOf(k,x.s[k])||'(no definition)'):'').filter(Boolean);L.push(b.name+' · '+callText(x)+(defs.length?'\n  Glossary: '+defs.join(' | '):'')+'\n  '+df.join('\n  '))})));
+  const txt=L.length?'Corrections to Draw all looks:\n\n'+L.join('\n\n'):'No edited drawings yet.';const ta=$('lk_ta');ta.style.display='block';ta.value=txt;ta.select();try{navigator.clipboard.writeText(txt).then(()=>toast('Copied. Paste it to me in the chat.')).catch(()=>toast('Select the text below and copy it'))}catch(e){toast('Select the text below and copy it')}};
  $('lk_x').onclick=()=>{$('modal').classList.remove('show');$('mbox').style.width=''}}
 $('prn').onclick=()=>{try{window.print()}catch(e){toast('Print is not available here')}};
 
@@ -484,7 +514,7 @@ function openCell(bi,key){const p=plan(),b=p.blocks[bi],r=p.rows.find(x=>x.id===
 
 /* ---------- drawing editor ---------- */
 let E=null;
-function openDraw(bi){const p=plan(),b=p.blocks[bi];E={bi,d:clone(b.draw||baseDraw()),sel:null,selL:null,mode:'move',cur:null,dot:false,arrow:true,col:COLS[0],grp:true,hist:[],drag:null};
+function openDraw(bi,look){const p=plan(),b=p.blocks[bi];E={bi,look:look||null,d:clone(look?look.d:(b.draw||baseDraw())),sel:null,selL:null,mode:'move',cur:null,dot:false,arrow:true,col:COLS[0],grp:true,hist:[],drag:null};
  if(!E.d.t)E.d=baseDraw();$('ed').classList.add('show');edRender()}
 function snap(){E.hist.push(JSON.stringify(E.d));if(E.hist.length>60)E.hist.shift()}
 function edRender(){const p=plan(),b=p.blocks[E.bi];
@@ -522,8 +552,8 @@ $('ed').addEventListener('pointermove',e=>{if(!E||!E.drag)return;const d=E.drag,
 const endDrag=()=>{if(E&&E.drag){E.drag=null;if(E.hist.length&&JSON.stringify(E.d)===E.hist[E.hist.length-1])E.hist.pop();edRender()}};
 $('ed').addEventListener('pointerup',endDrag);$('ed').addEventListener('pointercancel',endDrag);
 $('ed').addEventListener('click',e=>{const b=e.target.closest('[data-e]');if(!b||!E)return;const a=b.dataset.e,t=E.d.t;
- if(a==='cancel'){E=null;$('ed').classList.remove('show');return}
- if(a==='save'){finishLine();const p=plan();p.blocks[E.bi].draw=E.d;touch(p);E=null;$('ed').classList.remove('show');render();return}
+ if(a==='cancel'){const lk=E.look;E=null;$('ed').classList.remove('show');if(lk)$('looks').onclick();return}
+ if(a==='save'){finishLine();const p=plan(),lk=E.look;if(lk){const c=p.blocks[E.bi].cells[lk.key];if(c){const was=c.look||{};c.look=Object.assign({},was,{d:E.d,gen:lk.gen,edited:true,at:Date.now()})}}else p.blocks[E.bi].draw=E.d;touch(p);E=null;$('ed').classList.remove('show');render();if(lk)$('looks').onclick();return}
  if(a==='pl'){const k=b.dataset.k;snap();t[k].on=t[k].on?0:1;if(E.sel===k&&!t[k].on)E.sel=null}
  else if(a==='grp')E.grp=true;else if(a==='one')E.grp=false;
  else if(a==='lite'){snap();t.LT.x=t.RT.x+30;t.LT.y=LOS}
