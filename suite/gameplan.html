@@ -133,12 +133,17 @@ const TC={Q:'#ffffff',X:'#5aa9ff',Z:'#5aa9ff',M:'#f2b632',H:'#2fbf71',Y:'#c58bff
    Noah asked for the hashes drawn farther apart than real: HASHR puts the right hash 66 ft from the left one (real is 53'4"). Change the 66 to change it.
    Numbers are 6 ft tall: top 9 yards (27 ft) from the sideline, bottom 21 ft. */
 const PXFT=4.4,YD=3*PXFT,LOS=110,VW=Math.round(160*PXFT),VH=250,HASHX=Math.round(53.333*PXFT),HASHR=HASHX+Math.round(66*PXFT),NSHIFT=4,NB=Math.round((21-NSHIFT)*PXFT),NT=Math.round((27-NSHIFT)*PXFT); // numbers drawn NSHIFT ft closer to the sideline than the NFHS spec, at Noah's request
-const DEF0=[['DE1','DE',140,LOS-16],['DT1','DT',205,LOS-16],['DT2','DT',265,LOS-16],['DE2','DE',330,LOS-16],['WL','W',170,LOS-50],['ML','M',235,LOS-50],['SL','S',300,LOS-50],['CB1','CB',40,LOS-55],['CB2','CB',450,LOS-55],['FS','FS',205,LOS-86],['SS','SS',275,LOS-86]];
-function addDefense(t){DEF0.forEach(([k,lab,x,y])=>{const id='D_'+k;if(!t[id])t[id]={x,y,on:1,df:1,lab};else t[id].on=1})}
+const L1=LOS-16,L2=LOS-50,L3=LOS-86,DP={
+ '4-3-4':[['DE1','DE',133,L1],['DT1','DT',205,L1],['DT2','DT',265,L1],['DE2','DE',337,L1],['WL','W',170,L2],['ML','M',235,L2],['SL','S',300,L2],['CB1','CB',40,LOS-55],['CB2','CB',450,LOS-55],['FS','FS',205,L3],['SS','SS',265,L3]],
+ '3-4-4':[['DE1','DE',145,L1],['NT','NT',235,L1],['DE2','DE',325,L1],['OL1','W',105,LOS-34],['IL1','M',205,L2],['IL2','M',265,L2],['OL2','S',365,LOS-34],['CB1','CB',40,LOS-55],['CB2','CB',450,LOS-55],['FS','FS',205,L3],['SS','SS',265,L3]],
+ '3-3-5':[['DE1','DE',145,L1],['NT','NT',235,L1],['DE2','DE',325,L1],['WL','W',175,L2],['ML','M',235,L2],['SL','S',295,L2],['CB1','CB',40,LOS-55],['CB2','CB',450,LOS-55],['FS','FS',205,L3],['SS','SS',265,L3],['NB','N',350,LOS-42]],
+ '4-2-5':[['DE1','DE',133,L1],['DT1','DT',205,L1],['DT2','DT',265,L1],['DE2','DE',337,L1],['WL','W',205,L2],['ML','M',265,L2],['CB1','CB',40,LOS-55],['CB2','CB',450,LOS-55],['FS','FS',205,L3],['SS','SS',265,L3],['NB','N',350,LOS-42]]};
+function addDefense(t,pre){pre=DP[pre]?pre:'4-3-4';Object.keys(t).forEach(k=>{if(t[k].df)delete t[k]});DP[pre].forEach(([k,lab,x,y])=>{t['D_'+k]={x,y,on:1,df:1,lab}});return pre}
+const OLSP=36;   // spacing between offensive linemen
 function baseDraw(){const t={},put=(k,x,y,on)=>t[k]={x,y,on};
  put('X',30,114,1);put('Z',456,112,1);put('M',165,150,1);put('Q',235,168,1);put('T',210,205,1);put('H',385,128,1);
  put('Y',395,112,0);put('F',430,150,0);put('A',300,190,0);put('B',260,205,0);
- OLK.forEach((k,i)=>put(k,175+i*30,LOS,1));return{t,l:[]}}
+ OLK.forEach((k,i)=>put(k,235-2*OLSP+i*OLSP,LOS,1));return{t,l:[]}}
 let svgN=0;
 function svgOf(d,sel,cur,selL){const n=++svgN,used=new Set(),edit=selL!==undefined;
  const lines=(d.l||[]).concat(cur?[cur]:[]);lines.forEach(l=>used.add(l.col||'#ffffff'));
@@ -186,7 +191,7 @@ function samplePlan(){const cols=[['Play 1',''],['Play 2',''],['Play 3',''],['Pl
     [['Stack','','Power',''],['','Jet','Counter','Split'],'Iso',['Tight','','Power','Bubble']],
     [['Bunch','','Mesh','Switch'],['Stack','','Mesh','Speed'],['','Fly','Four Verts',''],['Tight','','Four Verts','Switch']],
     [['Stack','','Stick',''],['Bunch','Trade','Stick','Speed'],['Tight','','Y-Cross',''],['','Orbit','Y-Cross','Bubble']]],
-   [],t=>{t.RT.x=t.LT.x-30;t.RT.y=LOS;t.Y.on=0;t.M.on=1;t.H.on=1})]}}
+   [],t=>{t.RT.x=t.LT.x-OLSP;t.RT.y=LOS;t.Y.on=0;t.M.on=1;t.H.on=1})]}}
 
 /* ---------- main render ---------- */
 function cellHTML(c){if(!c)return`<div class="cc empty">+</div>`;const s=c.s||{},main=s.concept||s.tag||s.formation||'',extra=SLOTS.filter(x=>s[x[0]]&&s[x[0]]!==main).map(x=>s[x[0]]);
@@ -264,8 +269,8 @@ const dir=(t)=>t.H&&t.H.x>t.Q.x?-1:1;   // motion goes away from the side the pl
 const on=(t,k,x,y)=>{const p=t[k]||(t[k]={x,y,on:1});if(!p.on){p.on=1;p.x=x;p.y=y}return p};
 const LOOK={
  ftag:{
-  HEAVY:t=>{t.RT.x=t.LT.x-30;t.RT.y=LOS},
-  LITE:t=>{t.LT.x=t.RT.x+30;t.LT.y=LOS},
+  HEAVY:t=>{t.RT.x=t.LT.x-OLSP;t.RT.y=LOS},
+  LITE:t=>{t.LT.x=t.RT.x+OLSP;t.LT.y=LOS},
   OUTSIDE:t=>{t.Z.x=HASHR+8;t.Z.y=LOS;t.X.x=HASHR-24;t.X.y=LOS},
   STOOGE:t=>{const h=on(t,'H',t.Q.x+30,t.Q.y);h.x=t.Q.x+30;h.y=t.Q.y},
   TIGHT:{g:1,fn:t=>{const h=on(t,'H',t.RT.x+30,LOS),y=on(t,'Y',t.RT.x+60,LOS);h.x=t.RT.x+36;h.y=LOS+26;y.x=t.RT.x+30;y.y=LOS;t.Z.x=t.RT.x+62;t.Z.y=LOS}},
@@ -290,7 +295,7 @@ function parseDef(text){const ok=[],bad=[],steps=[];let subj=null;
   if((m=cl.match(new RegExp('^((?:'+PTOK+'(?:/|\\s*and\\s*)?)+)\\s+(?:moves?|goes|slides?|lines? up|shifts?|aligns?|sets?)\\s+(?:over\\s+)?(?:to|on|at)\\s+(?:the\\s+)?(left|right|field|boundary)(?:\\s+(?:side|hash))?(.*)$')))){
    P=players(m[1]);const sd=m[2],ball=/on the (?:ball|line)/i.test(m[3]||'');subj=P[P.length-1];
    steps.push((t)=>{P.forEach((k,i)=>{const p=on(t,k,235,LOS);
-    if(/^(LT|LG|RG|RT|C)$/.test(k)){const xs=OLK.filter(o=>o!==k).map(o=>t[o].x);p.x=/^(left|boundary)$/i.test(sd)?Math.min(...xs)-30:Math.max(...xs)+30;p.y=LOS}
+    if(/^(LT|LG|RG|RT|C)$/.test(k)){const xs=OLK.filter(o=>o!==k).map(o=>t[o].x);p.x=/^(left|boundary)$/i.test(sd)?Math.min(...xs)-OLSP:Math.max(...xs)+OLSP;p.y=LOS}
     else{const out=/^(left|boundary)$/i.test(sd)?-1:1,n=P.length-1-i;p.x=SIDEX(sd)+out*(n*32)+(out>0?8:-8)+(P.length>1?0:0);if(ball)p.y=LOS}})});ok.push(cl);continue}
   if((m=cl.match(new RegExp('^'+PTOK+'\\s+(?:in|into)\\s+the\\s+backfield\\s+(beside|next to|behind)\\s+'+PTOK)))){subj=m[1];const A=m[1],B=m[3],how=m[2];
    steps.push(t=>{const p=on(t,A,t[B].x,t[B].y);p.x=how==='behind'?t[B].x:t[B].x+30;p.y=how==='behind'?t[B].y+28:t[B].y});ok.push(cl);continue}
@@ -532,7 +537,7 @@ function edRender(){const p=plan(),b=p.blocks[E.bi];
    ${E.mode==='line'?`<div class="chips"><button class="chip" data-e="done">Done with line</button></div>`:''}</div>
   <div class="g"><div class="k">Line style</div><div class="chips"><button class="chip ${!E.dot?'on':''}" data-e="solid">Solid</button><button class="chip ${E.dot?'on':''}" data-e="dotted">Dotted (motion / shift)</button><button class="chip ${E.arrow&&!E.blk?'on':''}" data-e="arrow">Arrowhead</button><button class="chip ${E.blk?'on':''}" data-e="blk">Block |—</button></div>
    <div>${COLS.map(c=>`<span class="sw ${E.col===c?'on':''}" data-e="col" data-c="${c}" style="background:${c}"></span>`).join('')}</div></div>
-  <div class="g"><div class="k">Defense</div><div class="chips"><button class="chip ${Object.values(E.d.t).some(x=>x.df&&x.on)?'on':''}" data-e="defon">Show defense</button><button class="chip" data-e="defoff">Hide defense</button><button class="chip" data-e="defreset">Reset defense</button></div><div class="note" style="margin-top:6px">A base 4-3 you can drag anywhere. Tap a defender in Move mode to move him.</div></div>
+  <div class="g"><div class="k">Defense</div><div class="chips">${['4-3-4','3-4-4','3-3-5','4-2-5'].map(q=>`<button class="chip ${E.d.dp===q&&Object.values(E.d.t).some(x=>x.df&&x.on)?'on':''}" data-e="defp" data-p="${q}">${q}</button>`).join('')}<button class="chip" data-e="defoff">Hide defense</button></div><div class="note" style="margin-top:6px">Tap a preset to put that defense on the field. Drag any defender to move him.</div></div>
   <div class="g"><div class="k">Edit</div><div class="chips"><button class="chip" data-e="undo">Undo</button><button class="chip ${E.selL!=null?'on':''}" data-e="dellsel">Delete selected line</button><button class="chip" data-e="dellast">Delete last line</button><button class="chip" data-e="clear">Clear all lines</button></div></div>
  </div></div>`}
 function pt(ev){const sv=$('cv').querySelector('svg'),m=sv.getScreenCTM();if(!m)return{x:0,y:0};const q=sv.createSVGPoint();q.x=ev.clientX;q.y=ev.clientY;const r=q.matrixTransform(m.inverse());return{x:Math.max(8,Math.min(VW-8,Math.round(r.x))),y:Math.max(8,Math.min(VH-8,Math.round(r.y)))}}
@@ -565,15 +570,15 @@ $('ed').addEventListener('click',e=>{const b=e.target.closest('[data-e]');if(!b|
  if(a==='save'){finishLine();const p=plan(),lk=E.look;if(lk){const c=p.blocks[E.bi].cells[lk.key];if(c){const was=c.look||{};c.look=Object.assign({},was,{d:E.d,gen:lk.gen,edited:true,at:Date.now()})}}else p.blocks[E.bi].draw=E.d;touch(p);E=null;$('ed').classList.remove('show');render();if(lk)$('looks').onclick();return}
  if(a==='pl'){const k=b.dataset.k;snap();t[k].on=t[k].on?0:1;if(E.sel===k&&!t[k].on)E.sel=null}
  else if(a==='grp')E.grp=true;else if(a==='one')E.grp=false;
- else if(a==='lite'){snap();t.LT.x=t.RT.x+30;t.LT.y=LOS}
- else if(a==='heavy'){snap();t.RT.x=t.LT.x-30;t.RT.y=LOS}
+ else if(a==='lite'){snap();t.LT.x=t.RT.x+OLSP;t.LT.y=LOS}
+ else if(a==='heavy'){snap();t.RT.x=t.LT.x-OLSP;t.RT.y=LOS}
  else if(a==='reset'){snap();const bd=baseDraw();OLK.forEach(k=>t[k]=bd.t[k])}
  else if(a==='mm'){finishLine();E.mode='move';E.combo=null}else if(a==='ml'){E.mode='line';E.selL=null;E.combo=null}else if(a==='mc'){finishLine();E.mode='combo';E.combo={a:null,b:null};E.selL=null;E.sel=null}
  else if(a==='done')finishLine();
  else if(a==='solid'){E.dot=false;if(E.cur)E.cur.dot=false;if(E.selL!=null){snap();E.d.l[E.selL].dot=false}}else if(a==='dotted'){E.dot=true;if(E.cur)E.cur.dot=true;if(E.selL!=null){snap();E.d.l[E.selL].dot=true}}
  else if(a==='arrow'){E.arrow=!E.arrow;if(E.arrow)E.blk=false;if(E.cur){E.cur.arrow=E.arrow;E.cur.blk=E.blk}if(E.selL!=null){snap();E.d.l[E.selL].arrow=E.arrow;E.d.l[E.selL].blk=E.blk}}
  else if(a==='blk'){E.blk=!E.blk;if(E.blk)E.arrow=false;if(E.cur){E.cur.blk=E.blk;E.cur.arrow=E.arrow}if(E.selL!=null){snap();E.d.l[E.selL].blk=E.blk;E.d.l[E.selL].arrow=E.arrow}}
- else if(a==='defon'){snap();addDefense(t)}else if(a==='defoff'){snap();Object.values(t).forEach(x=>{if(x.df)x.on=0});if(E.sel&&String(E.sel).indexOf('D_')===0)E.sel=null}else if(a==='defreset'){snap();Object.keys(t).forEach(k=>{if(t[k].df)delete t[k]});addDefense(t)}
+ else if(a==='defp'){snap();E.d.dp=addDefense(t,b.dataset.p)}else if(a==='defoff'){snap();Object.values(t).forEach(x=>{if(x.df)x.on=0});if(E.sel&&String(E.sel).indexOf('D_')===0)E.sel=null}
  else if(a==='col'){E.col=b.dataset.c;if(E.cur)E.cur.col=E.col;if(E.selL!=null){snap();E.d.l[E.selL].col=E.col}}
  else if(a==='dellsel'){if(E.selL!=null){snap();E.d.l.splice(E.selL,1);E.selL=null}}
  else if(a==='undo'){if(E.cur){E.cur=null}else if(E.hist.length){E.d=JSON.parse(E.hist.pop());E.selL=null}}
