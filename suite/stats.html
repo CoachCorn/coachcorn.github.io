@@ -44,6 +44,7 @@ tr.click{cursor:pointer}tr.click:active{background:#223140}
 <main id="main"></main>
 <div class="modal" id="modal"><div class="box" id="mbox"></div></div>
 <script src="../shared/demoseed.js"></script>
+<script src="../shared/importer.js"></script>
 <script>
 /* Stats + schedule. Reads the Almanac's games from this device (kept in step by sync) and the program schedule.
    Efficiency: 1st down 4+ (or the distance if shorter), 2nd down half the distance (rounded up), 3rd/4th convert, TD always.
@@ -89,7 +90,7 @@ function result(r){if(r.us!=null&&r.us!==''&&r.them!=null&&r.them!==''){const u=
 function viewSchedule(){const S=sched(),rows=S.rows.filter(r=>String(r.date||'').startsWith(String(V.season)));
  let w=0,l=0,t=0;for(const r of rows)if(r.us!==''&&r.us!=null&&r.them!==''&&r.them!=null){+r.us>+r.them?w++:+r.us<+r.them?l++:t++}
  const fmt=d=>d?new Date(d+'T12:00').toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}):'No date';
- return`<div class="rec"><b>${w}–${l}${t?'–'+t:''}</b><span>${V.season} record</span><span style="flex:1"></span><button class="btn pri" id="addg">+ Add game</button></div>`+
+ return`<div class="rec"><b>${w}–${l}${t?'–'+t:''}</b><span>${V.season} record</span><span style="flex:1"></span><button class="btn" id="impg">Import games</button> <button class="btn pri" id="addg">+ Add game</button></div>`+
  (rows.length?rows.map(r=>`<button class="row" data-row="${r.id}"><span data-edit="${r.id}" title="Edit game" style="display:flex;flex:none;cursor:pointer">${logoHtml(r)}</span><span class="mid"><div class="opp"><small>${r.ha==='A'?'at':'vs.'}</small>${esc(r.opp)}</div><div class="meta">${fmt(r.date)} · ${r.ha==='A'?'Away':r.ha==='N'?'Neutral':'Home'}${r.game||matchGame(r)?' · stats ready':''}</div></span><span class="res">${result(r)}</span></button>`).join('')
  :'<div class="empty">No games on the '+V.season+' schedule yet. Tap <b>+ Add game</b> to type them in.</div>')}
 function matchGame(r){return r.game||((realGames(A()).find(g=>U(g.opp)===U(r.opp))||{}).id)}
@@ -140,6 +141,33 @@ function viewGames(){const gs=gamesInSeason(),S=sched(),L=A().lists||{};if(!gs.l
 function bucket(p){if(p.down===1)return'1st down';const n=+p.dist||10,b=n<=3?'short (1-3)':n<=6?'medium (4-6)':'long (7+)';return(p.down===2?'2nd ':p.down===3?'3rd ':'4th ')+b}
 function zone(f){f=+f||25;return f<=20?'Backed up (own 1-20)':f<=40?'Own 20-40':f<=60?'Open field':f<=80?'Plus territory (opp 40-20)':f<=90?'Opp 20-10':'Red zone'}
 
+
+/* ---------- import past games (.xlsx / .csv, Hudl column order) ---------- */
+function importOpen(){const key=ALMK(),raw=localStorage.getItem(key);
+ if(!raw){alert('Open the Almanac once first so this device has its game list, then come back to import.');return}
+ $('mbox').innerHTML=`<h3 style="margin-top:0;color:var(--tx);font-size:17px;text-transform:none;letter-spacing:0">Import games</h3><p class="note" style="text-transform:none;letter-spacing:0">Pick an .xlsx or .csv in the Hudl column order (the Raw Data tab, or a file from the Almanac's Export). Several games in one sheet are split when play numbers restart or a game-name row sits between them. Only offensive plays are imported. Your Almanac lists and gameplan are not changed.</p>
+ <input type="file" id="impfile" accept=".xlsx,.xlsm,.csv,text/csv" style="width:100%"><div id="impbox"></div><div class="two" style="margin-top:14px"><button class="btn" id="impx">Close</button></div>`;
+ $('modal').classList.add('show');$('impx').onclick=closeM;
+ $('impfile').onchange=async ev=>{const fl=ev.target.files[0],box=$('impbox');if(!fl)return;box.innerHTML='<p class="note">Reading…</p>';
+  try{if(!window.Importer)throw new Error('The importer did not load. Check your connection and reopen the app.');const I=Importer;let rows;if(/\.csv$/i.test(fl.name)){rows=I.parseCsv(await fl.text());if(I.findHeader(rows)<0)throw new Error('Could not find a PLAY # column in that CSV')}else rows=(await I.readXlsx(await fl.arrayBuffer())).rows;
+   const P=I.parseOwn(rows,fl.name);if(!P.blocks.length)throw new Error('No offensive plays found');
+   const yr=new Date().getFullYear(),have=new Set(A().games.map(x=>x.src).filter(Boolean)),inp='style="padding:8px;font-size:15px;background:transparent;color:inherit;border:1px solid var(--line);border-radius:8px"';
+   box.innerHTML=`<div class="lab" style="margin-top:10px">Season year (used when a game has no date)</div><input type="number" id="impyr" value="${yr}" ${inp} style="width:120px">
+   <div class="lab" style="margin-top:12px">Games found (${P.blocks.length}${P.skipped?', '+P.skipped+' defensive/other rows skipped':''})</div>
+   ${P.blocks.map((b,i)=>{const dup=have.has(fl.name+'|'+b.name);return`<div style="padding:8px 0;border-bottom:1px solid var(--line)"><div style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-ib="${i}" ${dup?'':'checked'} style="width:20px;height:20px"><input type="text" data-in="${i}" value="${esc(b.name)}" ${inp} style="flex:1;min-width:0"></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center"><input type="date" data-id="${i}" ${inp}><input type="number" data-iu="${i}" placeholder="Us" inputmode="numeric" ${inp} style="width:70px"><input type="number" data-it="${i}" placeholder="Them" inputmode="numeric" ${inp} style="width:70px"><span class="note" style="text-transform:none;letter-spacing:0">${b.n} plays${dup?' · already imported':''}</span></div></div>`}).join('')}
+   <div style="margin-top:12px"><button class="btn pri" id="impgo">Import selected</button></div>`;
+   $('impgo').onclick=()=>{const year=+$('impyr').value||yr;let a=null;try{a=JSON.parse(localStorage.getItem(key))}catch(e){}
+    if(!a||!Array.isArray(a.games)){alert('Could not read this device’s game list. Open the Almanac once and try again.');return}
+    let n=0,pl=0;const S=sched();let lastYear=null;
+    P.blocks.forEach((b,i)=>{if(!box.querySelector(`[data-ib="${i}"]`).checked)return;const opp=box.querySelector(`[data-in="${i}"]`).value.trim()||b.name,dt=box.querySelector(`[data-id="${i}"]`).value,us=box.querySelector(`[data-iu="${i}"]`).value,th=box.querySelector(`[data-it="${i}"]`).value;
+     const d0=dt?new Date(dt+'T12:00'):new Date(year,8,1+i*7,12);let ts=d0.getTime()+n,id='g'+ts;while(a.games.some(x=>x.id===id))id='g'+(++ts);
+     a.games.push({id,opp,program:prog(),plays:b.plays.map(x=>Object.assign({},x)),src:fl.name+'|'+b.name,imported:true});n++;pl+=b.n;lastYear=d0.getFullYear();
+     {const dd=dt||(d0.getFullYear()+'-'+String(d0.getMonth()+1).padStart(2,'0')+'-'+String(d0.getDate()).padStart(2,'0'));S.rows.push({id:newId(),opp,date:dd,ha:'H',us,them:th,color:'#3b4b5c',logo:null,game:id,upd:Date.now()})}});
+    if(!n){alert('Nothing selected');return}
+    try{localStorage.setItem(key,JSON.stringify(a))}catch(e){alert('Not enough room on this device to import that many games.');return}
+    saveSched(S);if(lastYear)V.season=lastYear;closeM();render()}}
+  catch(e){box.innerHTML='<p class="note" style="color:var(--bad);text-transform:none;letter-spacing:0">'+esc(e.message||String(e))+'</p>'}}}
 /* ---------- custom split ---------- */
 const CSK='stats_custom_v1';let CUS={g1:'call',g2:'',fl:[]};try{CUS=Object.assign(CUS,JSON.parse(localStorage.getItem(CSK))||{})}catch(e){}
 function csSave(){try{localStorage.setItem(CSK,JSON.stringify(CUS))}catch(e){}}
@@ -182,6 +210,7 @@ function render(){hdr();let h;
  const ca=$('cmpall');if(ca)ca.onchange=()=>{['custom','call','form','down','zone','rp'].forEach(k=>{if(ca.checked)delete CMP[k];else CMP[k]=1});cmpSave();render()};
  const g1=$('csg1');if(g1){g1.onchange=()=>{CUS.g1=g1.value;csSave();render()};$('csg2').onchange=e=>{CUS.g2=e.target.value;csSave();render()};$('csadd').onclick=()=>{CUS.fl.push({f:'',v:''});csSave();render()};
   document.querySelectorAll('[data-csf]').forEach(x=>x.onchange=()=>{CUS.fl[+x.dataset.csf]={f:x.value,v:''};csSave();render()});document.querySelectorAll('[data-csv]').forEach(x=>x.onchange=()=>{CUS.fl[+x.dataset.csv].v=x.value;csSave();render()});document.querySelectorAll('[data-csx]').forEach(x=>x.onclick=()=>{CUS.fl.splice(+x.dataset.csx,1);csSave();render()})}
+ const ig=$('impg');if(ig)ig.onclick=importOpen;
  const ag=$('addg');if(ag)ag.onclick=()=>editRow(null);
  document.querySelectorAll('[data-row]').forEach(b=>b.onclick=e=>{const r=sched().rows.find(x=>x.id===b.dataset.row),gid=r&&matchGame(r);if(e.target.closest('[data-edit]')||!gid)return editRow(b.dataset.row);V.game=gid;render()});
  document.querySelectorAll('tr[data-g]').forEach(r=>r.onclick=()=>{V.game=r.dataset.g;render()});

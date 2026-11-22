@@ -118,7 +118,7 @@ html,button,.chip,input,select{touch-action:manipulation;-webkit-tap-highlight-c
 /* ===== PROGRAM SETTINGS: change this block (and the lists below) to set the app up for another program ===== */
 /* Signed out = demo space (own storage, generic football calls, nothing of Deer Creek's). Signed in = the program's real data. */
 const SIGNED=(()=>{try{const s=JSON.parse(localStorage.getItem('suite_sync'));return !!(s&&s.token&&s.exp>Date.now())}catch(e){return false}})();
-addEventListener('storage',e=>{if(e.key==='suite_sync'){let n=false;try{const x=JSON.parse(e.newValue);n=!!(x&&x.token&&x.exp>Date.now())}catch(_){}if(n!==SIGNED)location.reload()}});
+addEventListener('storage',e=>{if(e.key===KEY&&e.newValue){try{const o=JSON.parse(e.newValue),ids=new Set(A.games.map(g=>g.id)),add=(o.games||[]).filter(g=>g&&!ids.has(g.id));if(add.length){A.games.push(...add);localStorage.setItem(KEY,JSON.stringify(A));renderAll()}}catch(x){}}if(e.key==='suite_sync'){let n=false;try{const x=JSON.parse(e.newValue);n=!!(x&&x.token&&x.exp>Date.now())}catch(_){}if(n!==SIGNED)location.reload()}});
 const CONFIG=SIGNED?{program:'deer-creek',name:'Deer Creek',filmRoom:'https://claude.ai/artifact/83Jt11X8MfVHj1xD2UB6CA',storageKey:'almanac_v1',blankUntilPlan:true}:{program:'demo',name:'Your Team',filmRoom:'../suite/film.html',storageKey:'almanac_demo',blankUntilPlan:false};
 const KEY=CONFIG.storageKey;
 const DEF_DC={
