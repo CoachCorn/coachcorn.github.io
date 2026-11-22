@@ -136,11 +136,11 @@ const TC={Q:'#ffffff',X:'#5aa9ff',Z:'#5aa9ff',M:'#f2b632',H:'#2fbf71',Y:'#c58bff
    Noah asked for the hashes drawn farther apart than real: HASHR puts the right hash 66 ft from the left one (real is 53'4"). Change the 66 to change it.
    Numbers are 6 ft tall: top 9 yards (27 ft) from the sideline, bottom 21 ft. */
 const PXFT=4.4,YD=3*PXFT,LOS=110+OFF,VW=Math.round(160*PXFT),VH=250+OFF,HASHX=Math.round(53.333*PXFT),HASHR=HASHX+Math.round(66*PXFT),NSHIFT=4,NB=Math.round((21-NSHIFT)*PXFT),NT=Math.round((27-NSHIFT)*PXFT); // numbers drawn NSHIFT ft closer to the sideline than the NFHS spec, at Noah's request
-const L1=LOS-16,L2=LOS-50,L3=LOS-100,DP={
- '4-3-4':[['DE1','DE',133,L1],['DT1','DT',205,L1],['DT2','DT',265,L1],['DE2','DE',337,L1],['WL','W',170,L2],['ML','M',235,L2],['SL','S',300,L2],['CB1','CB',40,LOS-55],['CB2','CB',450,LOS-55],['FS','FS',205,L3],['SS','SS',265,L3]],
- '3-4-4':[['DE1','DE',145,L1],['NT','NT',235,L1],['DE2','DE',325,L1],['OL1','W',105,LOS-34],['IL1','M',205,L2],['IL2','M',265,L2],['OL2','S',365,LOS-34],['CB1','CB',40,LOS-55],['CB2','CB',450,LOS-55],['FS','FS',205,L3],['SS','SS',265,L3]],
- '3-3-5':[['DE1','DE',145,L1],['NT','NT',235,L1],['DE2','DE',325,L1],['WL','W',175,L2],['ML','M',235,L2],['SL','S',295,L2],['CB1','CB',40,LOS-55],['CB2','CB',450,LOS-55],['FS','FS',205,L3],['SS','SS',265,L3],['NB','N',350,LOS-42]],
- '4-2-5':[['DE1','DE',133,L1],['DT1','DT',205,L1],['DT2','DT',265,L1],['DE2','DE',337,L1],['WL','W',205,L2],['ML','M',265,L2],['CB1','CB',40,LOS-55],['CB2','CB',450,LOS-55],['FS','FS',205,L3],['SS','SS',265,L3],['NB','N',350,LOS-42]]};
+const L1=LOS-28,L2=LOS-58,L3=LOS-100,DP={
+ '4-3-4':[['DE1','DE',163,L1],['DT1','DT',211,L1],['DT2','DT',259,L1],['DE2','DE',307,L1],['WL','W',170,L2],['ML','M',235,L2],['SL','S',300,L2],['CB1','CB',40,LOS-55],['CB2','CB',450,LOS-55],['FS','FS',205,L3],['SS','SS',265,L3]],
+ '3-4-4':[['DE1','DE',163,L1],['NT','NT',235,L1],['DE2','DE',307,L1],['OL1','W',105,LOS-40],['IL1','M',205,L2],['IL2','M',265,L2],['OL2','S',365,LOS-40],['CB1','CB',40,LOS-55],['CB2','CB',450,LOS-55],['FS','FS',205,L3],['SS','SS',265,L3]],
+ '3-3-5':[['DE1','DE',163,L1],['NT','NT',235,L1],['DE2','DE',307,L1],['WL','W',175,L2],['ML','M',235,L2],['SL','S',295,L2],['CB1','CB',40,LOS-55],['CB2','CB',450,LOS-55],['FS','FS',205,L3],['SS','SS',265,L3],['NB','N',350,LOS-42]],
+ '4-2-5':[['DE1','DE',163,L1],['DT1','DT',211,L1],['DT2','DT',259,L1],['DE2','DE',307,L1],['WL','W',205,L2],['ML','M',265,L2],['CB1','CB',40,LOS-55],['CB2','CB',450,LOS-55],['FS','FS',205,L3],['SS','SS',265,L3],['NB','N',350,LOS-42]]};
 function addDefense(t,pre){pre=DP[pre]?pre:'4-3-4';Object.keys(t).forEach(k=>{if(t[k].df)delete t[k]});DP[pre].forEach(([k,lab,x,y])=>{t['D_'+k]={x,y,on:1,df:1,lab}});return pre}
 const OLSP=36;   // spacing between offensive linemen
 function baseDraw(){const t={},put=(k,x,y,on)=>t[k]={x,y,on};
