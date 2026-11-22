@@ -63,6 +63,7 @@ button,input{font:inherit;color:var(--tx)}
 #views iframe,#views .soonv{position:absolute;inset:0;width:100%;height:100%;border:0;display:none;background:var(--bg)}
 #views .on{display:block}
 .soonv{padding:30px;color:var(--mut)}.soonv h2{color:var(--tx);margin-top:0}
+body.setov #views{display:block;flex:none;height:0;min-height:0}#views iframe.ovl{display:block;position:fixed;inset:0;z-index:40;background:transparent}
 body.tool #home{display:none}body.tool #bar{display:flex}body.tool #views{display:block}
 /* modal */
 .modal{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:9}
@@ -160,10 +161,13 @@ $('tiles').onclick=e=>{const b=e.target.closest('[data-t]');if(b)open(b.dataset.
 let EDOPEN=false;function homeLabel(){const bk=EDOPEN&&document.body.classList.contains('tool');$('homebtn').textContent=bk?'‹ Back':'‹ Home'}
 $('homebtn').onclick=()=>{if(EDOPEN){try{made.gameplan.contentWindow.edBack();return}catch(e){}}goHome()};$('demob1').onclick=()=>signInModal();
 /* A tool can ask the shell to open another tool, e.g. the Almanac's Glossary button. */
-function toSettings(){open('almanac');const f=made.almanac;let tries=0;const go=()=>{let w=null;try{w=f.contentWindow;if(!w||!w.openSetup)throw 0}catch(e){if(++tries<40)return setTimeout(go,250);return}w.openSetup()};go()}
+/* Settings opens over the current screen (no tab switch): the Almanac frame becomes a transparent overlay that shows only its Setup dialog. */
+function setClose(){const f=made.almanac;if(f){f.classList.remove('ovl');try{f.contentWindow.document.documentElement.classList.remove('ovl')}catch(e){}}document.body.classList.remove('setov')}
+function toSettings(){const f=frame(TOOLS[0]);let tries=0;const go=()=>{let w=null;try{w=f.contentWindow;if(!w||!w.openSetup||!w.document.documentElement)throw 0}catch(e){if(++tries<40)return setTimeout(go,250);return}
+  w.document.documentElement.classList.add('ovl');document.body.classList.add('setov');f.classList.add('ovl');w.openSetup()};go()}
 function toAlm(id){open('almanac');const f=made.almanac;let tries=0;const go=()=>{let w=null;try{w=f.contentWindow;if(!w||!w.takeGrid)throw 0}catch(e){if(++tries<40)return setTimeout(go,250);return}w.takeGrid(id)};go()}
 function toFilm(txt){open('film');const f=made.film;let tries=0;const go=()=>{let w=null;try{w=f.contentWindow;if(!w||!w.takeAlmanac)throw 0}catch(e){if(++tries<40)return setTimeout(go,250);return}w.postMessage({almanac:txt},location.origin)};go()}
-addEventListener('message',e=>{if(e.origin!==location.origin||!e.data)return;if('gpEditor' in e.data){EDOPEN=!!e.data.gpEditor;homeLabel();return}if(e.data.gamesChanged){Object.keys(made).forEach(k=>{if(k==='almanac')return;try{made[k].contentWindow.location.reload()}catch(x){}});return}if(e.data.toFilm){toFilm(e.data.toFilm);return}if(e.data.toAlmanac){toAlm(e.data.toAlmanac);return}if(!e.data.open)return;open(e.data.open);
+addEventListener('message',e=>{if(e.origin!==location.origin||!e.data)return;if(e.data.settingsClosed){setClose();return}if('gpEditor' in e.data){EDOPEN=!!e.data.gpEditor;homeLabel();return}if(e.data.gamesChanged){Object.keys(made).forEach(k=>{if(k==='almanac')return;try{made[k].contentWindow.location.reload()}catch(x){}});return}if(e.data.toFilm){toFilm(e.data.toFilm);return}if(e.data.toAlmanac){toAlm(e.data.toAlmanac);return}if(!e.data.open)return;open(e.data.open);
  if(e.data.open==='glossary'&&made.glossary&&made.glossary.contentWindow)made.glossary.contentWindow.postMessage({glossary:'review'},location.origin)});
 addEventListener('storage',e=>{if(e.key&&(e.key.indexOf('glossary_v1_')===0||e.key.indexOf('schedule_v1_')===0)&&!document.body.classList.contains('tool'))renderHome()});
 addEventListener('online',()=>{renderHome();barStatus()});addEventListener('offline',()=>{renderHome();barStatus()});
