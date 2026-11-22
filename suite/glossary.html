@@ -78,12 +78,18 @@ function edit(id){const t=id?GL.byId(G,id):null,tv=t?t.type:(S.type||'tag'),isTa
  <div class="lab">Type</div><select id="e_t" style="width:100%" ${t?'disabled':''}>${TYPES.map(([k,l])=>`<option value="${k}" ${k===tv?'selected':''}>${l}</option>`).join('')}</select>
  ${isTag?`<div class="lab">Used on (play tags only)</div><div class="chips"><label class="chip"><input type="checkbox" id="e_ur" ${!t||t.uses.includes('run')?'checked':''}> Run</label><label class="chip"><input type="checkbox" id="e_up" ${!t||t.uses.includes('pass')?'checked':''}> Pass</label></div>`:''}
  <div class="lab">Also called (aliases, commas)</div><input type="text" id="e_a" style="width:100%" value="${t?esc(t.aliases.join(', ')):''}">
+ ${(()=>{const w=(t&&t.ow)||{},h=w.byHash||(w.pair?{L:w.pair[0],R:w.pair[1]}:{});return`<div id="e_ow" style="display:${tv==='oneword'?'block':'none'};border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-top:8px"><b>One-word rules</b> <span class="note">used by the Almanac when this one word is tapped</span>
+  <div class="lab">Run or pass</div><select id="e_owt" style="width:100%"><option value="">(no rules)</option><option value="run" ${w.t==='run'?'selected':''}>Run</option><option value="pass" ${w.t==='pass'?'selected':''}>Pass</option></select>
+  <div class="lab">Formation it puts you in</div><input type="text" id="e_owf" style="width:100%" value="${esc(w.fam||'')}" placeholder="e.g. Trips">
+  <div class="lab">Call from the left hash / right hash (optional)</div><div style="display:flex;gap:8px"><input type="text" id="e_owl" style="flex:1" value="${esc(h.L||'')}" placeholder="Left hash"><input type="text" id="e_owr" style="flex:1" value="${esc(h.R||'')}" placeholder="Right hash"></div>
+  <div class="lab">Adds this play tag (optional)</div><input type="text" id="e_owg" style="width:100%" value="${esc(w.tg||'')}">
+  <div class="lab">Analysis name (optional)</div><input type="text" id="e_owa" style="width:100%" value="${esc(w.an||'')}"></div>`})()}
  <div class="lab">Meaning</div><textarea id="e_m">${t?esc(t.meaning.text||''):''}</textarea>
  ${t&&t.code!=null?`<div class="lab">Technique code</div><input type="text" id="e_c" style="width:100%" value="${esc(t.code)}">`:''}
  ${t&&t.type==='coverage'?`<div class="lab">Means (coarse tags)</div><div class="chips">${G.terms.filter(x=>x.type==='shell'&&x.status==='active').map(x=>`<label class="chip"><input type="checkbox" class="e_mp" value="${esc(x.id)}" ${(t.links.maps_to||[]).includes(x.id)?'checked':''}> ${esc(x.name)}</label>`).join('')}</div>`:''}
  ${t?`<p class="note">id ${esc(t.id)} · added ${esc(t.added||'')} (${esc(t.source||'')})${t.history.length>1?' · '+t.history.length+' versions: '+t.history.map(h=>esc(h.since+' '+h.name)).join(' → '):''}</p>`:''}
  <p style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px"><button class="btn pri" id="e_s">${t&&t.needsReview?'Approve and save':'Save'}</button>${t?`<button class="btn ${t.status==='active'?'bad':''}" id="e_r">${t.status==='active'?'Retire':'Bring back'}</button>`:''}<button class="btn" id="e_x">Cancel</button></p>`);
- $('e_x').onclick=close;
+ $('e_x').onclick=close;{const ts=$('e_t');if(ts)ts.onchange=()=>{$('e_ow').style.display=ts.value==='oneword'?'block':'none'}}
  const uses=()=>{const r=$('e_ur');return r?[r.checked&&'run',$('e_up').checked&&'pass'].filter(Boolean):null};
  $('e_s').onclick=()=>{load();let n=$('e_n').value.trim();if(!n){toast('Give it a name');return}
   const al=$('e_a').value.split(',').map(x=>x.trim()).filter(Boolean),mt=$('e_m').value;let term=t&&GL.byId(G,t.id);const old=term?term.name:null;
@@ -95,6 +101,8 @@ function edit(id){const t=id?GL.byId(G,id):null,tv=t?t.type:(S.type||'tag'),isTa
   GL.setMeaning(term,mt);term.needsReview=false;
   if($('e_c'))term.code=$('e_c').value.trim();
   const mp=[...document.querySelectorAll('.e_mp')];if(mp.length){term.links.maps_to=mp.filter(x=>x.checked).map(x=>x.value)}
+  if(term.type==='oneword'){const ty=$('e_owt').value,fam=$('e_owf').value.trim(),L=$('e_owl').value.trim().toUpperCase(),Rr=$('e_owr').value.trim().toUpperCase(),tg=$('e_owg').value.trim().toUpperCase(),an=$('e_owa').value.trim();
+   if(ty&&fam){const o={t:ty,fam:fam.toLowerCase().replace(/\b\w/g,m=>m.toUpperCase())};if(L||Rr)o.byHash={L:L||Rr,R:Rr||L};if(ty==='pass')o.pp=1;if(tg)o.tg=tg;if(an)o.an=an;term.ow=o}else delete term.ow}
   const u=uses();if(u&&term.type==='tag'){term.uses=u;if(!u.length)term.status='retired'}
   commit(term);close();toast('Saved '+term.name)};
  const rb=$('e_r');if(rb)rb.onclick=()=>{load();const x=GL.byId(G,t.id);x.status==='active'?GL.retire(x):GL.activate(x);x.needsReview=false;commit(x);close();toast((x.status==='active'?'Brought back ':'Retired ')+x.name)}}

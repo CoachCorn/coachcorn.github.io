@@ -280,7 +280,7 @@ $('modal').addEventListener('click',e=>{if(e.target.id==='modal'){$('modal').cla
 /* ---------- plans, columns, rows ---------- */
 function newPlan(sample){let p;if(sample)p=samplePlan();else{const cols=(signedIn()?['Jab','Cross','Counter','Knock out!']:['Play 1','Play 2','Play 3','Play 4']).map(h=>({id:uid('c'),head:h,sub:''})),rows=['Field run','Bdy run','Pass 1','Pass 2'].map(l=>({id:uid('r'),label:l}));p={id:uid('p'),upd:Date.now(),name:'New gameplan',cols,rows,blocks:[]}}
  ST.rows.push(p);cur=p.id;writeStore();render()}
-function newPlanDialog(){dialog({title:'New gameplan',fields:[{label:'Name (week or opponent)',val:''}],buttons:[{t:'Cancel'},{t:'Create',cls:'pri',fn:v=>{newPlan(false);const p=plan();p.name=v[0].trim()||'New gameplan';touch(p);render()}}]})}
+function newPlanDialog(){dialog({title:'New gameplan',fields:[{label:'Opponent',val:''},{label:'Plan name (optional, e.g. Week 9; blank = v. Opponent)',val:''}],buttons:[{t:'Cancel'},{t:'Create',cls:'pri',fn:v=>{newPlan(false);const p=plan(),o=v[0].trim();p.opp=o;p.name=v[1].trim()||(o?'v. '+o:'New gameplan');touch(p);render()}}]})}
 $('plan').onchange=e=>{cur=e.target.value;render()};
 $('pmore').onclick=()=>{const p=plan();if(!p)return newPlanDialog();dialog({title:'Plans',fields:[{label:'Name of this plan',val:p.name}],buttons:[
  {t:'Save name',cls:'pri',fn:v=>{p.name=v[0].trim()||p.name;touch(p);render()}},
@@ -533,7 +533,8 @@ function scoutFor(p){if(!p||!window.SCOUT)return null;const src=p.scoutSrc||'aut
   if(!g){const o=ownScout(p);if(o)return{name:o.name,rows:o.rows,from:'Loaded in Gameplan'}}}
  return g?{name:g.scout.name,rows:g.scout.rows,from:'Almanac · '+g.opp}:null}
 /* ---- "Start here": what gives this opponent's defense trouble, by the scout data ---- */
-const HMIN=5;   // fewest plays a concept or formation needs before it is ranked
+const HMIN=5;const HTOP=10;  // Start here lists: only items 10%+ better on BOTH efficiency and explosives
+const big=r=>r.de>=HTOP&&r.dx>=HTOP;   // fewest plays a concept or formation needs before it is ranked
 // Efficiency and explosive come from the same settings as the Stats tab (explosive yards for run / pass are set in Almanac > Setup), worked out from down, distance and gain.
 // Rows with no gain fall back to the scout's own EFF / EXPLOSIVE? columns.
 function hset(){const A=almData(),L=(A&&A.lists)||{};return{run:L.expRun||15,pass:L.expPass||15}}
@@ -552,16 +553,16 @@ function hintHTML(sc,p){if(!sc)return'';const rows=sc.rows||[];
  if(!hasOut(rows))return`<div class="hint"><div class="k">Start here</div><div class="note">This scout has no gain (GN/LS) column to work out efficiency and explosives from, so it cannot rank what hurts them.</div></div>`;
  const base=baseOf(rows),C=trouble(rows,x=>x.cn&&x.cn.toUpperCase(),base),F=trouble(rows,x=>x.fm,base);
  if(!C.length&&!F.length)return`<div class="hint"><div class="k">Start here</div><div class="note">Nothing in this scout has ${HMIN}+ plays above their average yet.</div></div>`;
- const W=planWords(p),has=p&&p.blocks&&p.blocks.length,miss=[...C,...F].filter(r=>!onGrid(W,r.k)).sort((a,b)=>b.sc-a.sc).slice(0,4);
+ const W=planWords(p),has=p&&p.blocks&&p.blocks.length,miss=[...C,...F].filter(r=>big(r)&&!onGrid(W,r.k)).sort((a,b)=>b.sc-a.sc).slice(0,4);
  const nm=a=>a.map(r=>`<span class="hc"><b>${esc(r.k)}</b></span>`).join('');
  const T=r=>`<tr><td><b>${esc(r.k)}</b>${onGrid(W,r.k)?'':' <em>not on grid</em>'}</td><td>${hn(r.de)}</td><td>${hn(r.dx)}</td><td class="mut">${r.n}</td></tr>`;
  const tb=(t,a)=>a.length?`<tr><th colspan="4">${t}</th></tr>`+a.slice(0,12).map(T).join(''):'';
  return`<details class="hint"><summary><span class="k">Start here · what hurts ${esc(sc.name||'this defense')}</span></summary>
-  ${miss.length?`<div class="hrow"><span class="hl" style="color:var(--warn)">Don't forget</span><span class="hcs">${nm(miss).replace(/class="hc"/g,'class="hc ng"')}</span></div>`:(has?'<div class="note" style="margin:4px 0">Everything that hurts them is already on your grid.</div>':'')}
-  <div class="hrow"><span class="hl">Hurts them</span><span class="hcs">${nm(C.slice(0,4))}${nm(F.slice(0,2))}</span></div>
+  ${miss.length?`<div class="hrow"><span class="hl" style="color:var(--warn)">Don't forget</span><span class="hcs">${nm(miss).replace(/class="hc"/g,'class="hc ng"')}</span></div>`:(has&&(C.some(big)||F.some(big))?'<div class="note" style="margin:4px 0">Everything 10%+ on both that hurts them is already on your grid.</div>':'')}
+  <div class="hrow"><span class="hl">Hurts them</span><span class="hcs">${nm(C.filter(big).slice(0,4))}${nm(F.filter(big).slice(0,2))}${C.some(big)||F.some(big)?'':'<span class="note">Nothing is 10%+ better on both efficiency and explosives. Tap for the full numbers.</span>'}</span></div>
   <div class="hmore"><div class="mut" style="font-size:12px;margin:6px 0 2px">Tap Start here for the numbers</div></div>
   <table class="ht"><tr><th></th><th>Eff</th><th>Expl</th><th>n</th></tr>${tb('Concepts',C)}${tb('Formations',F)}</table>
-  <div class="note" style="margin-top:6px">Versus their average (${Math.round(base.e*100)}% efficient, ${Math.round(base.x*100)}% explosive, ${base.n} plays). Explosive = ${hset().run===hset().pass?hset().run+'+ yards on any play':hset().run+'+ run, '+hset().pass+'+ pass'} (Almanac setting). ${HMIN}+ plays only. Green = better for you.</div></details>`}
+  <div class="note" style="margin-top:6px">Versus their average (${Math.round(base.e*100)}% efficient, ${Math.round(base.x*100)}% explosive, ${base.n} plays). Explosive = ${hset().run===hset().pass?hset().run+'+ yards on any play':hset().run+'+ run, '+hset().pass+'+ pass'} (Almanac setting). ${HMIN}+ plays only. Green = better for you. Don't forget and Hurts them list only items 10%+ better on both.</div></details>`}
 function blockHint(b,sc){if(!sc)return'';const r=predict(b,sc);if(!r||!r.looks||!r.looks.length)return'';const cv=r.looks[0].cv,rows=sc.rows.filter(x=>x.cv===cv);
  if(!hasOut(rows))return'';const C=trouble(rows,x=>x.cn&&x.cn.toUpperCase(),baseOf(rows)).slice(0,2);if(!C.length)return'';
  return`<div class="bhint"><span class="hl">Into ${esc(cv)}</span>${C.map(r=>`<span class="hc"><b>${esc(r.k)}</b></span>`).join('')}</div>`}
@@ -577,7 +578,7 @@ function pdHTML(b,sc){if(!sc)return'<div class="note">No scout for this plan yet
  return looks+`<div class="${r.lvl?'fb2':'note'}" style="margin-top:4px">${r.lvl?'Formation has only n='+r.nF+' in this scout. Fell back to '+esc(r.label)+' (n='+r.n+').':'By formation · n='+r.n+'.'} ${esc(sc.from)}</div>`}
 $('scout').onclick=()=>{const p=plan();if(!p)return toast('Start a plan first');const G=almGames(),own=ownScout(p),src=p.scoutSrc||'auto',cur=scoutFor(p);
  $('mbox').innerHTML=`<h3>Opponent scout</h3><div class="note">${cur?'<b>In use:</b> '+esc(cur.name)+' · '+cur.rows.length+' plays · '+esc(cur.from):'No scout is feeding this plan yet.'}</div>
- <div class="lab">Opponent for this plan</div><input type="text" id="sc_opp" value="${esc(p.opp||'')}" placeholder="Used to find the matching scout in the Almanac">
+ <div class="lab">Opponent for this plan</div><input type="text" id="sc_opp" value="${esc(p.opp||String(p.name||'').replace(/^(v\.?|vs\.?)\s+/i,'').trim())}" placeholder="Used to find the matching scout in the Almanac">
  <div class="lab">Use this scout</div><select id="sc_src" style="width:100%"><option value="auto" ${src==='auto'?'selected':''}>Automatic (opponent match, then the Almanac's current game)</option>
   ${G.map(g=>`<option value="alm:${esc(g.id)}" ${src==='alm:'+g.id?'selected':''}>Almanac · ${esc(g.opp)} · ${esc(g.scout.name)} (${g.scout.rows.length} plays)</option>`).join('')}
   ${own?`<option value="own" ${src==='own'?'selected':''}>Loaded here · ${esc(own.name)} (${own.rows.length} plays)</option>`:''}<option value="none" ${src==='none'?'selected':''}>None</option></select>
@@ -589,10 +590,11 @@ $('scout').onclick=()=>{const p=plan();if(!p)return toast('Start a plan first');
  $('sc_ok').onclick=()=>{p.opp=$('sc_opp').value.trim();p.scoutSrc=$('sc_src').value;touch(p);$('modal').classList.remove('show');render()};
  $('sc_file').onchange=async ev=>{const f=ev.target.files[0],box=$('sc_load');if(!f)return;box.innerHTML='<p class="note">Reading…</p>';
   try{const P=await SCOUT.readFile(f),tot=P.blocks.reduce((a,b)=>a+b.rows.length,0);
-   box.innerHTML=`<div class="lab">Which opponent</div><select id="sc_blk" style="width:100%">${P.blocks.map((b,i)=>`<option value="${i}">${esc(b.name)} — ${b.rows.length} plays</option>`).join('')}${P.blocks.length>1?`<option value="all">All blocks combined — ${tot} plays</option>`:''}</select>
+   box.innerHTML=`${P.blocks.length>1?`<div class="lab">Name the games in this file (optional)</div>${P.blocks.map((b,i)=>`<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px"><input type="text" data-bn="${i}" placeholder="${esc(b.name)}" style="flex:1"><span class="note">${b.rows.length} plays</span></div>`).join('')}`:''}<div class="lab">Which opponent</div><select id="sc_blk" style="width:100%">${P.blocks.length>1?`<option value="all" selected>All blocks combined — ${tot} plays</option>`:''}${P.blocks.map((b,i)=>`<option value="${i}">${esc(b.name)} — ${b.rows.length} plays</option>`).join('')}</select>
     <div class="lab">Name</div><input type="text" id="sc_nm"><div class="row"><button class="btn pri" id="sc_go">Load for this plan</button></div>`;
    const sel=$('sc_blk'),nm=$('sc_nm'),pick=()=>sel.value==='all'?{name:'All blocks',rows:P.blocks.flatMap(b=>b.rows)}:P.blocks[+sel.value];
-   const upd=()=>{const b=pick();nm.value=b.name.indexOf('Block ')===0?(p.opp||b.name):b.name};sel.onchange=upd;upd();
+   const upd=()=>{const b=pick();nm.value=(b.name.indexOf('Block ')===0||b.name==='All blocks')?(p.opp||b.name):b.name};sel.onchange=upd;upd();
+   box.oninput=e=>{const i=e.target.dataset&&e.target.dataset.bn;if(i==null)return;const v=e.target.value.trim();P.blocks[+i].name=v||P.blocks[+i].name0||P.blocks[+i].name;const o=sel.querySelector(`option[value="${i}"]`);if(o)o.textContent=P.blocks[+i].name+' — '+P.blocks[+i].rows.length+' plays';if(sel.value===i)upd()};P.blocks.forEach(b=>b.name0=b.name);
    $('sc_go').onclick=()=>{const b=pick();try{localStorage.setItem(SKEY+p.id,JSON.stringify({name:nm.value.trim()||b.name,src:f.name+' · '+P.sheet,at:Date.now(),rows:b.rows}))}catch(e){return toast('Not enough room on this device for that scout')}
     p.scoutSrc='own';if(!p.opp)p.opp=nm.value.trim();touch(p);$('modal').classList.remove('show');render();toast('Scout loaded: '+b.rows.length+' plays')}
   }catch(err){box.innerHTML='<p style="color:var(--bad)">'+esc(err.message||err)+'</p>'}}};
@@ -665,11 +667,11 @@ function openCell(bi,key){const p=plan(),b=p.blocks[bi],r=p.rows.find(x=>x.id===
   if(cv&&!list.includes(cv)&&!MULTI[k])h=`<button class="chip on" data-pick="${k}" data-v="${esc(cv)}">${esc(cv)}</button>`+h;
   const typed=(C.q[k]||'').trim();if(typed&&!list.some(n=>n.toUpperCase()===typed.toUpperCase()))h+=`<button class="chip" data-pick="${k}" data-v="${esc(typed)}" style="border-style:dashed">Use “${esc(typed)}”</button>`;
   if(!opts[k].length&&!typed&&!cv)h+=`<span class="note">No ${k} words in the glossary yet. Type one above.</span>`;return h}
- $('mbox').innerHTML=`<h3>${esc(p.blocks[bi].name||'Formation')} · ${esc(r.label)} × ${esc(c.head||'column')}</h3>
+ $('mbox').style.width='min(1100px,96vw)';$('mbox').innerHTML=`<h3>${esc(p.blocks[bi].name||'Formation')} · ${esc(r.label)} × ${esc(c.head||'column')}</h3>
  <input type="text" id="qb" value="${esc(barText(C.s))}" placeholder="Type the call: tags, formation, play" autocapitalize="off" autocorrect="off" autocomplete="off" enterkeyhint="next" style="font-size:20px;font-weight:700;padding:12px;margin:6px 0">
  <div id="qs" class="chips" style="margin-bottom:4px"></div><div id="qp" style="margin-bottom:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">${pv('')}</div>
  <div class="note">Words from your glossary land in their slot; anything else becomes the play. Press Enter to save and move to the next cell, or tap words below.</div>
- ${SLOTS.map(sl=>`<div class="slot"><div class="top"><b>${sl[1]}</b><input type="text" data-q="${sl[0]}" placeholder="Search or type" autocapitalize="off" autocorrect="off"></div><div class="chips" id="ch_${sl[0]}">${chips(sl[0])}</div></div>`).join('')}
+ <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:0 14px">${SLOTS.map(sl=>`<div class="slot"><div class="top"><b>${sl[1]}</b><input type="text" data-q="${sl[0]}" placeholder="Search or type" autocapitalize="off" autocorrect="off"></div><div class="chips" id="ch_${sl[0]}">${chips(sl[0])}</div></div>`).join('')}</div>
  <div class="lab">Note</div><input type="text" id="cn" value="${esc(C.n)}" placeholder="Optional"><div class="row"><button class="btn pri" data-x="save">Save cell</button><button class="btn" data-x="clear">Clear cell</button><button class="btn" data-x="cancel">Cancel</button></div>`;
  m.classList.add('show');
  const acList=()=>{const v=$('qb').value;if(/\s$/.test(v))return[];const t=(v.split(/\s+/).pop()||'').toLowerCase();if(t.length<2)return[];const out=[];ORD.forEach(k=>(opts[k]||[]).forEach(n=>{const l=n.toLowerCase();if(l.startsWith(t)&&l!==t&&!out.includes(n))out.push(n)}));return out.slice(0,8)};
@@ -691,6 +693,7 @@ function openCell(bi,key){const p=plan(),b=p.blocks[bi],r=p.rows.find(x=>x.id===
 /* ---------- drawing editor ---------- */
 let E=null;
 function edBack(){if(!E)return;const b=document.querySelector('#ed [data-e="save"]');if(b)b.click()}
+try{new MutationObserver(()=>{if(!$('modal').classList.contains('show'))$('mbox').style.width=''}).observe($('modal'),{attributes:true,attributeFilter:['class']})}catch(e){}
 try{new MutationObserver(()=>{try{parent.postMessage({gpEditor:$('ed').classList.contains('show')},location.origin)}catch(e){}}).observe($('ed'),{attributes:true,attributeFilter:['class']})}catch(e){}
 const edB=()=>E&&E.lb?E.lb:plan().blocks[E.bi];
 function openDraw(bi,look){const p=plan(),b=p.blocks[bi];E={bi,look:look||null,d:clone(look?look.d:(b.draw||baseDraw())),sel:null,selL:null,mode:'move',cur:null,dot:false,arrow:true,col:COLS[0],grp:true,hist:[],drag:null};
