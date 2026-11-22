@@ -37,6 +37,7 @@ tr.click{cursor:pointer}tr.click:active{background:#223140}
 .modal{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:9}.modal.show{display:flex}
 .box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;width:min(480px,94vw);max-height:90vh;overflow:auto}
 .lab{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:10px 0 4px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.chip{background:#223140;border:1px solid var(--line);border-radius:999px;padding:6px 11px;font-size:13px;font-weight:600;color:var(--tx)}.chip i{font-style:normal;color:var(--mut);font-weight:500;margin-left:2px}.chip.on{background:var(--acc);border-color:var(--acc);color:#fff}.chip.on i{color:#dbeaff}
 .seg{display:flex;gap:6px}.seg button{flex:1;background:#223140;border:1px solid var(--line);border-radius:8px;padding:8px;font-weight:700}.seg button.on{background:var(--acc);border-color:var(--acc);color:#fff}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 </style></head><body>
@@ -169,7 +170,8 @@ function importOpen(){const key=ALMK(),raw=localStorage.getItem(key);
     saveSched(S);if(lastYear)V.season=lastYear;closeM();render()}}
   catch(e){box.innerHTML='<p class="note" style="color:var(--bad);text-transform:none;letter-spacing:0">'+esc(e.message||String(e))+'</p>'}}}
 /* ---------- custom split ---------- */
-const CSK='stats_custom_v1';let CUS={g1:'call',g2:'',fl:[]};try{CUS=Object.assign(CUS,JSON.parse(localStorage.getItem(CSK))||{})}catch(e){}
+const CSK='stats_custom_v2';let CUS={lv:[{f:'call',v:[]},{f:'',v:[]}],sort:'n'};
+try{const o=JSON.parse(localStorage.getItem(CSK));if(o&&Array.isArray(o.lv))CUS=Object.assign(CUS,o);else{const old=JSON.parse(localStorage.getItem('stats_custom_v1'));if(old)CUS.lv=[{f:old.g1||'call',v:[]},{f:old.g2||'',v:[]}]}}catch(e){}
 function csSave(){try{localStorage.setItem(CSK,JSON.stringify(CUS))}catch(e){}}
 const CSF=[['call','Call (concept / one word)'],['formation','Formation'],['ftag','Formation tag'],['motion','Motion / shift'],['tag','Play tag'],['target','Route / target'],['ptype','Run / pass'],['down','Down'],['bucket','Down & distance'],['zone','Field zone'],['hash','Hash'],['result','Result'],['player','Player (carrier / target)'],['passer','QB']];
 const RESW={COMP:'Complete',INC:'Incomplete',RUSH:'Rush',SCRAM:'Scramble',SACK:'Sack',INT:'Interception',FUM:'Fumble lost'};
@@ -181,25 +183,26 @@ function csVals(p,k){const one=v=>v==null||v===''?[]:[String(v)],none=a=>a.lengt
  return[]}
 const csLab=k=>(CSF.find(x=>x[0]===k)||[k,k])[1];
 function customSplit(P,L){
- const opts=(sel)=>CSF.map(([k,l])=>`<option value="${k}" ${sel===k?'selected':''}>${esc(l)}</option>`).join('');
- const valsFor=f=>[...new Set(P.flatMap(p=>csVals(p,f)))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
- let Q=P;for(const x of CUS.fl)if(x.f&&x.v)Q=Q.filter(p=>csVals(p,x.f).includes(x.v));
- const base=summ(Q,L),on=cmpOn('custom');
- const m={};for(const p of Q){let keys=[''];for(const g of [CUS.g1,CUS.g2].filter(Boolean)){const v=csVals(p,g);if(!v.length){keys=[];break}keys=keys.flatMap(a=>v.map(b=>a?a+' · '+b:b))}for(const k of keys)(m[k]=m[k]||[]).push(p)}
- const rows=Object.entries(m).sort((a,b)=>b[1].length-a[1].length).slice(0,60).map(([k,a])=>{const s=summ(a,L);return[esc(k),s.n,delta(s.ypp,base.ypp,false,s.n,on),delta(s.eff,base.eff,true,s.n,on),delta(s.exp,base.exp,true,s.n,on)]});
  const sel='style="padding:8px;font-size:15px;background:transparent;color:inherit;border:1px solid var(--line);border-radius:8px;max-width:100%"';
- const fl=CUS.fl.map((x,i)=>`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center"><span class="note">Only</span><select ${sel} data-csf="${i}"><option value="">Choose…</option>${opts(x.f)}</select><select ${sel} data-csv="${i}"><option value="">any</option>${x.f?valsFor(x.f).map(v=>`<option value="${esc(v)}" ${x.v===v?'selected':''}>${esc(v)}</option>`).join(''):''}</select><button class="btn" data-csx="${i}">Remove</button></div>`).join('');
- return`<div class="sh"><h3>Custom split</h3><label class="cmp"><input type="checkbox" data-cmp="custom" ${on?'checked':''}>+/−</label></div>
- <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:6px">
-  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="note">Group by</span><select ${sel} id="csg1">${opts(CUS.g1)}</select><span class="note">then by</span><select ${sel} id="csg2"><option value="">nothing</option>${opts(CUS.g2)}</select></div>
-  ${fl}<div style="margin-top:8px"><button class="btn" id="csadd">+ Only plays where…</button></div></div>`+(Q.length?`<p class="note">${Q.length} plays${CUS.fl.some(x=>x.f&&x.v)?' (filtered)':''}. +/− is against the average of these plays (${f1(base.ypp)} yds/play, ${pct(base.eff)} efficient, ${pct(base.exp)} explosive).</p>`+tbl(['','Plays','Yds/play','Eff','Exp'],rows):'<p class="note">No plays match.</p>')}
+ const opts=cur=>'<option value="">Choose…</option>'+CSF.map(([k,l])=>`<option value="${k}" ${cur===k?'selected':''}>${esc(l)}</option>`).join('');
+ const num=(a,b)=>a.localeCompare(b,undefined,{numeric:true});
+ let Q=P;const info=CUS.lv.map(x=>{if(!x.f)return null;const cnt={};Q.forEach(p=>csVals(p,x.f).forEach(v=>cnt[v]=(cnt[v]||0)+1));const vals=Object.keys(cnt).sort(num),S=(x.v||[]).filter(v=>vals.includes(v));if(S.length)Q=Q.filter(p=>csVals(p,x.f).some(v=>S.includes(v)));return{vals,cnt,S}});
+ const base=summ(Q,L),on=cmpOn('custom'),act=CUS.lv.map((x,i)=>info[i]?{f:x.f,S:info[i].S}:null).filter(Boolean);
+ const m={};for(const p of Q){let keys=[''];for(const g of act){const v=csVals(p,g.f).filter(v=>!g.S.length||g.S.includes(v));if(!v.length){keys=[];break}if(g.S.length===1)continue;keys=keys.flatMap(a=>v.map(b=>a?a+' · '+b:b))}for(const k of keys)(m[k]=m[k]||[]).push(p)}
+ const SK=CUS.sort||'n',ent=Object.entries(m).map(([k,a])=>[k||'Selected plays',a,summ(a,L)]).sort((a,b)=>{const ta=a[2].n<3,tb=b[2].n<3;if(SK!=='n'&&ta!==tb)return ta?1:-1;return(b[2][SK]||0)-(a[2][SK]||0)||b[2].n-a[2].n});
+ const rows=ent.slice(0,80).map(([k,a,s])=>[esc(k),s.n,delta(s.ypp,base.ypp,false,s.n,on),delta(s.eff,base.eff,true,s.n,on),delta(s.exp,base.exp,true,s.n,on)]);
+ const lv=CUS.lv.map((x,i)=>{const I=info[i];return`<div style="padding:10px 0;border-top:${i?'1px solid var(--line)':'0'}"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="note">${i?'Then by':'Sort by'}</span><select ${sel} data-csf="${i}">${opts(x.f)}</select>${CUS.lv.length>1?`<button class="btn" data-csx="${i}" style="padding:6px 10px;min-height:0;font-size:12px">Remove</button>`:''}</div>
+  ${I?`<div class="chips"><button class="chip ${I.S.length?'':'on'}" data-csall="${i}">All</button>${I.vals.map(v=>`<button class="chip ${I.S.includes(v)?'on':''}" data-csv="${i}" data-val="${esc(v)}">${esc(v)} <i>${I.cnt[v]}</i></button>`).join('')}</div>`:''}</div>`}).join('');
+ return`<div class="sh"><h3>Build your own split</h3><label class="cmp"><input type="checkbox" data-cmp="custom" ${on?'checked':''}>+/−</label></div>
+ <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;padding:4px 12px 12px;margin-bottom:6px">${lv}
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px">${CUS.lv.length<5?'<button class="btn" id="csadd" style="padding:6px 10px;min-height:0;font-size:12px">+ Add another</button>':''}<span style="flex:1"></span><span class="note">Rank by</span><select ${sel} id="cssort"><option value="n" ${SK==='n'?'selected':''}>Most plays</option><option value="ypp" ${SK==='ypp'?'selected':''}>Yds / play</option><option value="eff" ${SK==='eff'?'selected':''}>Efficiency</option><option value="exp" ${SK==='exp'?'selected':''}>Explosive</option></select></div></div>`+(Q.length?`<p class="note">${Q.length} plays selected (${f1(base.ypp)} yds/play, ${pct(base.eff)} efficient, ${pct(base.exp)} explosive). +/− is against that selection. Tap values to pick some, or All. Rows under 3 plays rank last.</p>`+tbl(['','Plays','Yds/play','Eff','Exp'],rows):'<p class="note">No plays match.</p>')}
 function viewSplits(){const gs=V.game?realGames(A()).filter(g=>g.id===V.game):gamesInSeason(),L=A().lists||{},P=plays(gs),all=summ(P,L);
  if(!P.length)return`<div class="empty">No logged plays in ${V.season} yet.</div>`;
  const split=(title,key,id)=>{const on=cmpOn(id);const m={};for(const p of P){const k=key(p);if(!k)continue;(m[k]=m[k]||[]).push(p)}
   const rows=Object.entries(m).sort((a,b)=>b[1].length-a[1].length).map(([k,a])=>{const s=summ(a,L);return[esc(k),s.n,delta(s.ypp,all.ypp,false,s.n,on),delta(s.eff,all.eff,true,s.n,on),delta(s.exp,all.exp,true,s.n,on)]});
   return`<div class="sh"><h3>${title}</h3><label class="cmp"><input type="checkbox" data-cmp="${id}" ${on?'checked':''}>+/−</label></div>`+tbl(['','Plays','Yds/play','Eff','Exp'],rows)};
  const IDS=['custom','call','form','down','zone','rp'],allOn=IDS.every(cmpOn);
- const L2=A().lists||{};return`<p class="note">Explosive = ${(L2.expRun||15)===(L2.expPass||15)?(L2.expRun||15)+'+ yards on any play':(L2.expRun||15)+'+ run, '+(L2.expPass||15)+'+ pass'} (change in Almanac › Setup). Compared with the ${V.season} average (${f1(all.ypp)} yds/play, ${pct(all.eff)} efficient, ${pct(all.exp)} explosive). Fewer than 3 plays shows no +/–.</p>${customSplit(P,L)}<label class="cmp" style="margin:10px 0 2px;font-size:13px"><input type="checkbox" id="cmpall" ${allOn?'checked':''}>Show all +/−</label>`+
+ const L2=A().lists||{};return`<div style="display:flex;justify-content:flex-end"><label class="cmp" style="font-size:13px"><input type="checkbox" id="cmpall" ${allOn?'checked':''}>Show all +/−</label></div><p class="note">Explosive = ${(L2.expRun||15)===(L2.expPass||15)?(L2.expRun||15)+'+ yards on any play':(L2.expRun||15)+'+ run, '+(L2.expPass||15)+'+ pass'} (change in Almanac › Setup). Compared with the ${V.season} average (${f1(all.ypp)} yds/play, ${pct(all.eff)} efficient, ${pct(all.exp)} explosive). Fewer than 3 plays shows no +/–.</p>${customSplit(P,L)}`+
   split('By call (one word or concept)',p=>p.owc||p.call,'call')+split('By formation',p=>p.formation?(p.formation+(p.ftag?' '+p.ftag:'')):null,'form')+split('By down and distance',bucket,'down')+split('By field zone',p=>zone(p.f),'zone')+split('Run / pass',p=>p.ptype==='run'?'Run':'Pass','rp')}
 /* ---------- render ---------- */
 function render(){hdr();let h;
@@ -208,8 +211,11 @@ function render(){hdr();let h;
  $('main').innerHTML=h;
  document.querySelectorAll('[data-cmp]').forEach(c=>c.onchange=()=>{if(c.checked)delete CMP[c.dataset.cmp];else CMP[c.dataset.cmp]=1;cmpSave();render()});
  const ca=$('cmpall');if(ca)ca.onchange=()=>{['custom','call','form','down','zone','rp'].forEach(k=>{if(ca.checked)delete CMP[k];else CMP[k]=1});cmpSave();render()};
- const g1=$('csg1');if(g1){g1.onchange=()=>{CUS.g1=g1.value;csSave();render()};$('csg2').onchange=e=>{CUS.g2=e.target.value;csSave();render()};$('csadd').onclick=()=>{CUS.fl.push({f:'',v:''});csSave();render()};
-  document.querySelectorAll('[data-csf]').forEach(x=>x.onchange=()=>{CUS.fl[+x.dataset.csf]={f:x.value,v:''};csSave();render()});document.querySelectorAll('[data-csv]').forEach(x=>x.onchange=()=>{CUS.fl[+x.dataset.csv].v=x.value;csSave();render()});document.querySelectorAll('[data-csx]').forEach(x=>x.onclick=()=>{CUS.fl.splice(+x.dataset.csx,1);csSave();render()})}
+ if($('cssort')){$('cssort').onchange=e=>{CUS.sort=e.target.value;csSave();render()};const ad=$('csadd');if(ad)ad.onclick=()=>{CUS.lv.push({f:'',v:[]});csSave();render()};
+  document.querySelectorAll('[data-csf]').forEach(x=>x.onchange=()=>{CUS.lv[+x.dataset.csf]={f:x.value,v:[]};csSave();render()});
+  document.querySelectorAll('[data-csall]').forEach(x=>x.onclick=()=>{CUS.lv[+x.dataset.csall].v=[];csSave();render()});
+  document.querySelectorAll('[data-csv]').forEach(x=>x.onclick=()=>{const L=CUS.lv[+x.dataset.csv],v=x.dataset.val,i=(L.v||[]).indexOf(v);L.v=L.v||[];if(i<0)L.v.push(v);else L.v.splice(i,1);csSave();render()});
+  document.querySelectorAll('[data-csx]').forEach(x=>x.onclick=()=>{CUS.lv.splice(+x.dataset.csx,1);csSave();render()})}
  const ig=$('impg');if(ig)ig.onclick=importOpen;
  const ag=$('addg');if(ag)ag.onclick=()=>editRow(null);
  document.querySelectorAll('[data-row]').forEach(b=>b.onclick=e=>{const r=sched().rows.find(x=>x.id===b.dataset.row),gid=r&&matchGame(r);if(e.target.closest('[data-edit]')||!gid)return editRow(b.dataset.row);V.game=gid;render()});
