@@ -399,15 +399,30 @@ function defOf(k,v){const g=glossary();if(!g)return null;for(const ty of SLOTT[k
 /* a line belongs to the player it starts on (within 8 units); shift lines carry mv = player */
 function lineAnchors(d){const T=d.t||{},out=[];(d.l||[]).forEach((l,i)=>{const a=l.pts&&l.pts[0];if(!a)return;let k=l.mv&&T[l.mv]?l.mv:null;if(!k){let best=8;for(const q in T){const t=T[q];if(!t.on)continue;const dd=Math.hypot(t.x-a[0],t.y-a[1]);if(dd<=best){best=dd;k=q}}}if(k)out.push({i,k,pts:clone(l.pts),mv:!!l.mv})});return out}
 function followAnchors(d,anc,t0){for(const a of anc){const t=d.t[a.k],o=t0[a.k],l=d.l[a.i];if(!t||!o||!l)continue;const dx=t.x-o.x,dy=t.y-o.y;if(!dx&&!dy)continue;if(a.mv)l.pts[0]=[t.x,t.y];else l.pts=a.pts.map(q=>[q[0]+dx,q[1]+dy])}}
-function lookFor(b,c){if(c&&c.look&&c.look.d)return{d:c.look.d,did:[],guess:[],not:[],none:[],gl:[],part:[],defs:[],saved:1};const d=clone(b.draw||baseDraw());d.sh=(d.sh||[]).filter(h=>h.k!=='txt');const t=d.t,L=d.l=(d.l||[]),t0={},anc=lineAnchors(d);for(const k in t)t0[k]={x:t[k].x,y:t[k].y};const s=(c&&c.s)||{},did=[],guess=[],not=[],none=[],gl=[],part=[],defs=[];
+/* ---------- concept library: a run or pass concept is drawn once and saved on its glossary term (term.rt).
+   Routes of eligible receivers (WR and TE slots) are saved by number, counted across the whole field from the side the concept is
+   called to (rt.side L or R); routes of anyone else (backs, QB, OL) are saved by player letter. Shapes are relative to where the
+   player stands (after a shift), so they move with him; x is kept inside the sidelines. ---------- */
+const RCVK=['X','Z','H','Y','M','A','F'];
+function standAt(d,k){const h=(d.sh||[]).find(h=>h.k==='pos'&&h.p===k),t=d.t[k];return h?{x:h.x,y:h.y}:t?{x:t.x,y:t.y}:null}
+function rcvOrder(d,side){return RCVK.filter(k=>d.t[k]&&d.t[k].on).map(k=>({k,p:standAt(d,k)})).sort((a,b)=>side==='R'?b.p.x-a.p.x:a.p.x-b.p.x).map(x=>x.k)}
+function conTerm(v){const g=glossary();if(!g)return null;for(const ty of SLOTT.concept){const t=GL.find(g,ty,v);if(t)return t}return null}
+function recConcept(d,side,skip){const ord=rcvOrder(d,side),cand=Object.keys(d.t).filter(k=>d.t[k].on&&!d.t[k].df).map(k=>({k,p:standAt(d,k)})),out=[];
+ (d.l||[]).forEach((l,i)=>{if(l.mv||!l.pts||!l.pts[0]||(skip&&skip.has(i)))return;const a=l.pts[0];let best=10,k=null;for(const c of cand){const dd=Math.hypot(c.p.x-a[0],c.p.y-a[1]);if(dd<=best){best=dd;k=c.k}}if(!k)return;
+  const p=standAt(d,k),r=Object.assign({},l);delete r.pts;delete r.mv;r.pts=l.pts.map(q=>[Math.round(q[0]-p.x),Math.round(q[1]-p.y)]);const n=ord.indexOf(k);if(n>=0)r.n=n+1;else r.k=k;out.push(r)});return out}
+function applyConcept(d,rt){if(!rt||!rt.routes)return 0;const ord=rcvOrder(d,rt.side||'L');let n=0;
+ for(const r of rt.routes){const k=r.n?ord[r.n-1]:(d.t[r.k]&&d.t[r.k].on?r.k:null);if(!k)continue;const p=standAt(d,k),l=Object.assign({},r);delete l.n;delete l.k;
+  l.pts=r.pts.map(q=>[Math.max(4,Math.min(VW-4,p.x+q[0])),p.y+q[1]]);(d.l||(d.l=[])).push(l);n++}return n}
+function lookFor(b,c){if(c&&c.look&&c.look.d)return{d:c.look.d,did:[],guess:[],not:[],none:[],gl:[],part:[],defs:[],saved:1};const d=clone(b.draw||baseDraw());d.sh=(d.sh||[]).filter(h=>h.k!=='txt');const t=d.t,L=d.l=(d.l||[]),t0={},anc=lineAnchors(d);for(const k in t)t0[k]={x:t[k].x,y:t[k].y};const s=(c&&c.s)||{},did=[],guess=[],not=[],none=[],gl=[],part=[],defs=[],ccs=[];
  for(const [k,v] of ['ftag','motion','concept','tag'].flatMap(k=>s[k]?splitT(k,s[k]).map(v=>[k,v]):[])){const df=defOf(k,v);defs.push({k,v,df});
-  if(k==='concept'||k==='tag'){not.push(v);continue}
+  if(k==='concept'){const ct=conTerm(v);if(ct&&ct.rt){ccs.push(ct);did.push(v)}else not.push(v);continue}
+  if(k==='tag'){not.push(v);continue}
   const pr=df?parseDef(df):null,B=LOOK[k][String(v).toUpperCase()],bf=B&&(typeof B==='function'?B:B.fn);
   if(pr&&pr.steps.length&&!pr.bad.length){try{pr.steps.forEach(fn=>fn(t,L));gl.push(v);continue}catch(e){}}
   if(bf){try{bf(t,L);(B.g?guess:did).push(v);if(pr&&pr.bad.length)part.push({v,bad:pr.bad});continue}catch(e){}}
   if(pr&&pr.steps.length){try{pr.steps.forEach(fn=>fn(t,L));part.push({v,bad:pr.bad,applied:1});continue}catch(e){}}
   none.push(v);if(pr&&pr.bad.length)part.push({v,bad:pr.bad})}
- followAnchors(d,anc,t0);return{d,did,guess,not,none,gl,part,defs}}
+ followAnchors(d,anc,t0);ccs.forEach(ct=>applyConcept(d,ct.rt));return{d,did,guess,not,none,gl,part,defs}}
 /* "Draw all looks" popup: each card has Edit drawing (the same drawing tool as the grid) and Send to Mental Reps. Edits are kept on the call cell so nothing is lost,
    and the original machine drawing is kept beside them so the corrections can be read back (Copy corrections). */
 let LKCODE='';
@@ -462,24 +477,30 @@ $('looks').onclick=()=>{const p=plan();if(!p||!p.blocks.length)return toast('Sta
   fetch(mrEndpoint(),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({type:'corrections',code,plan:String(p.name||''),items})}).then(r=>r.text()).then(t=>{t=t.trim();toast(/^ok:/.test(t)?'Saved '+t.slice(3)+' new correction'+(t.slice(3)==='1'?'':'s')+' to the sheet.'+cp:t==='bad code'?'That coach code was not accepted.'+cp:t==='skip'?'The sheet needs the updated Code.gs deployed first.'+cp:'The sheet said: '+t+cp)}).catch(()=>toast('Could not reach the sheet.'+cp))};
  $('lk_x').onclick=()=>{$('modal').classList.remove('show');$('mbox').style.width=''}}
 /* ---------- formation library (#19a) and printing formations (#19) ---------- */
-const LIB={q:'',f:'all',sel:new Set(),pp:10};
-function libTerms(){const g=glossary();return g?GL.active(g,'formation').slice().sort((a,b)=>a.name.localeCompare(b.name)):[]}
-const libPers=t=>t.draw&&t.draw.t?(digits(t.draw.pers)||persOf({t:t.draw.t}).code||'?'):'';
-function libDraw(t){const d=stdDraw(t,'');return d||null}
+const LIB={q:'',f:'all',sel:new Set(),pp:10,kind:'formation',on:''};
+function libTerms(){const g=glossary();if(!g)return[];const ty=LIB.kind==='concept'?['pass','run']:['formation'];return ty.flatMap(x=>GL.active(g,x)).sort((a,b)=>a.name.localeCompare(b.name))}
+const libFms=()=>{const g=glossary();return g?GL.active(g,'formation').filter(t=>t.draw&&t.draw.t).sort((a,b)=>a.name.localeCompare(b.name)):[]};
+function libBase(){const g=glossary(),f=g&&(GL.byId(g,LIB.on)||libFms()[0]);return f?{d:stdDraw(f,''),name:f.name}:{d:baseDraw(),name:'Base'}}
+const libPers=t=>LIB.kind==='concept'?(t.rt?(t.type==='run'?'Run':'Pass'):''):t.draw&&t.draw.t?(digits(t.draw.pers)||persOf({t:t.draw.t}).code||'?'):'';
+function libDraw(t){if(t.type==='run'||t.type==='pass'){if(!t.rt)return null;const d=clone(libBase().d);d.l=[];applyConcept(d,t.rt);return d}const d=stdDraw(t,'');return d||null}
 function libOpen(){const g=glossary();if(!g)return toast('No glossary on this device yet (open with signal once)');
- const all=libTerms(),drawn=all.filter(t=>t.draw&&t.draw.t).length,pers=[...new Set(all.map(libPers).filter(Boolean))].sort();
- const u=LIB.q.trim().toUpperCase(),show=all.filter(t=>(!u||t.name.toUpperCase().includes(u)||(t.aliases||[]).some(a=>String(a).toUpperCase().includes(u)))&&(LIB.f==='all'||(LIB.f==='todo'&&!(t.draw&&t.draw.t))||(LIB.f==='done'&&t.draw&&t.draw.t)||LIB.f===libPers(t)));
- const groups={};show.forEach(t=>{const k=libPers(t)?libPers(t)+' personnel':'No drawing yet';(groups[k]=groups[k]||[]).push(t)});
+ const isC=LIB.kind==='concept',dn=t=>isC?!!t.rt:!!(t.draw&&t.draw.t),grp=t=>isC?(t.rt?(t.type==='run'?'Run concepts':'Pass concepts'):'No drawing yet'):(libPers(t)?libPers(t)+' personnel':'No drawing yet'),all=libTerms(),drawn=all.filter(dn).length,pers=[...new Set(all.map(libPers).filter(Boolean))].sort();
+ const u=LIB.q.trim().toUpperCase(),show=all.filter(t=>(!u||t.name.toUpperCase().includes(u)||(t.aliases||[]).some(a=>String(a).toUpperCase().includes(u)))&&(LIB.f==='all'||(LIB.f==='todo'&&!dn(t))||(LIB.f==='done'&&dn(t))||LIB.f===libPers(t)));
+ const groups={};show.forEach(t=>{const k=grp(t);(groups[k]=groups[k]||[]).push(t)});
  const keys=Object.keys(groups).sort((a,b)=>(a==='No drawing yet')-(b==='No drawing yet')||a.localeCompare(b));
  const fchip=(v,l)=>`<button class="chip ${LIB.f===v?'on':''}" data-lf="${v}">${l}</button>`;
  const exact=all.some(t=>t.name.toUpperCase()===u);
  $('mbox').style.width='min(760px,96vw)';
- $('mbox').innerHTML=`<h3>Formation library <span class="mut" style="font-weight:400">${drawn} of ${all.length} drawn</span></h3>
- <div class="note">Every formation in your glossary. Tap Draw to set its standard drawing; the grid, Draw all looks and new blocks start from it. Select formations to print them.</div>
- <input id="lb_q" value="${esc(LIB.q)}" placeholder="Search, or type a new formation name" autocomplete="off" style="width:100%;padding:10px;margin:6px 0">
- ${u&&!exact?`<button class="btn pri" data-ladd="1" style="width:100%;margin-bottom:6px">Add “${esc(LIB.q.trim())}” as a new formation</button>`:''}
- <div class="chips" style="margin-bottom:6px">${fchip('all','All')}${fchip('todo','Not drawn')}${fchip('done','Drawn')}${pers.map(x=>fchip(x,x+'p')).join('')}</div>
- <div id="lb_l" style="max-height:52vh;overflow:auto">${keys.map(k=>`<div class="lab" style="margin-top:8px;display:flex;justify-content:space-between"><span>${esc(k)} (${groups[k].length})</span>${k!=='No drawing yet'?`<button class="chip" data-lgrp="${esc(k)}" style="min-height:0;padding:2px 9px">Select all ${esc(k.split(' ')[0])}p</button>`:''}</div>`+groups[k].map(t=>{const d=libDraw(t);return`<div style="display:flex;gap:10px;align-items:center;border-top:1px solid var(--line);padding:6px 0">
+ const fms=libFms(),bs=libBase();
+ $('mbox').innerHTML=`<div class="chips" style="margin-bottom:6px"><button class="chip ${!isC?'on':''}" data-lk="formation">Formations</button><button class="chip ${isC?'on':''}" data-lk="concept">Concepts</button></div>
+ <h3>${isC?'Concept library':'Formation library'} <span class="mut" style="font-weight:400">${drawn} of ${all.length} drawn</span></h3>
+ ${isC?`<div class="note">Every run and pass concept in your glossary. Draw one once on any formation: receivers' routes are saved by number (eligible WRs and TEs, counted across the field from the side you pick when you save); backs, QB and line by letter. Draw all looks then puts the routes on every call with that concept.</div>
+  <div style="display:flex;gap:8px;align-items:center;margin-top:6px"><span class="note">Draw and preview on</span><select id="lb_on">${fms.length?fms.map(t=>`<option value="${esc(t.id)}" ${t.name===bs.name?'selected':''}>${esc(t.name)}</option>`).join(''):'<option>Base formation (draw formations first for more)</option>'}</select></div>`
+ :`<div class="note">Every formation in your glossary. Tap Draw to set its standard drawing; the grid, Draw all looks and new blocks start from it. Select formations to print them.</div>`}
+ <input id="lb_q" value="${esc(LIB.q)}" placeholder="Search, or type a new ${isC?'concept':'formation'} name" autocomplete="off" style="width:100%;padding:10px;margin:6px 0">
+ ${u&&!exact?(isC?`<div class="row" style="margin-bottom:6px"><button class="btn pri" data-ladd="pass">Add “${esc(LIB.q.trim())}” as a pass concept</button><button class="btn" data-ladd="run">as a run concept</button></div>`:`<button class="btn pri" data-ladd="formation" style="width:100%;margin-bottom:6px">Add “${esc(LIB.q.trim())}” as a new formation</button>`):''}
+ <div class="chips" style="margin-bottom:6px">${fchip('all','All')}${fchip('todo','Not drawn')}${fchip('done','Drawn')}${pers.map(x=>fchip(x,isC?x:x+'p')).join('')}</div>
+ <div id="lb_l" style="max-height:52vh;overflow:auto">${keys.map(k=>`<div class="lab" style="margin-top:8px;display:flex;justify-content:space-between"><span>${esc(k)} (${groups[k].length})</span>${k!=='No drawing yet'?`<button class="chip" data-lgrp="${esc(k)}" style="min-height:0;padding:2px 9px">Select all ${isC?esc(k.split(' ')[0].toLowerCase()):esc(k.split(' ')[0])+'p'}</button>`:''}</div>`+groups[k].map(t=>{const d=libDraw(t);return`<div style="display:flex;gap:10px;align-items:center;border-top:1px solid var(--line);padding:6px 0">
    <input type="checkbox" data-lsel="${esc(t.id)}" ${LIB.sel.has(t.id)?'checked':''} ${d?'':'disabled'} style="width:22px;height:22px">
    <div style="width:120px;flex:none">${d?`<div style="pointer-events:none">${svgOf(d)}</div>`:'<span class="note">no drawing yet</span>'}</div>
    <b style="flex:1;text-transform:uppercase">${esc(t.name)}</b>
@@ -490,21 +511,22 @@ function libOpen(){const g=glossary();if(!g)return toast('No glossary on this de
  $('modal').classList.add('show');
  const qi=$('lb_q');qi.oninput=e=>{LIB.q=e.target.value;const pos=e.target.selectionStart;libOpen();const n=$('lb_q');n.focus();try{n.setSelectionRange(pos,pos)}catch(x){}};
  qi.onkeydown=e=>{if(e.key==='Enter'){const b=$('mbox').querySelector('[data-ladd]');if(b)b.click()}};
- $('lb_pp').onchange=e=>{LIB.pp=+e.target.value};
+ $('lb_pp').onchange=e=>{LIB.pp=+e.target.value};{const on=$('lb_on');if(on)on.onchange=e=>{LIB.on=e.target.value;libOpen()}}
  $('mbox').onclick=e=>{const T=x=>e.target.closest(x),G0=glossary();let b;
+  if(b=T('[data-lk]')){LIB.kind=b.dataset.lk;LIB.f='all';LIB.sel.clear();return libOpen()}
   if(b=T('[data-lf]')){LIB.f=b.dataset.lf;return libOpen()}
   if(b=T('[data-lsel]')){const id=b.dataset.lsel;b.checked?LIB.sel.add(id):LIB.sel.delete(id);return libOpen()}
-  if(b=T('[data-lgrp]')){const k=b.dataset.lgrp;show.filter(t=>libDraw(t)&&(libPers(t)+' personnel')===k).forEach(t=>LIB.sel.add(t.id));return libOpen()}
+  if(b=T('[data-lgrp]')){const k=b.dataset.lgrp;show.filter(t=>libDraw(t)&&grp(t)===k).forEach(t=>LIB.sel.add(t.id));return libOpen()}
   if(T('[data-lall]')){show.filter(libDraw).forEach(t=>LIB.sel.add(t.id));return libOpen()}
   if(T('[data-lnone]')){LIB.sel.clear();return libOpen()}
   if(T('[data-lx]')){$('modal').classList.remove('show');$('mbox').style.width='';return}
-  if(T('[data-ladd]')){const nm=LIB.q.trim().replace(/\s+(LT|RT)$/i,'');GL.add(G0,{type:'formation',name:nm.toLowerCase().replace(/\b\w/g,c=>c.toUpperCase()),source:'gameplan',needsReview:true});GL.save(G0);LIB.q='';return libOpen()}
+  if(b=T('[data-ladd]')){const ty=b.dataset.ladd,nm=LIB.q.trim().replace(/\s+(LT|RT)$/i,'');GL.add(G0,{type:ty,name:ty==='formation'?nm.toLowerCase().replace(/\b\w/g,c=>c.toUpperCase()):nm.toUpperCase(),source:'gameplan',needsReview:true});GL.save(G0);LIB.q='';return libOpen()}
   if(b=T('[data-ldraw]')){const t=GL.byId(G0,b.dataset.ldraw);if(!t)return;$('modal').classList.remove('show');$('mbox').style.width='';
-   E={bi:-1,lb:{name:t.name,pers:libPers(t),ftags:clone(t.ftags||[]),cells:{},draw:null},look:null,d:libDraw(t)||baseDraw(),sel:null,selL:null,mode:'move',cur:null,dot:false,arrow:true,col:COLS[0],grp:true,hist:[],drag:null};$('ed').classList.add('show');return edRender()}
+   const isCon=t.type==='run'||t.type==='pass';E={bi:-1,lb:{name:t.name,pers:isCon?'':libPers(t),ftags:isCon?[]:clone(t.ftags||[]),cells:{},draw:null,concept:isCon?t.id:null},look:null,d:isCon?(libDraw(t)||clone(libBase().d)):(libDraw(t)||baseDraw()),sel:null,selL:null,mode:'move',cur:null,dot:false,arrow:true,col:COLS[0],grp:true,hist:[],drag:null};$('ed').classList.add('show');return edRender()}
   if(T('[data-lprn]'))return libPrint()};
  $('mbox').onkeydown=null}
-function libPrint(){const g=glossary(),ts=libTerms().filter(t=>LIB.sel.has(t.id)&&libDraw(t));if(!ts.length)return toast('Select the formations to print first');
- const n=LIB.pp,cols=n<=4?2:n<=10?2:n<=20?4:5;let h='';for(let i=0;i<ts.length;i+=n)h+=`<div class="pg" style="grid-template-columns:repeat(${cols},1fr)">${ts.slice(i,i+n).map(t=>`<div class="fc"><b>${esc(t.name)}${libPers(t)?' · '+esc(libPers(t))+'p':''}</b>${svgOf(libDraw(t))}</div>`).join('')}</div>`;
+function libPrint(){const g=glossary(),ts=libTerms().filter(t=>LIB.sel.has(t.id)&&libDraw(t));if(!ts.length)return toast('Select what to print first');
+ const n=LIB.pp,cols=n<=4?2:n<=10?2:n<=20?4:5;let h='';for(let i=0;i<ts.length;i+=n)h+=`<div class="pg" style="grid-template-columns:repeat(${cols},1fr)">${ts.slice(i,i+n).map(t=>`<div class="fc"><b>${esc(t.name)}${libPers(t)?' · '+esc(libPers(t))+(LIB.kind==='concept'?'':'p'):''}</b>${svgOf(libDraw(t))}</div>`).join('')}</div>`;
  let el=$('libprint');if(!el){el=document.createElement('div');el.id='libprint';document.body.appendChild(el)}el.innerHTML=h;
  document.body.classList.add('libp');const done=()=>{document.body.classList.remove('libp');removeEventListener('afterprint',done)};addEventListener('afterprint',done);
  setTimeout(()=>{try{window.print()}catch(e){toast('Print is not available here');done()}},80)}
@@ -823,6 +845,10 @@ $('ed').addEventListener('click',e=>{const b=e.target.closest('[data-e]');if(!b|
  if(a==='stdreset'){const p=plan(),bk=edB(),t=fmTerm(glossary(),bk.name),d=t&&stdDraw(t,fmParse(bk.name).side);if(d){snap();E.d=d;E.selL=null;E.sel=null;edRender();toast('Back to the standard')}return}
  if(a==='ftrm'){const p=plan(),bk=edB();const nm=bk.ftags.splice(+b.dataset.i,1)[0];tagDraw(E.d,nm,false);touch(p);return edRender()}
  if(a==='ftadd'&&E.lb){return toast('Add formation tags from a gameplan block')}if(a==='ftadd'){finishLine();const bi=E.bi;return ftPicker(bi,()=>{$('modal').classList.remove('show');edRender()})}
+ if(a==='save'&&E.lb&&E.lb.concept){finishLine();const g=glossary(),t=g&&GL.byId(g,E.lb.concept);if(!t)return toast('That concept is gone from the glossary');const side0=(t.rt&&t.rt.side)||'L';
+  $('mbox').innerHTML=`<h3>Save ${esc(t.name)}</h3><div class="note">Count the receivers from which side? #1 is the widest eligible WR or TE on that side, then across the whole field. Backs, QB and line are saved by letter.</div><div class="row" style="margin-top:10px"><button class="btn ${side0==='L'?'pri':''}" data-cs="L">From the left</button><button class="btn ${side0==='R'?'pri':''}" data-cs="R">From the right</button><button class="btn" data-cs="">Cancel</button></div>`;$('modal').classList.add('show');
+  $('mbox').onclick=ev=>{const x=ev.target.closest('[data-cs]');if(!x)return;$('modal').classList.remove('show');if(!x.dataset.cs)return;const side=x.dataset.cs,routes=recConcept(E.d,side);
+   t.rt={side,routes};GL.touch&&GL.touch(t);GL.save(g);toast('Saved '+t.name+': '+routes.length+' route'+(routes.length===1?'':'s')+(routes.length?'':' (draw lines that start on a player)'));E=null;$('ed').classList.remove('show');render();libOpen()};return}
  if(a==='save'&&E.lb){finishLine();const lb=E.lb,r=fmSave(lb.name,E.d,persOf(E.d).code,true,lb.ftags);E=null;$('ed').classList.remove('show');render();toast(r?'Saved '+lb.name+' to the formation library':'Could not save (no glossary on this device)');return libOpen()}if(a==='save'){finishLine();const p=plan(),lk=E.look;if(lk){const c=p.blocks[E.bi].cells[lk.key];if(c){const was=c.look||{};c.look=Object.assign({},was,{d:E.d,gen:lk.gen,edited:true,at:Date.now()})}}else{const bl=p.blocks[E.bi];bl.draw=E.d;const q=persOf(E.d);if(q.ok){if(!digits(bl.pers))bl.pers=q.code;else if(digits(bl.pers)!==q.code)setTimeout(()=>toast('Personnel box says '+bl.pers+' but the drawing shows '+q.code+'p'),50)}const fr=fmSave(bl.name,E.d,bl.pers||q.code,false);if(fr)setTimeout(()=>toast('Saved '+fmParse(bl.name).base+' to your glossary with this drawing'),1500)}touch(p);E=null;$('ed').classList.remove('show');render();if(lk)$('looks').onclick();return}
  if(a==='pl'){const k=b.dataset.k;snap();t[k].on=t[k].on?0:1;if(E.sel===k&&!t[k].on)E.sel=null}
  else if(a==='grp')E.grp=true;else if(a==='one')E.grp=false;
@@ -853,8 +879,8 @@ function boot(){ST=readStore();try{cur=localStorage.getItem('gp_cur')||null}catc
  if(!signedIn()&&ST.rows.some(p=>p.sample&&p.dv!==3)){ST.rows=ST.rows.filter(p=>!(p.sample&&p.dv!==3));ST.rows.unshift(samplePlan());writeStore()}   // demo vocabulary changed: swap an out-of-date sample week for the current one, leave the coach's own plans alone
  if(!signedIn()&&!ST.rows.length&&!(ST.deleted||[]).length){ST.rows.push(samplePlan());writeStore()}
  render()}
-addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.gameplan==='library'){if(!E&&!($('modal').classList.contains('show')&&$('lb_q')))libOpen();return}});
-if(location.hash==='#lib')setTimeout(()=>{try{libOpen()}catch(e){}},600);
+addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.gameplan==='library'){if(e.data.kind==='concept'||e.data.kind==='formation')LIB.kind=e.data.kind;if(!E&&!($('modal').classList.contains('show')&&$('lb_q')))libOpen();else if(!E)libOpen();return}});
+if(/^#lib/.test(location.hash)){if(/concept/.test(location.hash))LIB.kind='concept';setTimeout(()=>{try{libOpen()}catch(e){}},600)}
 addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.gameplan==='changed'&&!E&&!$('modal').classList.contains('show')){ST=readStore();render()}});
 addEventListener('storage',e=>{if(!E&&!$('modal').classList.contains('show')){if(e.key===KEY){ST=readStore();render()}else if(e.key==='almanac_v1')render()}});
 boot();

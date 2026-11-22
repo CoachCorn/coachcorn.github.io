@@ -97,18 +97,18 @@ function render(){
  const list=G.terms.filter(t=>(!S.type||t.type===S.type)&&(!S.review||t.needsReview)&&(!S.nodef||noDef(t))&&(!q||[t.name,...t.aliases,t.meaning.text||'',t.code||''].some(x=>GL.U(x).includes(q))))
   .sort((a,b)=>(a.status===b.status?0:a.status==='active'?-1:1)||a.type.localeCompare(b.type)||a.name.localeCompare(b.name));
  const tl=t=>(TYPES.find(x=>x[0]===t)||[t,t])[1];
- const head=S.type==='formation'?`<p style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="btn pri" id="toLib">Draw formations</button><span class="note">${G.terms.filter(t=>t.type==='formation'&&t.status==='active'&&!drawn(t)).length} not drawn yet. Opens the formation library in Gameplan.</span></p>`:'';
+ const head=canDraw(S.type)?`<p style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="btn pri" id="toLib">${S.type==='formation'?'Draw formations':'Draw concepts'}</button><span class="note">${G.terms.filter(t=>t.type===S.type&&t.status==='active'&&!drawn(t)).length} not drawn yet. Opens the ${S.type==='formation'?'formation':'concept'} library in Gameplan.</span></p>`:'';
  $('list').innerHTML=head+`<table><thead><tr><th>Term</th><th>Type</th><th>Meaning</th></tr></thead><tbody>${list.map(t=>`<tr class="r" data-id="${esc(t.id)}" style="${t.status==='retired'?'opacity:.45':''}"><td><b>${esc(t.name)}</b>${t.code?' <span class="mut">'+esc(t.code)+(t.package?' '+t.package:'')+'</span>':''}${t.needsReview?'<span class="badge">REVIEW</span>':''}${t.status==='retired'?' <span class="mut">retired</span>':''}${t.aliases.length?'<div class="mut">also '+esc(t.aliases.join(', '))+'</div>':''}</td><td class="mut">${esc(tl(t.type))}${t.uses.length?' · '+t.uses.join('/'):''}</td><td>${esc(t.meaning.text||'')||'<span class="mut">no meaning yet</span>'}</td></tr>`).join('')||'<tr><td colspan="3" class="mut">Nothing matches.</td></tr>'}</tbody></table>`;
  $('types').insertAdjacentHTML('afterbegin','<button class="chip" data-home="1" style="font-weight:700">← Categories</button>');document.querySelector('[data-home]').onclick=()=>{S.home=true;S.type='';S.review=false;S.nodef=false;S.q='';$('q').value='';render()};
  document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{S.type=b.dataset.t;S.review=false;if(!b.dataset.t)S.nodef=false;render()});
  document.querySelector('[data-nd]').onclick=()=>{S.nodef=!S.nodef;if(S.nodef)S.review=false;render()};
  document.querySelector('[data-rv]').onclick=()=>{S.review=!S.review;render()};
  document.querySelectorAll('tr.r').forEach(r=>r.onclick=()=>edit(r.dataset.id));
- const tl0=$('toLib');if(tl0)tl0.onclick=()=>{try{parent.postMessage({open:'gameplan',gpLib:1},location.origin)}catch(e){}if(parent===window)location.href='gameplan.html#lib'}}
+ const tl0=$('toLib');if(tl0)tl0.onclick=()=>{try{parent.postMessage({open:'gameplan',gpLib:S.type==='formation'?'formation':'concept'},location.origin)}catch(e){}if(parent===window)location.href='gameplan.html#lib-'+(S.type==='formation'?'formation':'concept')}}
 /* ---- home: one tile per category with badges for what still needs work (like a locker with new items) ---- */
-const drawn=t=>!!(t.draw&&t.draw.t);
+const drawn=t=>t.type==='run'||t.type==='pass'?!!t.rt:!!(t.draw&&t.draw.t),canDraw=k=>['formation','run','pass'].includes(k);
 function renderHome(){const act=G.terms.filter(t=>t.status==='active'),rvl=GL.reviewList(G);
- const tile=(k,l)=>{const ts=act.filter(t=>t.type===k),nd=ts.filter(t=>noDef(t)||t.needsReview).length,ud=k==='formation'?ts.filter(t=>!drawn(t)).length:0,work=nd+ud;
+ const tile=(k,l)=>{const ts=act.filter(t=>t.type===k),nd=ts.filter(t=>noDef(t)||t.needsReview).length,ud=canDraw(k)?ts.filter(t=>!drawn(t)).length:0,work=nd+ud;
   return`<button class="tile" data-cat="${k}" style="position:relative;text-align:left;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--card,#151c24);color:inherit;min-height:96px;cursor:pointer">
    ${work?`<span style="position:absolute;top:-8px;right:-8px;min-width:24px;height:24px;border-radius:12px;background:var(--warn,#f2b632);color:#111;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;padding:0 6px">${work}</span>`:''}
    <div style="font-weight:800;font-size:16px">${esc(l)}</div><div class="note" style="margin-top:2px">${ts.length} term${ts.length===1?'':'s'}</div>
