@@ -394,7 +394,10 @@ function splitT(k,v){v=String(v||'').trim();if(!v)return[];const g=glossary();if
  const tk=v.split(/\s+/),out=[];let rest=[];for(let i=0;i<tk.length;){const h=names.find(n=>i+n.length<=tk.length&&n.every((w,j)=>w===tk[i+j].toLowerCase()));if(h){if(rest.length){out.push(rest.join(' '));rest=[]}out.push(tk.slice(i,i+h.length).join(' '));i+=h.length}else{rest.push(tk[i]);i++}}
  if(rest.length)out.push(rest.join(' '));return out}
 function defOf(k,v){const g=glossary();if(!g)return null;for(const ty of SLOTT[k]){const x=GL.find(g,ty,v);if(x)return(x.meaning&&x.meaning.text||'').trim()}return null}
-function lookFor(b,c){if(c&&c.look&&c.look.d)return{d:c.look.d,did:[],guess:[],not:[],none:[],gl:[],part:[],defs:[],saved:1};const d=clone(b.draw||baseDraw());d.l=[];const t=d.t,L=d.l,s=(c&&c.s)||{},did=[],guess=[],not=[],none=[],gl=[],part=[],defs=[];
+/* a line belongs to the player it starts on (within 8 units); shift lines carry mv = player */
+function lineAnchors(d){const T=d.t||{},out=[];(d.l||[]).forEach((l,i)=>{const a=l.pts&&l.pts[0];if(!a)return;let k=l.mv&&T[l.mv]?l.mv:null;if(!k){let best=8;for(const q in T){const t=T[q];if(!t.on)continue;const dd=Math.hypot(t.x-a[0],t.y-a[1]);if(dd<=best){best=dd;k=q}}}if(k)out.push({i,k,pts:clone(l.pts),mv:!!l.mv})});return out}
+function followAnchors(d,anc,t0){for(const a of anc){const t=d.t[a.k],o=t0[a.k],l=d.l[a.i];if(!t||!o||!l)continue;const dx=t.x-o.x,dy=t.y-o.y;if(!dx&&!dy)continue;if(a.mv)l.pts[0]=[t.x,t.y];else l.pts=a.pts.map(q=>[q[0]+dx,q[1]+dy])}}
+function lookFor(b,c){if(c&&c.look&&c.look.d)return{d:c.look.d,did:[],guess:[],not:[],none:[],gl:[],part:[],defs:[],saved:1};const d=clone(b.draw||baseDraw());d.sh=(d.sh||[]).filter(h=>h.k!=='txt');const t=d.t,L=d.l=(d.l||[]),t0={},anc=lineAnchors(d);for(const k in t)t0[k]={x:t[k].x,y:t[k].y};const s=(c&&c.s)||{},did=[],guess=[],not=[],none=[],gl=[],part=[],defs=[];
  for(const [k,v] of ['ftag','motion','concept','tag'].flatMap(k=>s[k]?splitT(k,s[k]).map(v=>[k,v]):[])){const df=defOf(k,v);defs.push({k,v,df});
   if(k==='concept'||k==='tag'){not.push(v);continue}
   const pr=df?parseDef(df):null,B=LOOK[k][String(v).toUpperCase()],bf=B&&(typeof B==='function'?B:B.fn);
@@ -402,7 +405,7 @@ function lookFor(b,c){if(c&&c.look&&c.look.d)return{d:c.look.d,did:[],guess:[],n
   if(bf){try{bf(t,L);(B.g?guess:did).push(v);if(pr&&pr.bad.length)part.push({v,bad:pr.bad});continue}catch(e){}}
   if(pr&&pr.steps.length){try{pr.steps.forEach(fn=>fn(t,L));part.push({v,bad:pr.bad,applied:1});continue}catch(e){}}
   none.push(v);if(pr&&pr.bad.length)part.push({v,bad:pr.bad})}
- return{d,did,guess,not,none,gl,part,defs}}
+ followAnchors(d,anc,t0);return{d,did,guess,not,none,gl,part,defs}}
 /* "Draw all looks" popup: each card has Edit drawing (the same drawing tool as the grid) and Send to Mental Reps. Edits are kept on the call cell so nothing is lost,
    and the original machine drawing is kept beside them so the corrections can be read back (Copy corrections). */
 let LKCODE='';
@@ -782,7 +785,7 @@ $('ed').addEventListener('pointerdown',e=>{const cv=e.target.closest('#cv');if(!
  if(E.mode==='move'){const h=e.target.closest('[data-h]'),ln=e.target.closest('[data-l]');
   const mh=e.target.closest('[data-m]');if(mh){const[li,j]=mh.dataset.m.split(':').map(Number),L=E.d.l[li];if(L.curve&&L.pts.length>=3){e.preventDefault();return}snap();const a=L.pts[j],b=L.pts[j+1];L.pts.splice(j+1,0,[Math.round((a[0]+b[0])/2),Math.round((a[1]+b[1])/2)]);if(L.pts.length===3)L.curve=true;E.curve=!!L.curve;E.drag={kind:'pt',p0,li,pi:j+1};cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);e.preventDefault();return}
   if(h){const[li,pi]=h.dataset.h.split(':').map(Number);snap();E.drag={kind:'pt',p0,li,pi};cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);e.preventDefault();return}
-  if(g){const k=g.dataset.k,was=E.sel===k;E.sel=k;E.selL=null;E.selS=null;snap();const start={};const ids=(OLK.includes(k)&&E.grp)?OLK:[k];ids.forEach(i=>start[i]={x:E.d.t[i].x,y:E.d.t[i].y});E.drag={kind:'tok',p0,start,was};cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);redrawCanvas();e.preventDefault();return}
+  if(g){const k=g.dataset.k,was=E.sel===k;E.sel=k;E.selL=null;E.selS=null;snap();const start={};const ids=(OLK.includes(k)&&E.grp)?OLK:[k];ids.forEach(i=>start[i]={x:E.d.t[i].x,y:E.d.t[i].y});E.drag={kind:'tok',p0,start,was,anc:lineAnchors(E.d).filter(a=>ids.includes(a.k))};cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);redrawCanvas();e.preventDefault();return}
   const sh=e.target.closest('[data-s]');if(sh&&!ln){const si=+sh.dataset.s,H=E.d.sh[si];E.selS=si;E.selL=null;E.sel=null;E.col=H.col||E.col;snap();E.drag={kind:'sh',p0,si,ox:H.x,oy:H.y};cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);redrawCanvas();edRender();e.preventDefault();return}
   if(ln){E.selS=null;const li=+ln.dataset.l,L=E.d.l[li];E.selL=li;E.sel=null;E.dot=!!L.dot;E.arrow=!!L.arrow;E.blk=!!L.blk;E.curve=!!L.curve;E.col=L.col||COLS[0];snap();E.drag={kind:'ln',p0,li,orig:clone(L.pts)};cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);redrawCanvas();e.preventDefault();return}
   if(E.sel&&E.d.t[E.sel]&&E.d.t[E.sel].on&&!(e.target.closest('[data-l]'))){const t=E.d.t[E.sel];snap();E.d.l.push({pts:[[t.x,t.y],[p0.x,p0.y]],dot:E.dot,arrow:E.arrow&&!E.blk,blk:E.blk,curve:E.curve,col:E.col});convShift();E.selL=null;E.sel=null;redrawCanvas();edRender();return}
@@ -802,7 +805,7 @@ $('ed').addEventListener('pointermove',e=>{if(!E||!E.drag)return;const d=E.drag,
  if(d.kind==='sh'){const H=E.d.sh[d.si];H.x=Math.max(16,Math.min(VW-16,d.ox+dx));H.y=Math.max(VT+18,Math.min(VH-16,d.oy+dy));if(H.k==='pos'){const L=E.d.l.find(l=>l.mv===H.p);if(L)L.pts[L.pts.length-1]=[H.x,H.y]}}
  else if(d.kind==='pt')E.d.l[d.li].pts[d.pi]=[p1.x,p1.y];
  else if(d.kind==='ln'){const xs=d.orig.map(q=>q[0]),ys=d.orig.map(q=>q[1]),mx=Math.max(8-Math.min(...xs),Math.min(VW-8-Math.max(...xs),dx)),my=Math.max(VT+8-Math.min(...ys),Math.min(VH-8-Math.max(...ys),dy));E.d.l[d.li].pts=d.orig.map(q=>[q[0]+mx,q[1]+my])}
- else for(const k in d.start){const s0=d.start[k],t=E.d.t[k];t.x=Math.max(8,Math.min(VW-8,s0.x+dx));t.y=Math.max(VT+8,Math.min(VH-8,s0.y+dy))}
+ else{for(const k in d.start){const s0=d.start[k],t=E.d.t[k];t.x=Math.max(8,Math.min(VW-8,s0.x+dx));t.y=Math.max(VT+8,Math.min(VH-8,s0.y+dy))}if(d.anc)followAnchors(E.d,d.anc,d.start)}
  redrawCanvas()});
 const endDrag=()=>{if(E&&E.drag&&E.drag.kind==='free'){E.drag=null;finishFree();E.sel=null;E.selL=null;E.selS=null;redrawCanvas();edRender();return}if(E&&E.drag){const dg=E.drag,k=dg.kind;E.drag=null;if(E.hist.length&&JSON.stringify(E.d)===E.hist[E.hist.length-1]){E.hist.pop();if(k==='tok'&&dg.was){E.sel=null;redrawCanvas()}if(dg.tapEdit){edRender();return txtEdit(dg.si)}}else{E.sel=null;if(k!=='pt'&&k!=='ln')E.selL=null;E.selS=null;redrawCanvas()}edRender()}};
 $('ed').addEventListener('pointerdown',e=>{if(!E||!e.target.isConnected||e.target.closest('button,.chip,.sw,input,#cv,.fh'))return;if(E.sel||E.selL!=null||E.selS!=null){E.sel=null;E.selL=null;E.selS=null;E.cur=null;redrawCanvas();edRender()}});
