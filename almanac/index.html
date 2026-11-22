@@ -204,7 +204,7 @@ function newGame(name,quiet){const g={id:'g'+Date.now(),opp:name,program:CONFIG.
 const G=()=>A.games.find(g=>g.id===A.cur);
 const esc2=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let d,edit=null,TQ='',TFOC=false,SQ={target:'',player:'',ftags:'',motions:'',formations:''},FOCID=null;
-function freshDraft(prev){return{down:prev?prev.down:1,dist:prev?prev.dist:10,f:prev?prev.f:25,ptype:'run',formation:null,dir:null,motion:null,shift:false,jumbo:false,call:null,tag:null,ftags:[],tags:[],rgs:false,shot:false,result:null,gain:0,player:null,target:null,hash:null,fib:null,mpos:null,glf:null,passer:lastPasser(),td:false}}
+function freshDraft(prev){return{down:prev?prev.down:1,dist:prev?prev.dist:10,f:prev?prev.f:25,ptype:'run',formation:null,dir:(prev&&(prev.hash==='L'||prev.hash==='R'))?(prev.hash==='L'?'RT':'LT'):null,motion:null,shift:false,jumbo:false,call:null,tag:null,ftags:[],tags:[],rgs:false,shot:false,result:null,gain:0,player:null,target:null,hash:(prev&&prev.hash)||null,fib:(prev&&prev.hash==='M')?null:'N',mpos:null,glf:null,passer:lastPasser(),td:false}}
 const allTags=()=>[...new Set([...(A.lists.tagsRun||[]),...(A.lists.tagsPass||[])])].sort((a,b)=>a.localeCompare(b));
 const lastTerm=()=>(TQ.split(',').pop()||'').trim().toUpperCase();
 function tagChipsHtml(){const q=lastTerm();const src=TQ?allTags():[...new Set([...planL('tagsRun',d.tags),...planL('tagsPass',d.tags)])].sort((a,b)=>a.localeCompare(b));
@@ -249,9 +249,9 @@ function logPlay(){if(!d.result){toast('Pick a result');return}
  {const U=x=>String(x||'').toUpperCase(),gl=(A.lists.glfs||[]).map(U);if(!p.glf&&p.formation&&gl.includes(U(p.formation)))p.glf=U(p.formation);
   if(p.glf){if(!p.formation)p.formation=p.glf.charAt(0)+p.glf.slice(1).toLowerCase();if(!p.call&&!p.owc){p.call=p.glf;p.ptype='pass'}p.glfOut=U(p.formation)!==p.glf}else{p.glf=null;p.glfOut=false}}
  if(edit!==null){p.upd=Date.now();G().plays[edit]=p;edit=null;d=freshDraft(lastNext())}
- else{G().plays.push(p);const a=advance(p);if(a.nd)G().plays.push({k:'d'});d=freshDraft(a.next)}
+ else{G().plays.push(p);const a=advance(p);if(a.nd)G().plays.push({k:'d'});d=freshDraft(Object.assign({},a.next,{hash:p.hash||null}))}
  save();renderAll()}
-function lastNext(){const pl=G().plays;for(let i=pl.length-1;i>=0;i--)if(pl[i].k==='p'){const a=advance(pl[i]);return a.next}return{down:1,dist:10,f:25}}
+function lastNext(){const pl=G().plays;for(let i=pl.length-1;i>=0;i--)if(pl[i].k==='p'){const a=advance(pl[i]);return Object.assign({},a.next,{hash:pl[i].hash||null})}return{down:1,dist:10,f:25}}
 function toast(m){const t=document.createElement('div');t.textContent=m;t.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#000c;padding:10px 16px;border-radius:10px;z-index:20';document.body.appendChild(t);setTimeout(()=>t.remove(),2200)}
 const chip=(g,v,l,on,x='')=>`<button class="chip ${x} ${on?'on':''}" data-g="${g}" data-v="${String(v).replace(/"/g,'&quot;')}">${l??v}</button>`;
 const lab=(t,r='')=>`<div class="lab"><span>${t}</span><span>${r}</span></div>`;
@@ -362,9 +362,9 @@ try{if(localStorage.getItem('almanac_logon')==='1')setLog(true)}catch(e){}
 document.getElementById('newdrive').onclick=()=>{G().plays.push({k:'d'});save();renderLog();toast('New drive — Drive '+(G().plays.filter(p=>p.k==='d'||p.k==='h'||p.k==='q').length+1))};
 document.getElementById('qtr').onclick=()=>{const pl=G().plays,h=pl.some(p=>p.k==='h'),q1=pl.some(p=>p.k==='q'&&p.n===1),q3=pl.some(p=>p.k==='q'&&p.n===3);let m;
  if(!h&&!q1)m={k:'q',n:1};else if(!h)m={k:'h'};else if(!q3)m={k:'q',n:3};else{toast('All quarter breaks marked (use Undo to fix)');return}
- pl.push(m);d=freshDraft({down:1,dist:10,f:25});edit=null;save();renderAll();toast(m.k==='h'?'End of Q2 (halftime) marked':'End of Q'+m.n+' marked')};
+ pl.push(m);d=freshDraft({down:1,dist:10,f:25,hash:lastNext().hash});edit=null;save();renderAll();toast(m.k==='h'?'End of Q2 (halftime) marked':'End of Q'+m.n+' marked')};
 document.getElementById('noplay').onclick=()=>{G().plays.push({k:'x'});d=freshDraft(lastNext());edit=null;save();renderAll();toast('Timeout / no play marked')};
-document.getElementById('half').onclick=()=>{if(G().plays.some(p=>p.k==='h')){toast('Halftime already marked');return}G().plays.push({k:'h'});d=freshDraft({down:1,dist:10,f:25});edit=null;save();renderAll();toast('Halftime marked')};
+document.getElementById('half').onclick=()=>{if(G().plays.some(p=>p.k==='h')){toast('Halftime already marked');return}G().plays.push({k:'h'});d=freshDraft({down:1,dist:10,f:25,hash:lastNext().hash});edit=null;save();renderAll();toast('Halftime marked')};
 document.getElementById('undo').onclick=()=>{const pl=G().plays;if(pl.length){const x=pl.pop();tomb(G(),x);d=freshDraft(lastNext());edit=null;save();renderAll();toast('Undid '+(x.k==='q'?'quarter break':x.k==='h'?'halftime':x.k==='d'?'drive marker':x.k==='x'?'timeout / no play':'last play'))}else toast('Nothing to undo')};
 const HEAD=['DOWN','DISTANCE','JUMBO Y/N','SHIFT','MOTION','PLAY TAG','RUN CALL','PASS CALL','RGS Y/N','SHOT Y/N','RESULT','PLAYER','YARD LINE','GAIN/LOSS','<50','CROSS 50','>50','BCKWD CROSS 50','GAIN/LOSS','EXPLOSIVE','EFFICIENT','RUN SCHEME','PASS SCHEME','FORMATION','DIRECTION','PLAY TYPE','FORMATION TAG','CONCEPT','TARGET','ONE WORD','GLF','PASSER'];
 function resText(p){const r=p.result;if(r==='PEN')return'PENALTY';if(r==='INC')return'INC';if(r==='INT')return'INT';if(r==='FUM')return'FUM';if(r==='SACK')return'SACK';if(p.td)return p.gain+' YD TD';return String(p.gain)}
