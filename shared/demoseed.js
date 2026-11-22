@@ -24,6 +24,7 @@ function game(seed,opp,idx){let sd=seed;const rnd=()=>{sd|=0;sd=sd+0x6D2B79F5|0;
   else{p.call=wp(PASS,[4,3,3,2]);p.passer=qb();const r=rnd();p.player=wp(['1','81','85','3','88','87','22','28'],[5,4,3,3,2,1,1,1]);
    if(r<.04){p.result='SACK';p.gain=-ri(4,8);p.player=null}else if(r<.24){p.result='INC';p.gain=0}else if(r<.255){p.result='INT';p.gain=0}
    else{p.result='COMP';const q=rnd();p.gain=q<.45?ri(3,9):q<.8?ri(10,18):ri(19,48)}}
+  {const ft=rnd()<.5?pick(['TIGHT','STACK','BUNCH']):null;p.ftags=ft?[ft]:[];p.ftag=ft||'';p.tags=p.tag?[p.tag]:[];if(!run)p.target=pick(['HITCH','SLANT','OUT','CURL','DIG','POST','CORNER','GO','SEAM','FLAT','CROSS','SCREEN'])}
   if(down<3&&rnd()<.015&&p.result!=='INT'){p.result='PEN';p.gain=rnd()<.5?-5:5;p.player=null}
   if(p.result!=='PEN'&&p.result!=='INC'&&f+p.gain>=100){p.gain=100-f;p.td=true}
   g.plays.push(p);n++;

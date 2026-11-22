@@ -139,13 +139,39 @@ function viewGames(){const gs=gamesInSeason(),S=sched(),L=A().lists||{};if(!gs.l
 /* ---------- splits ---------- */
 function bucket(p){if(p.down===1)return'1st down';const n=+p.dist||10,b=n<=3?'short (1-3)':n<=6?'medium (4-6)':'long (7+)';return(p.down===2?'2nd ':p.down===3?'3rd ':'4th ')+b}
 function zone(f){f=+f||25;return f<=20?'Backed up (own 1-20)':f<=40?'Own 20-40':f<=60?'Open field':f<=80?'Plus territory (opp 40-20)':f<=90?'Opp 20-10':'Red zone'}
+
+/* ---------- custom split ---------- */
+const CSK='stats_custom_v1';let CUS={g1:'call',g2:'',fl:[]};try{CUS=Object.assign(CUS,JSON.parse(localStorage.getItem(CSK))||{})}catch(e){}
+function csSave(){try{localStorage.setItem(CSK,JSON.stringify(CUS))}catch(e){}}
+const CSF=[['call','Call (concept / one word)'],['formation','Formation'],['ftag','Formation tag'],['motion','Motion / shift'],['tag','Play tag'],['target','Route / target'],['ptype','Run / pass'],['down','Down'],['bucket','Down & distance'],['zone','Field zone'],['hash','Hash'],['result','Result'],['player','Player (carrier / target)'],['passer','QB']];
+const RESW={COMP:'Complete',INC:'Incomplete',RUSH:'Rush',SCRAM:'Scramble',SACK:'Sack',INT:'Interception',FUM:'Fumble lost'};
+const listOf=(a,str)=>Array.isArray(a)&&a.length?a:(str?String(str).split(/\s+/).filter(Boolean):[]);
+function csVals(p,k){const one=v=>v==null||v===''?[]:[String(v)],none=a=>a.length?a:['None'];
+ switch(k){case'call':return one(p.owc||p.call);case'formation':return one(p.formation);case'ftag':return none(listOf(p.ftags,p.ftag));case'motion':return none(one(p.motion));case'tag':return none(listOf(p.tags,p.tag));
+  case'target':return one(p.target);case'ptype':return[p.ptype==='run'?'Run':'Pass'];case'down':return p.down?[p.down+(['','st','nd','rd','th'][p.down]||'th')+' down']:[];case'bucket':return one(bucket(p));case'zone':return one(zone(p.f));
+  case'hash':return p.hash?[({L:'Left hash',M:'Middle',R:'Right hash'})[p.hash]||p.hash]:[];case'result':return one(RESW[p.result]||p.result);case'player':return p.player?[PL(p.player).replace(/<[^>]*>/g,'')]:[];case'passer':return p.passer?[PL(p.passer).replace(/<[^>]*>/g,'')]:[]}
+ return[]}
+const csLab=k=>(CSF.find(x=>x[0]===k)||[k,k])[1];
+function customSplit(P,L){
+ const opts=(sel)=>CSF.map(([k,l])=>`<option value="${k}" ${sel===k?'selected':''}>${esc(l)}</option>`).join('');
+ const valsFor=f=>[...new Set(P.flatMap(p=>csVals(p,f)))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+ let Q=P;for(const x of CUS.fl)if(x.f&&x.v)Q=Q.filter(p=>csVals(p,x.f).includes(x.v));
+ const base=summ(Q,L),on=cmpOn('custom');
+ const m={};for(const p of Q){let keys=[''];for(const g of [CUS.g1,CUS.g2].filter(Boolean)){const v=csVals(p,g);if(!v.length){keys=[];break}keys=keys.flatMap(a=>v.map(b=>a?a+' · '+b:b))}for(const k of keys)(m[k]=m[k]||[]).push(p)}
+ const rows=Object.entries(m).sort((a,b)=>b[1].length-a[1].length).slice(0,60).map(([k,a])=>{const s=summ(a,L);return[esc(k),s.n,delta(s.ypp,base.ypp,false,s.n,on),delta(s.eff,base.eff,true,s.n,on),delta(s.exp,base.exp,true,s.n,on)]});
+ const sel='style="padding:8px;font-size:15px;background:transparent;color:inherit;border:1px solid var(--line);border-radius:8px;max-width:100%"';
+ const fl=CUS.fl.map((x,i)=>`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center"><span class="note">Only</span><select ${sel} data-csf="${i}"><option value="">Choose…</option>${opts(x.f)}</select><select ${sel} data-csv="${i}"><option value="">any</option>${x.f?valsFor(x.f).map(v=>`<option value="${esc(v)}" ${x.v===v?'selected':''}>${esc(v)}</option>`).join(''):''}</select><button class="btn" data-csx="${i}">Remove</button></div>`).join('');
+ return`<div class="sh"><h3>Custom split</h3><label class="cmp"><input type="checkbox" data-cmp="custom" ${on?'checked':''}>+/−</label></div>
+ <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:6px">
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="note">Group by</span><select ${sel} id="csg1">${opts(CUS.g1)}</select><span class="note">then by</span><select ${sel} id="csg2"><option value="">nothing</option>${opts(CUS.g2)}</select></div>
+  ${fl}<div style="margin-top:8px"><button class="btn" id="csadd">+ Only plays where…</button></div></div>`+(Q.length?`<p class="note">${Q.length} plays${CUS.fl.some(x=>x.f&&x.v)?' (filtered)':''}. +/− is against the average of these plays (${f1(base.ypp)} yds/play, ${pct(base.eff)} efficient, ${pct(base.exp)} explosive).</p>`+tbl(['','Plays','Yds/play','Eff','Exp'],rows):'<p class="note">No plays match.</p>')}
 function viewSplits(){const gs=V.game?realGames(A()).filter(g=>g.id===V.game):gamesInSeason(),L=A().lists||{},P=plays(gs),all=summ(P,L);
  if(!P.length)return`<div class="empty">No logged plays in ${V.season} yet.</div>`;
  const split=(title,key,id)=>{const on=cmpOn(id);const m={};for(const p of P){const k=key(p);if(!k)continue;(m[k]=m[k]||[]).push(p)}
   const rows=Object.entries(m).sort((a,b)=>b[1].length-a[1].length).map(([k,a])=>{const s=summ(a,L);return[esc(k),s.n,delta(s.ypp,all.ypp,false,s.n,on),delta(s.eff,all.eff,true,s.n,on),delta(s.exp,all.exp,true,s.n,on)]});
   return`<div class="sh"><h3>${title}</h3><label class="cmp"><input type="checkbox" data-cmp="${id}" ${on?'checked':''}>+/−</label></div>`+tbl(['','Plays','Yds/play','Eff','Exp'],rows)};
- const IDS=['call','form','down','zone','rp'],allOn=IDS.every(cmpOn);
- const L2=A().lists||{};return`<p class="note">Explosive = ${(L2.expRun||15)===(L2.expPass||15)?(L2.expRun||15)+'+ yards on any play':(L2.expRun||15)+'+ run, '+(L2.expPass||15)+'+ pass'} (change in Almanac › Setup). Compared with the ${V.season} average (${f1(all.ypp)} yds/play, ${pct(all.eff)} efficient, ${pct(all.exp)} explosive). Fewer than 3 plays shows no +/–.</p><label class="cmp" style="margin:4px 0 2px;font-size:13px"><input type="checkbox" id="cmpall" ${allOn?'checked':''}>Show all +/−</label>`+
+ const IDS=['custom','call','form','down','zone','rp'],allOn=IDS.every(cmpOn);
+ const L2=A().lists||{};return`<p class="note">Explosive = ${(L2.expRun||15)===(L2.expPass||15)?(L2.expRun||15)+'+ yards on any play':(L2.expRun||15)+'+ run, '+(L2.expPass||15)+'+ pass'} (change in Almanac › Setup). Compared with the ${V.season} average (${f1(all.ypp)} yds/play, ${pct(all.eff)} efficient, ${pct(all.exp)} explosive). Fewer than 3 plays shows no +/–.</p>${customSplit(P,L)}<label class="cmp" style="margin:10px 0 2px;font-size:13px"><input type="checkbox" id="cmpall" ${allOn?'checked':''}>Show all +/−</label>`+
   split('By call (one word or concept)',p=>p.owc||p.call,'call')+split('By formation',p=>p.formation?(p.formation+(p.ftag?' '+p.ftag:'')):null,'form')+split('By down and distance',bucket,'down')+split('By field zone',p=>zone(p.f),'zone')+split('Run / pass',p=>p.ptype==='run'?'Run':'Pass','rp')}
 /* ---------- render ---------- */
 function render(){hdr();let h;
@@ -153,7 +179,9 @@ function render(){hdr();let h;
  else if(V.tab==='schedule')h=viewSchedule();else if(V.tab==='season')h=viewSeason(gamesInSeason());else if(V.tab==='games')h=viewGames();else h=viewSplits();
  $('main').innerHTML=h;
  document.querySelectorAll('[data-cmp]').forEach(c=>c.onchange=()=>{if(c.checked)delete CMP[c.dataset.cmp];else CMP[c.dataset.cmp]=1;cmpSave();render()});
- const ca=$('cmpall');if(ca)ca.onchange=()=>{['call','form','down','zone','rp'].forEach(k=>{if(ca.checked)delete CMP[k];else CMP[k]=1});cmpSave();render()};
+ const ca=$('cmpall');if(ca)ca.onchange=()=>{['custom','call','form','down','zone','rp'].forEach(k=>{if(ca.checked)delete CMP[k];else CMP[k]=1});cmpSave();render()};
+ const g1=$('csg1');if(g1){g1.onchange=()=>{CUS.g1=g1.value;csSave();render()};$('csg2').onchange=e=>{CUS.g2=e.target.value;csSave();render()};$('csadd').onclick=()=>{CUS.fl.push({f:'',v:''});csSave();render()};
+  document.querySelectorAll('[data-csf]').forEach(x=>x.onchange=()=>{CUS.fl[+x.dataset.csf]={f:x.value,v:''};csSave();render()});document.querySelectorAll('[data-csv]').forEach(x=>x.onchange=()=>{CUS.fl[+x.dataset.csv].v=x.value;csSave();render()});document.querySelectorAll('[data-csx]').forEach(x=>x.onclick=()=>{CUS.fl.splice(+x.dataset.csx,1);csSave();render()})}
  const ag=$('addg');if(ag)ag.onclick=()=>editRow(null);
  document.querySelectorAll('[data-row]').forEach(b=>b.onclick=e=>{const r=sched().rows.find(x=>x.id===b.dataset.row),gid=r&&matchGame(r);if(e.target.closest('[data-edit]')||!gid)return editRow(b.dataset.row);V.game=gid;render()});
  document.querySelectorAll('tr[data-g]').forEach(r=>r.onclick=()=>{V.game=r.dataset.g;render()});
