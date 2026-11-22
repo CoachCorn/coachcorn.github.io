@@ -31,7 +31,7 @@ tr.r{cursor:pointer}tr.r:active{background:#223140}
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#000c;padding:10px 16px;border-radius:10px;z-index:20;display:none}
 </style></head><body>
 <header><h1 id="ttl">Glossary</h1><span class="mut" id="meta"></span><span style="flex:1"></span>
- <button class="btn pri" id="add">+ Add term</button><button class="btn" id="exp">Export</button>
+ <button class="btn pri" id="add">+ Add term</button><button class="btn" id="imp">Import words from Hudl</button><button class="btn" id="exp">Export</button>
  <label class="btn" style="display:inline-flex;align-items:center">Import<input type="file" id="imp" accept=".json,application/json" style="display:none"></label></header>
 <main>
  <input id="q" type="search" placeholder="Search names, aliases, meanings" style="width:100%;font-size:16px">
@@ -39,7 +39,7 @@ tr.r{cursor:pointer}tr.r:active{background:#223140}
  <div id="list"></div>
 </main>
 <div class="modal" id="modal"><div class="box" id="mbox"></div></div><div id="toast"></div>
-<script src="../shared/glossary.js"></script>
+<script src="../shared/glossary.js"></script><script src="../shared/importer.js"></script>
 <script>
 /* Standalone glossary editor. Reads and writes the same device copy the Almanac uses (shared/glossary.js).
    No seeding here: the first open of the Almanac seeds a program's glossary. */
@@ -55,6 +55,32 @@ const noDef=t=>t.status==='active'&&!String((t.meaning&&t.meaning.text)||'').tri
 function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',2200)}
 function load(){G=window.GL?GL.load(PROGRAM):null}
 function commit(t){if(t)GL.touch(t);GL.save(G);render()}
+/* ---- import words from a Hudl export (end-of-year master playlist): list what is found, coach ticks what to keep ---- */
+const HALIAS={'DOWN':'DN','DISTANCE':'DIST','FORMATION':'OFF FORM','OFF FORMATION':'OFF FORM','OFF PLAY':'PLAY','PLAY CALL':'PLAY','OFF PLAY CALL':'PLAY','PLAY TAG':'TAG','PLAY TAGS':'TAG','TAGS':'TAG','ONE WORD':'ONE WORD CALL','OWC':'ONE WORD CALL','MOTIONS':'MOTION','MOTION/SHIFT':'MOTION','OFF PLAY TYPE':'PLAY TYPE'};
+function impWords(g){const I=Importer,hi=I.findHeader(g);if(hi<0)throw new Error('Could not find a PLAY # column in that file');g[hi]=g[hi].map(c=>{const k=I.cellS(c).toUpperCase().replace(/\s+/g,' ').trim();return HALIAS[k]||k});
+ const r=I.parseOwn(g,'file'),W=new Map(),add=(type,name,use)=>{name=String(name||'').trim();if(!name)return;name=type==='formation'?name:name.toUpperCase();const k=type+'|'+GL.U(name);const w=W.get(k)||{type,name,n:0,uses:new Set()};w.n++;if(use)w.uses.add(use);W.set(k,w)};
+ let plays=0;for(const b of r.blocks)for(const p of b.plays){if(p.k!=='p')continue;plays++;add('formation',p.formation);(p.ftags||[]).forEach(x=>add('ftag',x));add('motion',p.motion);(p.tags||[]).forEach(x=>add('tag',x,p.ptype));add('oneword',p.owc);if(p.call&&!p.owc)add(p.ptype==='run'?'run':'pass',p.call)}
+ return{plays,games:r.blocks.length,words:[...W.values()]}}
+function impOpen(){modal(`<h3 style="margin-top:0">Import words from Hudl</h3><p class="note">Pick a Hudl export of your own offense (the end-of-year master playlist works best), .xlsx or .csv. It lists every formation, formation tag, motion, play, play tag and one word it finds, with how often each was used. Tick what to keep; they go into the glossary flagged for review so you can add definitions later. Nothing is added until you tap Add.</p>
+ <input type="file" id="i_f" accept=".xlsx,.xlsm,.csv,text/csv" style="width:100%"><div id="i_b"></div><p style="margin-top:12px"><button class="btn" id="i_x">Close</button></p>`);
+ $('i_x').onclick=close;
+ $('i_f').onchange=async ev=>{const f=ev.target.files[0],box=$('i_b');if(!f)return;box.innerHTML='<p class="note">Reading…</p>';
+  try{if(!window.Importer)throw new Error('The importer did not load. Open this once with signal.');const I=Importer;let g;if(/\.csv$/i.test(f.name))g=I.parseCsv(await f.text());else g=(await I.readXlsx(await f.arrayBuffer())).rows;
+   const r=impWords(g);if(!G){G=GL.blank(PROGRAM)}
+   const have=w=>!!GL.find(G,w.type,w.name),fresh=r.words.filter(w=>!have(w)),known=r.words.length-fresh.length;
+   if(!r.plays)throw new Error('No offensive plays found (needs DN and DIST columns, and ODK = O if there is an ODK column)');
+   const groups=TYPES.filter(([k])=>fresh.some(w=>w.type===k));
+   box.innerHTML=`<p class="note"><b>${r.plays} plays</b> in ${r.games} game${r.games===1?'':'s'}. ${fresh.length} new word${fresh.length===1?'':'s'} found${known?', '+known+' already in your glossary':''}. Words used only once start unticked.</p>
+    ${fresh.length?`<p style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="i_all">Tick all</button><button class="btn" id="i_none">Untick all</button><button class="btn" id="i_two">Only used 2+ times</button></p>
+    <div style="max-height:46vh;overflow:auto">${groups.map(([k,l])=>`<div class="lab" style="margin-top:8px">${l}</div>`+fresh.filter(w=>w.type===k).sort((a,b)=>b.n-a.n||a.name.localeCompare(b.name)).map(w=>`<label style="display:flex;gap:10px;align-items:center;padding:5px 0;border-top:1px solid var(--line)"><input type="checkbox" class="i_w" data-k="${esc(w.type+'|'+w.name)}" ${w.n>=2?'checked':''} style="width:20px;height:20px"><b style="flex:1">${esc(w.name)}</b><span class="note">${w.n}×</span></label>`).join('')).join('')}</div>
+    <p style="margin-top:10px"><button class="btn pri" id="i_add">Add ticked words</button></p>`:'<p class="note">Every word in this file is already in your glossary.</p>'}`;
+   const cbs=()=>[...document.querySelectorAll('.i_w')],byK=new Map(fresh.map(w=>[w.type+'|'+w.name,w]));
+   if(!fresh.length)return;
+   $('i_all').onclick=()=>cbs().forEach(c=>c.checked=true);$('i_none').onclick=()=>cbs().forEach(c=>c.checked=false);$('i_two').onclick=()=>cbs().forEach(c=>c.checked=byK.get(c.dataset.k).n>=2);
+   $('i_add').onclick=()=>{load();if(!G){G=GL.blank(PROGRAM)}let n=0;for(const c of cbs()){if(!c.checked)continue;const w=byK.get(c.dataset.k);if(GL.find(G,w.type,w.name))continue;
+     GL.add(G,{type:w.type,name:w.name,side:'O',source:'import',needsReview:true,uses:w.type==='tag'?(w.uses.size?[...w.uses]:['run','pass']):[]});n++}
+    GL.save(G);close();render();toast('Added '+n+' word'+(n===1?'':'s')+' to the glossary. They are in the Review list.')}
+  }catch(e){box.innerHTML='<p class="note" style="color:var(--bad)">'+esc(e.message||String(e))+'</p>'}}}
 function render(){
  if(!window.GL){$('list').innerHTML='<p class="note">The glossary code did not load. Open this once with signal.</p>';return}
  if(!G){$('list').innerHTML='<p class="note">No glossary on this device yet for '+esc(PROGRAM)+'. Open the Almanac once; it builds the glossary from its lists.</p>';$('meta').textContent='';return}
@@ -108,6 +134,7 @@ function edit(id){const t=id?GL.byId(G,id):null,tv=t?t.type:(S.type||'tag'),isTa
  const rb=$('e_r');if(rb)rb.onclick=()=>{load();const x=GL.byId(G,t.id);x.status==='active'?GL.retire(x):GL.activate(x);x.needsReview=false;commit(x);close();toast((x.status==='active'?'Brought back ':'Retired ')+x.name)}}
 $('q').oninput=e=>{S.q=e.target.value;render()};
 $('add').onclick=()=>{if(G)edit(null)};
+$('imp').onclick=impOpen;
 $('exp').onclick=()=>{if(!G)return;const b=new Blob([JSON.stringify(G,null,1)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='glossary-'+G.program+'-rev'+G.rev+'.json';document.body.appendChild(a);a.click();a.remove()};
 $('imp').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{load();const inc=JSON.parse(await f.text());if(!G){G=GL.migrate(inc);GL.save(G);render();toast('Glossary loaded');return}
  const r=GL.merge(G,inc);GL.save(G);render();toast(`Imported: ${r.added} new, ${r.updated} updated${r.clashes.length?', '+r.clashes.length+' name clashes skipped':''}`)}catch(err){toast(err.message||'Import failed')}e.target.value=''};
