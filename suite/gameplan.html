@@ -137,7 +137,7 @@ function touch(p){p.upd=Date.now();writeStore()}
 const OLK=['LT','LG','C','RG','RT'],SK=['Q','X','Z','M','H','Y','F','A','B','T'];
 const COLS=['#ffffff','#ef5b5b','#5aa9ff','#f2b632','#2fbf71','#c58bff'];
 const LKEY=[['#5aa9ff','Motion'],['#ef5b5b','Shift'],['#2fbf71','Ball carrier'],['#f2b632','Carrier on read']];
-const TC={Q:'#ffffff',X:'#5aa9ff',Z:'#5aa9ff',M:'#f2b632',H:'#2fbf71',Y:'#c58bff',F:'#5ad1c8',A:'#ff9bd0',B:'#b0b8c4',T:'#ef7b5b'};
+const TC={Q:'#ffffff',X:'#5aa9ff',Z:'#a3e635',M:'#f2b632',H:'#2fbf71',Y:'#c58bff',F:'#5ad1c8',A:'#ff9bd0',B:'#b0b8c4',T:'#ef7b5b'};
 /* The drawing is the whole field width: 160 ft (high school), 4.4 px per foot. The left hash sits where the center lines up (53'4" from the sideline).
    Noah asked for the hashes drawn farther apart than real: HASHR puts the right hash 66 ft from the left one (real is 53'4"). Change the 66 to change it.
    Numbers are 6 ft tall: top 9 yards (27 ft) from the sideline, bottom 21 ft. */
@@ -147,10 +147,12 @@ const L1=LOS-28,L2=LOS-66,L3=LOS-112,DP={   // defensive templates, spread for r
  '3-4-4':[['DE1','DE',163,L1],['NT','NT',235,L1],['DE2','DE',307,L1],['OL1','W',100,LOS-42],['IL1','M',190,L2],['IL2','M',280,L2],['OL2','S',370,LOS-42],['CB1','CB',40,LOS-58],['CB2','CB',450,LOS-58],['FS','FS',170,L3],['SS','SS',300,L3]],
  '3-3-5':[['DE1','DE',163,L1],['NT','NT',235,L1],['DE2','DE',307,L1],['WL','W',155,L2],['ML','M',235,L2],['SL','S',315,L2],['CB1','CB',40,LOS-58],['CB2','CB',450,LOS-58],['FS','FS',170,L3],['SS','SS',300,L3],['NB','N',380,LOS-46]],
  '4-2-5':[['DE1','DE',163,L1],['DT1','DT',211,L1],['DT2','DT',259,L1],['DE2','DE',307,L1],['WL','W',190,L2],['ML','M',280,L2],['CB1','CB',40,LOS-58],['CB2','CB',450,LOS-58],['FS','FS',170,L3],['SS','SS',300,L3],['NB','N',380,LOS-46]]};
-function addDefense(t,pre){pre=DP[pre]?pre:'4-3-4';Object.keys(t).forEach(k=>{if(t[k].df)delete t[k]});DP[pre].forEach(([k,lab,x,y])=>{t['D_'+k]={x,y,on:1,df:1,lab}});return pre}
+function addDefense(t,pre){pre=DP[pre]?pre:'4-3-4';Object.keys(t).forEach(k=>{if(t[k].df)delete t[k]});DP[pre].forEach(([k,lab,x,y])=>{const w=k==='CB1'?t.X:k==='CB2'?t.Z:null;if(w&&w.on)x=w.x;t['D_'+k]={x,y,on:1,df:1,lab}});return pre}
 const OLSP=36;   // spacing between offensive linemen
+const NUMX=Math.round((NB+NT)/2);
 function baseDraw(){const t={},put=(k,x,y,on)=>t[k]={x,y,on};
- put('X',30,114+OFF,1);put('Z',456,112+OFF,1);put('M',165,150+OFF,1);put('Q',235,168+OFF,1);put('T',210,205+OFF,1);put('H',385,128+OFF,1);
+ put('X',NUMX,114+OFF,1);put('Z',VW-NUMX,112+OFF,1);   // X and Z start on the numbers, each on his side
+ put('M',165,150+OFF,1);put('Q',235,168+OFF,1);put('T',210,205+OFF,1);put('H',385,128+OFF,1);
  put('Y',395,112+OFF,0);put('F',430,150+OFF,0);put('A',300,190+OFF,0);put('B',260,205+OFF,0);
  OLK.forEach((k,i)=>put(k,235-2*OLSP+i*OLSP,LOS,1));return{t,l:[],v:2}}
 let svgN=0;
