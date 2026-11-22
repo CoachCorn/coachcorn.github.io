@@ -581,7 +581,7 @@ function climbLine(D1,D2,cx,col){const dx=D1.x-D2.x,dy=D1.y-D2.y,m=Math.hypot(dx
   [0,.16,.32,.48,.64,.8,.92,.98,1].forEach(t=>{const a=(1-t)*(1-t),b=2*t*(1-t),c=t*t;pts.push([R(a*S.x+b*C.x+c*E.x),R(a*S.y+b*C.y+c*E.y)])});
   return{pts,curve:true,blk:1,col}}
 /* Personnel from the players on the field: first digit = backs (B, T), second = tight ends (M, A, F); wide receivers (X, Z, H, Y) must fill the rest of the 5 */
-function persOf(d){const t=(d&&d.t)||{},n=a=>a.filter(k=>t[k]&&t[k].on&&!t[k].df).length,rb=n(['B','T']),te=n(['M','A','F']),wr=n(['X','Z','H','Y']);return{code:''+rb+te,rb,te,wr,ok:wr===5-rb-te}}
+function persOf(d){const A=almData(),L=(A&&A.lists)||{},pl=(k,df)=>(L[k]&&L[k].length?L[k]:df).map(x=>String(x).toUpperCase()),t=(d&&d.t)||{},n=a=>a.filter(k=>t[k]&&t[k].on&&!t[k].df).length,rb=n(pl('pRB',['B','T'])),te=n(pl('pTE',['M','A','F'])),wr=n(pl('pWR',['X','Z','H','Y']));return{code:''+rb+te,rb,te,wr,ok:wr===5-rb-te}}
 function snap(){E.hist.push(JSON.stringify(E.d));E.redo=[];if(E.hist.length>60)E.hist.shift()}
 function edUndo(){if(E.cur){E.cur=null;return}if(!E.hist.length)return;(E.redo||(E.redo=[])).push(JSON.stringify(E.d));E.d=JSON.parse(E.hist.pop());E.selL=null;E.selS=null;E.combo=null}
 function edRedo(){if(!E.redo||!E.redo.length)return;E.hist.push(JSON.stringify(E.d));E.d=JSON.parse(E.redo.pop());E.selL=null}

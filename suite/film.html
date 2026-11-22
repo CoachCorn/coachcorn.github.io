@@ -695,9 +695,10 @@ function mgRemove(ids){if(!ids.length)return;
   tombstone(ids);ids.forEach(id=>{try{localStorage.removeItem(FP+'game:'+id)}catch(e){}});setSaved(SAVED().filter(g=>!ids.includes(g.id)));
   if(CUR&&ids.includes(CUR)){CUR=null;fillPicker();startPick()}else fillPicker();
   renderMg();toast(ids.length>1?'Deleted '+ids.length+' games':'Game deleted')}
+function show5012(){try{const A=JSON.parse(localStorage.getItem(SIGNED?'almanac_v1':'almanac_demo'));const v=A&&A.lists&&A.lists.show5012;return v==null?SIGNED:!!v}catch(e){return SIGNED}}
 const TABSETS={self:[['result','Game Result &amp; Why'],['fiftytwelve','50 / 12'],['stats','Stats'],['tagger','Film Tagger'],['hudl','Export to Hudl']],
   opp:[['overview','Their Defense'],['situation','By Situation'],['hurt','What Hurt Them'],['tagger','Film Tagger'],['hudl','Export to Hudl']]};
-function setTabs(){const set=TABSETS[G&&G.kind==='opp'?'opp':'self'].filter(t=>SIGNED||t[0]!=='fiftytwelve');   // 50 / 12 is not part of the booth demo
+function setTabs(){const set=TABSETS[G&&G.kind==='opp'?'opp':'self'].filter(t=>show5012()||t[0]!=='fiftytwelve');   // 50 / 12 is not part of the booth demo
   if(!set.some(t=>t[0]===TAB))TAB=set[0][0];
   $('#tabs').innerHTML=set.map(([k,l])=>`<button role="tab" data-tab="${k}" aria-selected="${k===TAB}">${l}</button>`).join('');
   $$('#tabs button').forEach(b=>b.onclick=()=>{TAB=b.dataset.tab;render()});
