@@ -834,7 +834,7 @@ $('ed').addEventListener('click',e=>{const b=e.target.closest('[data-e]');if(!b|
  else if(a==='blk'){E.blk=!E.blk;if(E.blk)E.arrow=false;if(E.cur){E.cur.blk=E.blk;E.cur.arrow=E.arrow}if(E.selL!=null){snap();E.d.l[E.selL].blk=E.blk;E.d.l[E.selL].arrow=E.arrow}}
  else if(a==='curve'){E.curve=!E.curve;if(E.cur)E.cur.curve=E.curve;if(E.selL!=null){snap();E.d.l[E.selL].curve=E.curve}}
  else if(a==='defp'){snap();E.d.dp=addDefense(t,b.dataset.p)}else if(a==='defoff'){snap();Object.values(t).forEach(x=>{if(x.df)x.on=0});if(E.sel&&String(E.sel).indexOf('D_')===0)E.sel=null}
- else if(a==='col'){E.col=b.dataset.c;if(E.selS!=null&&E.d.sh&&E.d.sh[E.selS]){snap();E.d.sh[E.selS].col=E.col}if(E.cur)E.cur.col=E.col;if(E.selL!=null){snap();E.d.l[E.selL].col=E.col}}
+ else if(a==='col'){E.col=b.dataset.c;{/* Ball carrier = solid, Carrier on read = dotted */const kk=(LKEY.find(k=>k[0]===E.col)||[])[1];const dd=kk==='Ball carrier'?false:kk==='Carrier on read'?true:null;if(dd!==null){E.dot=dd;if(E.cur)E.cur.dot=dd?1:0;if(E.selL!=null&&E.d.l[E.selL]&&!E.d.l[E.selL].mv){snap();E.d.l[E.selL].dot=dd?1:0}}}if(E.selS!=null&&E.d.sh&&E.d.sh[E.selS]){snap();E.d.sh[E.selS].col=E.col}if(E.cur)E.cur.col=E.col;if(E.selL!=null){snap();E.d.l[E.selL].col=E.col}}
  else if(a==='dellsel'){if(E.selL!=null){snap();E.d.l.splice(E.selL,1);E.selL=null}else if(E.selS!=null&&E.d.sh&&E.d.sh[E.selS]){snap();delSh(E.selS);E.selS=null}}
  else if(a==='undo')edUndo();else if(a==='redo')edRedo()
  else if(a==='dellast'){snap();E.d.l.pop();E.selL=null}
