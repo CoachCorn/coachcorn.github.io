@@ -440,13 +440,14 @@ function recConcept(d,side,skip){const ord=rcvOrder(d,side),cand=Object.keys(d.t
   const p=standAt(d,k),r=Object.assign({},l);delete r.pts;delete r.mv;r.pts=l.pts.map(q=>[Math.round(q[0]-p.x),Math.round(q[1]-p.y)]);const n=ord.indexOf(k);if(n>=0)r.n=n+1;else r.k=k;out.push(r)});return out}
 /* OL rules from a run concept's meaning ("BSG pulls and traps the 1st man in the C gap", "PSG combos with the C to the M").
    PS / BS = playside / backside of the run; drawn against the defense on the drawing if there is one, else to a spot. */
-const OLRX=new RegExp('^(PST|PSG|C|BSG|BST|'+PTOK.slice(1,-1)+')\\s+(base blocks|down blocks|reach blocks|zone steps(?:\\s+to)?|combos|double teams|pulls and traps|pulls and kicks out|pulls and wraps(?:\\s+for)?|pulls and leads(?:\\s+up)?(?:\\s+on|\\s+for)?|pulls and logs|hinges|cuts off|scoops|climbs(?:\\s+to)?|blocks)(?:\\s+with\\s+the\\s+(\\w+))?(?:\\s+(?:to|for|on)(?=\\s))?(?:\\s+(.+?))?\\.?$','i');
+const OLRX=new RegExp('^(PS TE|BS TE|PST|PSG|C|BSG|BST|'+PTOK.slice(1,-1)+')\\s+(base blocks|down blocks|reach blocks|zone steps(?:\\s+to)?|combos|double teams|pulls and traps|pulls and kicks out|pulls and wraps(?:\\s+for)?|pulls and leads(?:\\s+up)?(?:\\s+on|\\s+for)?|pulls and logs|arc releases(?:\\s+to)?|hinges|cuts off|scoops|climbs(?:\\s+to)?|blocks)(?:\\s+with\\s+the\\s+(\\w+))?(?:\\s+(?:to|for|on)(?=\\s))?(?:\\s+(.+?))?\\.?$','i');
 function olRules(text){return String(text||'').split(/\.\s+|\.$|;\s*|\n/).map(x=>x.trim()).filter(Boolean).map(x=>{const m=x.match(OLRX);return m?{p:m[1].toUpperCase(),a:m[2].toLowerCase(),w:(m[3]||'').toUpperCase(),tg:(m[4]||'').toLowerCase()}:null}).filter(Boolean)}
 function runSide(text,b){const m=String(text||'').match(/to the (left|right|field|boundary|call side)/i),w=m?m[1].toLowerCase():'';if(w==='left')return-1;if(w==='right')return 1;const sd=b?fmParse(b.name).side:'';return sd==='LT'?-1:1}
 function olDraw(d,text,s){const t=d.t,L=d.l=(d.l||[]),R=olRules(text);if(!R.length)return 0;
  const ol=OLK.filter(k=>t[k]&&t[k].on).sort((a,b)=>t[a].x-t[b].x);if(ol.length<5)return 0;const C=t.C,ps=s>0?ol.slice(3):ol.slice(0,2).reverse(),bs=s>0?ol.slice(0,2).reverse():ol.slice(3);
- const KEY={PSG:ps[0],PST:ps[1],BSG:bs[0],BST:bs[1],C:'C'},key=k=>KEY[k]||k,P=k=>t[key(k)]&&t[key(k)].on?t[key(k)]:null;
- const te=['Y','M','A','F'].map(k=>t[k]).filter(q=>q&&q.on&&Math.abs(q.y-LOS)<8&&(q.x-t[ps[1]].x)*s>0&&Math.abs(q.x-t[ps[1]].x)<OLSP*1.8)[0];
+ const teK=sd=>['Y','M','A','F','H'].filter(k=>{const q=t[k],tk=t[sd>0?ps[1]:bs[1]],o=sd>0?s:-s;return q&&q.on&&!q.df&&Math.abs(q.y-LOS)<1.6*YD&&(q.x-tk.x)*o>0&&Math.abs(q.x-tk.x)<OLSP*2.2}).sort((a,b)=>Math.abs(t[a].x-t[ps[1]].x)-Math.abs(t[b].x-t[ps[1]].x))[0];
+ const KEY={PSG:ps[0],PST:ps[1],BSG:bs[0],BST:bs[1],C:'C','PS TE':teK(1),'BS TE':teK(-1)},key=k=>k in KEY?KEY[k]:k,P=k=>key(k)&&t[key(k)]&&t[key(k)].on?t[key(k)]:null;
+ const te=KEY['PS TE']?t[KEY['PS TE']]:null;
  const gx={a:(C.x+t[ps[0]].x)/2,b:(t[ps[0]].x+t[ps[1]].x)/2,c:te?(t[ps[1]].x+te.x)/2:t[ps[1]].x+s*OLSP*.55,d:(te?te.x:t[ps[1]].x+s*OLSP)+s*OLSP*.55};
  const D=Object.keys(t).filter(k=>t[k].df&&t[k].on).map(k=>t[k]),dl=D.filter(q=>q.y>LOS-3*YD),lb=D.filter(q=>q.y<=LOS-3*YD&&q.y>LOS-7*YD);
  const near=(arr,x,y,max)=>{let b=null,bd=1e9;arr.forEach(q=>{const dd=Math.hypot(q.x-x,(q.y-y)*.6);if(dd<bd){bd=dd;b=q}});return b&&(max==null||Math.abs(b.x-x)<=max)?b:null};
@@ -474,9 +475,9 @@ function olDraw(d,text,s){const t=d.t,L=d.l=(d.l||[]),R=olRules(text);if(!R.leng
   if(/combos|double/.test(a)){const w=P(r.w);const mid=w?{x:(p.x+w.x)/2,y:LOS}:p,D1=near(dl,mid.x,LOS-2*YD,OLSP)||spot(mid.x,LOS-1.4*YD);
    L.push(bl(p,D1));if(T&&T.y<LOS-3*YD&&!climbed.includes(T)){climbed.push(T);L.push(climbLine(D1,T,C.x,'#ffffff'))}return}
   if(T){L.push(bl(p,T));return}
-  const dq=/down/.test(a)?near(dl.filter(q=>(q.x-p.x)*toC>2),p.x+toC*OLSP*.7,LOS-2*YD,OLSP*1.3):/reach|zone|scoop|cut/.test(a)?near(dl.filter(q=>(q.x-p.x)*s>-4),p.x+s*OLSP*.6,LOS-2*YD,OLSP*1.2):/climb/.test(a)?near(lb,p.x+s*OLSP*.5,LOS-5*YD,OLSP*1.5):/hinge/.test(a)?null:near(dl,p.x,LOS-2*YD,OLSP*.6);
+  const dq=/down/.test(a)?near(dl.filter(q=>(q.x-p.x)*toC>2),p.x+toC*OLSP*.7,LOS-2*YD,OLSP*1.3):/reach|zone|scoop|cut/.test(a)?near(dl.filter(q=>(q.x-p.x)*s>-4),p.x+s*OLSP*.6,LOS-2*YD,OLSP*1.2):/arc/.test(a)?near(lb.filter(q=>(q.x-p.x)*s>-4),p.x+s*OLSP,LOS-5*YD,OLSP*2):/climb/.test(a)?near(lb,p.x+s*OLSP*.5,LOS-5*YD,OLSP*1.5):/hinge/.test(a)?null:near(dl,p.x,LOS-2*YD,OLSP*.6);
   if(dq){L.push(bl(p,dq));return}
-  let q;if(/down/.test(a))q=spot(p.x+toC*1.3*YD,LOS-1.5*YD);else if(/hinge/.test(a))q=spot(p.x-s*1*YD,p.y+1*YD);else if(/climb/.test(a))q=spot(p.x+s*.5*YD,LOS-2.5*YD);
+  let q;if(/down/.test(a))q=spot(p.x+toC*1.3*YD,LOS-1.5*YD);else if(/hinge/.test(a))q=spot(p.x-s*1*YD,p.y+1*YD);else if(/climb/.test(a))q=spot(p.x+s*.5*YD,LOS-2.5*YD);else if(/arc/.test(a))q=spot(p.x+s*1.6*YD,LOS-3*YD);
   else if(/reach|zone|scoop|cut/.test(a))q=spot(p.x+s*1.3*YD,LOS-1.5*YD);else q=spot(p.x,LOS-1.8*YD);
   L.push(bl(p,q))});
  return n}
