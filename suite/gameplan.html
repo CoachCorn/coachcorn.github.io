@@ -473,7 +473,7 @@ function olDraw(d,text,s){const t=d.t,L=d.l=(d.l||[]),R=olRules(text);if(!R.leng
  let n=0,pulls=0;const climbed=[];R.forEach(r=>{const p=P(r.p);if(!p)return;const T=target(r.tg,p),toC=p===C?-s:(C.x>p.x?1:-1),a=r.a;n++;
   if(/trap|kick|wrap|lead|log/.test(a)){const PL=Math.max(LOS+1.7*YD,p.y+.6*YD)+(pulls++)*.8*YD,back=[Math.round(p.x+s*.5*YD),Math.round(PL)],pts=[[p.x,p.y],back];
    const first=/trap|kick|log/.test(a),tg=first?target(r.tg||'the c gap',p,1):(T||spot(gx.b,LOS-5*YD));
-   if(/trap|kick/.test(a))pts.push([Math.round(tg.x-s*1.4*YD),Math.round(PL)]);
+   if(/trap|kick/.test(a))pts.push([Math.round(tg.x-s*Math.max(0,PL-tg.y)),Math.round(PL)]);   // last leg at 45 degrees into the LOS
    else if(/log/.test(a))pts.push([Math.round(tg.x+s*.3*YD),Math.round(PL)],[Math.round(tg.x+s*1.3*YD),Math.round(LOS-.2*YD)]);
    else pts.push([Math.round((te?gx.c:gx.b)-s*.3*YD),Math.round(PL)],[Math.round(te?gx.c:gx.b),Math.round(LOS+.2*YD)]);
    pts.push(tg.sp?[tg.x,tg.y]:end({x:pts[pts.length-1][0],y:pts[pts.length-1][1]},tg,14));L.push({pts,blk:1,col:'#ffffff'});return}
