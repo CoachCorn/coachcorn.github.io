@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Defensive Setup</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0f1720">
+<style>
+:root{--bg:#0f1720;--card:#18232f;--line:#2a3948;--tx:#e8eef4;--mut:#8ea0b2;--acc:#3b9cff;--ok:#2fbf71;--warn:#f2b632;--bad:#ef5b5b}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px -apple-system,system-ui,sans-serif}
+header{display:flex;gap:8px;align-items:center;padding:8px 12px;background:#0b1118;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:3}
+header h1{font-size:16px;margin:0 8px 0 0}
+select,button,input{font:inherit;color:var(--tx)}
+.btn{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 12px;min-height:40px;text-transform:uppercase}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:700}.btn.bad{color:var(--bad)}
+main{padding:10px 12px;max-width:900px;margin:0 auto}
+.card{background:#102030;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:0 0 6px}
+.mut,.note{color:var(--mut);font-size:12px}
+.pt{width:100%;border-collapse:collapse}.pt th{font-size:11px;text-transform:uppercase;color:var(--mut);text-align:left;padding:4px 3px}
+.pt td{padding:3px;border-top:1px solid var(--line)}
+.pt input{width:100%;min-width:0;background:#0e1822;border:1px solid var(--line);border-radius:6px;padding:9px 7px}
+.pt input.l{width:64px;text-align:center;font-weight:800;text-transform:uppercase}
+.pt tr.dup input.l{border-color:var(--bad)}
+.pt td.x button{background:none;border:0;color:var(--mut);font-size:20px;padding:4px 10px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.err{color:var(--bad);font-size:13px;margin-top:8px}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#000c;padding:10px 16px;border-radius:10px;z-index:20;display:none}
+</style></head><body>
+<header><h1>Defensive Setup</h1><span style="flex:1"></span><span class="mut" id="meta"></span></header>
+<main>
+ <div class="card">
+  <div class="lab">Position letters</div>
+  <p class="note" style="margin:0 0 8px">Every program calls its defenders something different. Set the letter and the name for each position. Positions are kept in your glossary, so every device in the program uses the same ones.</p>
+  <table class="pt"><thead><tr><th>Letter</th><th>Name</th><th>What he does</th><th></th></tr></thead><tbody id="rows"></tbody></table>
+  <div class="err" id="err"></div>
+  <div class="row"><button class="btn" id="add">+ Position</button><span style="flex:1"></span><button class="btn bad" id="reset">Back to starting set</button><button class="btn pri" id="save">Save</button></div>
+ </div>
+ <div class="note">Letters must be different from each other. Changing a letter or a name does not lose anything: the position keeps its place in the glossary.</div>
+</main>
+<div id="toast"></div>
+<script src="../shared/glossary.js"></script>
+<script src="../shared/defvocab.js"></script>
+<script>
+const SIGNED=(()=>{try{const s=JSON.parse(localStorage.getItem('suite_sync'));return !!(s&&s.token&&s.exp>Date.now())}catch(e){return false}})();
+const PROGRAM=SIGNED?'deer-creek':'demo';
+if(!SIGNED)DefVocab.demoGlossary(PROGRAM);
+const DV=DefVocab(PROGRAM,SIGNED);
+const $=id=>document.getElementById(id),esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const toast=m=>{const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',2400)};
+let L=DV.positions().map(x=>({...x}));
+const dups=()=>{const c={};L.forEach(x=>{const k=String(x.letter||'').trim().toUpperCase();if(k)c[k]=(c[k]||0)+1});return c};
+function draw(){const c=dups();
+ $('rows').innerHTML=L.map((x,i)=>`<tr data-i="${i}" class="${c[String(x.letter||'').trim().toUpperCase()]>1?'dup':''}"><td><input class="l" data-k="letter" maxlength="3" value="${esc(x.letter)}" aria-label="Letter" autocomplete="off" autocapitalize="characters"></td>
+  <td><input data-k="name" value="${esc(x.name)}" aria-label="Name" autocomplete="off"></td><td><input data-k="desc" value="${esc(x.desc)}" aria-label="What he does" autocomplete="off"></td>
+  <td class="x"><button data-del="${i}" aria-label="Remove ${esc(x.name)}">✕</button></td></tr>`).join('')||'<tr><td colspan="4" class="mut">No positions. Add one.</td></tr>'}
+$('rows').addEventListener('input',e=>{const tr=e.target.closest('tr');if(!tr||!e.target.dataset.k)return;const x=L[+tr.dataset.i];x[e.target.dataset.k]=e.target.value;
+ if(e.target.dataset.k==='letter'){const c=dups();[...$('rows').children].forEach((r,i)=>r.classList.toggle('dup',c[String(L[i]&&L[i].letter||'').trim().toUpperCase()]>1))}});
+$('rows').addEventListener('click',e=>{const b=e.target.closest('[data-del]');if(!b)return;L.splice(+b.dataset.del,1);draw()});
+$('add').onclick=()=>{L.push({id:'',name:'',letter:'',desc:''});draw();const r=$('rows').lastElementChild;if(r)r.querySelector('input').focus()};
+$('save').onclick=()=>{const err=$('err');err.textContent='';
+ const bad=L.find(x=>!String(x.name||'').trim()||!String(x.letter||'').trim());if(bad){err.textContent='Every position needs a letter and a name.';return}
+ const c=dups(),d=Object.keys(c).filter(k=>c[k]>1);if(d.length){err.textContent='Two positions share the letter '+d.join(', ')+'. Each letter can be used once.';return}
+ const names=L.map(x=>x.name.trim().toUpperCase()),nd=names.find((n,i)=>names.indexOf(n)!==i);if(nd){err.textContent='Two positions are named '+nd+'.';return}
+ const used=new Set(L.map(x=>x.id).filter(Boolean));L.forEach(x=>{if(!x.id){let id='pos.'+GL.slug(x.name),k=2;while(used.has(id))id='pos.'+GL.slug(x.name)+'-'+(k++);x.id=id;used.add(id)}});
+ if(DV.setPositions(L)){L=DV.positions().map(x=>({...x}));draw();toast('Saved')}else err.textContent='Could not save on this device.'};
+$('reset').onclick=()=>{const b=$('reset');if(!b.dataset.arm){b.dataset.arm=1;b.textContent='Tap again: replace my positions';setTimeout(()=>{delete b.dataset.arm;b.textContent='Back to starting set'},4000);return}
+ delete b.dataset.arm;b.textContent='Back to starting set';DV.resetPositions();L=DV.positions().map(x=>({...x}));draw();$('err').textContent='';toast('Starting set restored')};
+if(!SIGNED)$('meta').textContent='Demo space';
+draw();
+</script>
+</body></html>

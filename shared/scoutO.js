@@ -13,12 +13,17 @@ const famOf=s=>U(s).replace(/\(FIB\)/g,'').replace(/\b(LT|RT|LEFT|RIGHT)\b\.?/g,
 
 /* One-word calls -> concept, run or pass, and the side when the word fixes one. SEED from Louis's Call Predictor (Deer Creek one-word rules).
    TODO: read these from the program glossary (one words and concepts) so a program can edit them. */
-const WORDS={LA:['Power','run','L'],CHARGER:['Power','run','R'],CAROLINA:['GY Counter','run','L'],PANTHER:['GY Counter','run','R'],VEGAS:['Buck Sweep','run','L'],RAIDER:['Buck Sweep','run','R'],
+const DC_WORDS={LA:['Power','run','L'],CHARGER:['Power','run','R'],CAROLINA:['GY Counter','run','L'],PANTHER:['GY Counter','run','R'],VEGAS:['Buck Sweep','run','L'],RAIDER:['Buck Sweep','run','R'],
  PITT:['GT Counter','run','L'],PITTSBURGH:['GT Counter','run','L'],STEELER:['GT Counter','run','R'],LAP:['Cross','pass','L'],RACE:['Cross','pass','R'],
  FLASH:['Verticals','pass',null],STRIKE:['Verticals','pass',null],SOONERS:['Zone Insert','run',null],WASHINGTON:['Zone Insert','run',null],COMMANDER:['Zone Insert','run',null],
  BRONCHOS:['Sail','pass',null],CAL:['Cross','pass',null],MINERS:['Verticals','pass',null],AGGIES:['Aggies','pass',null],STANFORD:['Post-Spike','pass',null],TULSA:['Post-Spike','pass',null],
  BRUINS:['Jet Sweep','run',null],FALCON:['Jet Sweep','run',null],STATE:['GY Counter','run',null],TROJANS:['GY Counter','run',null],TROJAN:['GY Counter','run',null],
  TEXAS:['Buck Sweep','run',null],HOUSTON:['GT Counter','run',null]};
+/* Demo space (signed out): generic one-word calls instead of Deer Creek's. The defensive pages switch to this when nobody is signed in. */
+const DEMO_WORDS={ZONE:['Inside Zone','run',null],STRETCH:['Outside Zone','run',null],POWER:['Power','run',null],COUNTER:['Counter','run',null],DRAW:['Draw','run',null],ISO:['Iso','run',null],
+ MESH:['Mesh','pass',null],STICK:['Stick','pass',null],VERTS:['Four Verts','pass',null],CROSS:['Y-Cross','pass',null]};
+let WORDS=DC_WORDS;
+function useDemoWords(on){WORDS=on===false?DC_WORDS:DEMO_WORDS}
 /* concept names (Power, GY Counter, ...) with run or pass, from the call-word table. The call word (CHARGER, PANTHER) is the tag; the concept is the play. */
 function concepts(){const m={};Object.keys(WORDS).forEach(k=>{const w=WORDS[k];if(!m[w[0]])m[w[0]]={name:w[0],type:w[1]}});m['Solid']=m['Solid']||{name:'Solid',type:'run'};return Object.values(m)}
 function decode(call){const t=U(call).split(' ').filter(Boolean),hits=t.filter(x=>WORDS[x]);
@@ -138,5 +143,5 @@ function store(program){const KEY='oscout_v1_'+program;
   remove:n=>{const o=read();delete o.opps[n];(o.del=o.del||{})[n]=Date.now();if(o.active===n)o.active='';write(o)},
   rows:n=>{const e=read().opps[n];return e?e.games.filter(g=>!g.off).flatMap(g=>g.rows):[]}}}
 
-root.SCOUTO={MIN,typedRows,callWords,effOf,concepts,decode,parseOffense,readFile,tendencies,favRuns,favPass,favRunsByForm,lookup,split,famOf,dnd,store};
+root.SCOUTO={useDemoWords,MIN,typedRows,callWords,effOf,concepts,decode,parseOffense,readFile,tendencies,favRuns,favPass,favRunsByForm,lookup,split,famOf,dnd,store};
 })(typeof window!=='undefined'?window:globalThis);

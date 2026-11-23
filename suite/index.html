@@ -96,15 +96,17 @@ const IC={
  dalmanac:['#3b9cff','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg>'],
  dgameplan:['#9b7bff','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16"/></svg>'],
  dscout:['#2fbf71','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>'],
+ dsetup:['#8aa4c0','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h0a1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>'],
  stats:['#ef5b5b','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>'],
  mreps:['#ff8a4c','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="14" height="14" rx="2"/><path d="M7 3h12a2 2 0 0 1 2 2v12"/><path d="M7 12l2.5 2.5L13 10"/></svg>'],
  glossary:['#f2b632','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/><path d="M9 7h6M9 11h4"/></svg>']};
 const signedIn=()=>{try{const x=JSON.parse(localStorage.getItem('suite_sync'));return !!(x&&x.token&&x.exp>Date.now())}catch(e){return false}};
-/* Defense tools: real pages once a program is signed in; the demo and booth builds keep the "coming" placeholders. */
+/* Defense tools: real pages signed in and in the demo (the demo has its own made-up opponent, game and plan). */
 const DTOOLS=[
- {id:'dalmanac',name:'Defensive Almanac',desc:'Sideline log, predicted call',get src(){return signedIn()?'dalmanac.html':undefined},get soon(){return signedIn()?undefined:'The defensive side is being built with the defensive staff. It will log our front, coverage and pressure each snap and predict the opponent offense.'}},
- {id:'dscout',name:'Offense Scout',desc:'Their tendencies by formation, down and distance',get src(){return signedIn()?'dscout.html':undefined},get soon(){return signedIn()?undefined:'Imports the opponent offense scout and shows their tendencies by formation, down and distance.'}},
- {id:'dgameplan',name:'Gameplan',desc:'Their favorites by formation, our front, pressure, coverage',get src(){return signedIn()?'dgameplan.html':undefined},get soon(){return signedIn()?undefined:'Builds the defensive gameplan grid from the opponent offense scout: their favorite runs and passes by formation, and our fronts, pressures and coverages.'}},
+ {id:'dalmanac',name:'Defensive Almanac',desc:'Sideline log, predicted call',src:'dalmanac.html'},
+ {id:'dscout',name:'Offense Scout',desc:'Their tendencies by formation, down and distance',src:'dscout.html'},
+ {id:'dgameplan',name:'Gameplan',desc:'Their favorites by formation, our front, pressure, coverage',src:'dgameplan.html'},
+ {id:'dsetup',name:'Setup',desc:'Position letters',src:'dsettings.html'},
  {id:'glossary',name:'Glossary',desc:'Fronts, coverages, pressures',src:'glossary.html'},
  {id:'stats',name:'Stats',desc:'Schedule and defensive stats',src:'stats.html'}];
 let SIDE='O';try{SIDE=localStorage.getItem('suite_side')||'O'}catch(e){}
@@ -203,7 +205,7 @@ function signInModal(){const s=SUITESYNC.status();
  pwToggle('sc');pwToggle('sa');
  $('sx').onclick=closeM;
  $('rd').onclick=()=>{const b=$('rd');if(!b.dataset.arm){b.dataset.arm=1;b.textContent='Tap again: erase all demo data';return}
-  try{Object.keys(localStorage).filter(k=>['almanac_demo','glossary_v1_demo','gameplan_v1_demo','schedule_v1_demo','gp_cur','gp.demodeck','mr.demoset'].includes(k)||k.indexOf('frd:')===0||k.indexOf('gpscout_v1_demo_')===0).forEach(k=>localStorage.removeItem(k))}catch(e){}location.reload()};
+  try{Object.keys(localStorage).filter(k=>['almanac_demo','glossary_v1_demo','gameplan_v1_demo','schedule_v1_demo','gp_cur','gp.demodeck','mr.demoset','oscout_v1_demo','dalmanac_v1_demo','dgameplan_v1_demo','dpos_v1_demo','demoseedD_v1'].includes(k)||k.indexOf('frd:')===0||k.indexOf('gpscout_v1_demo_')===0).forEach(k=>localStorage.removeItem(k))}catch(e){}location.reload()};
  $('sg').onclick=async()=>{$('se').textContent='';try{await SUITESYNC.login($('su').value,$('sp').value,$('sc').value);closeM();renderHome();SUITESYNC.syncNow()}catch(e){$('se').textContent=e.message}};
  $('ss').onclick=async()=>{$('se').textContent='';try{await SUITESYNC.setup($('su').value,$('sp').value.trim().toLowerCase(),$('sn2').value,$('sc').value,$('sa').value);$('se').style.color='var(--ok)';$('se').textContent='Program set. Now tap Sign in.'}catch(e){$('se').style.color='';$('se').textContent=e.message}}}
 (()=>{let x0=null,y0=null;const h=$('home');h.addEventListener('touchstart',e=>{x0=e.touches[0].clientX;y0=e.touches[0].clientY},{passive:true});

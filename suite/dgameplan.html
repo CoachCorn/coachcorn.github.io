@@ -58,6 +58,7 @@ main{padding:12px;max-width:1500px;margin:0 auto}
 <script src="../shared/scout.js"></script>
 <script src="../shared/scoutO.js"></script>
 <script src="../shared/defvocab.js"></script>
+<script src="../shared/demoseedD.js"></script>
 <script src="../shared/fielddraw.js"></script>
 <script>
 /* Defensive gameplan grid. One plan per opponent (their offense scout). One block per formation of theirs; the grid fills the favorites from the scout:
@@ -66,6 +67,7 @@ main{padding:12px;max-width:1500px;margin:0 auto}
    Stored on this device under dgameplan_v1_<program>. Not synced between devices yet. */
 const SIGNED=(()=>{try{const s=JSON.parse(localStorage.getItem('suite_sync'));return !!(s&&s.token&&s.exp>Date.now())}catch(e){return false}})();
 const PROGRAM=SIGNED?'deer-creek':'demo';
+if(!SIGNED){SCOUTO.useDemoWords();DefVocab.demoGlossary(PROGRAM);DemoSeedD.ensure()}
 const KEY='dgameplan_v1_'+PROGRAM,SO=SCOUTO.store(PROGRAM),DV=DefVocab(PROGRAM,SIGNED);
 const $=id=>document.getElementById(id),esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const toast=m=>{const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',2400)};

@@ -2,12 +2,31 @@
    (a program with its own glossary is not forced onto these). Needs shared/glossary.js and shared/scoutO.js loaded first.
    DefVocab(program, signed) -> {lists(), addWord(type,name,extra), forms(), glo(), reload()} */
 (function(root){
+/* Demo space (signed out): generic football words only, nothing of Deer Creek's. */
+const DEMO={
+ pkg:['BASE','NICKEL','DIME'],
+ fr:[['4-3','','BASE'],['3-4','','BASE'],['4-2-5','','NICKEL'],['3-3-5','','NICKEL']],
+ cov:['COVER 1','COVER 2','COVER 3','COVER 4','MAN'],
+ press:['A-GAP','EDGE','ZONE BLITZ','FIRE ZONE','NICKEL BLITZ','DOUBLE A']};
+const DEMO_MEAN={'4-3':'Four down linemen, three linebackers.','3-4':'Three down linemen, four linebackers.','4-2-5':'Four down linemen, two linebackers, five defensive backs.','3-3-5':'Three down linemen, three linebackers, five defensive backs.',
+ 'COVER 1':'Man coverage with one deep safety.','COVER 2':'Two deep safeties, corners in the flats.','COVER 3':'Three deep defenders.','COVER 4':'Four deep defenders.','MAN':'Man coverage.',
+ 'A-GAP':'Linebackers blitz the A gaps.','EDGE':'An edge defender blitzes.','ZONE BLITZ':'Zone coverage with a lineman dropping.','FIRE ZONE':'Five rush, zone behind it.','NICKEL BLITZ':'The nickel back blitzes.','DOUBLE A':'Two linebackers show in the A gaps.'};
+/* Defender positions: a letter and a name each program picks for itself. A program's glossary holds them as terms (type position, side D, permanent id);
+   a device with no glossary yet keeps them in its own list (dpos_v1_<program>) until one exists. */
+const POS={
+ dc:[['pos.end','End','E','Defensive end (two: field and boundary).'],['pos.spur','Spur','S','Field outside linebacker. Always to the field.'],['pos.will','Will','W','Boundary outside linebacker.'],
+  ['pos.mike','Mike','M','Inside linebacker.'],['pos.hawk','Hawk','H','Boundary inside linebacker.'],['pos.bandit','Bandit','B','Boundary safety.'],['pos.free','Free','F','Field safety.'],['pos.corner','Corner','C','Corner (two).']],
+ demo:[['pos.end','End','E','Defensive end.'],['pos.tackle','Tackle','T','Defensive tackle.'],['pos.sam','Sam','S','Strong-side linebacker.'],['pos.mike','Mike','M','Middle linebacker.'],['pos.will','Will','W','Weak-side linebacker.'],
+  ['pos.corner','Corner','C','Cornerback.'],['pos.ss','Strong safety','SS','Strong safety.'],['pos.fs','Free safety','FS','Free safety.']]};
+const posDefaults=signed=>(signed?POS.dc:POS.demo).map(x=>({id:x[0],name:x[1],letter:x[2],desc:x[3]}));
+const posKey=program=>'dpos_v1_'+program;
+
 function DefVocab(PROGRAM,SIGNED){
 const DEF_PKG=SIGNED?['BASE','CYCLONE','COBRA','NICKEL','DIME']:['BASE','NICKEL','DIME'];
 const DEF_FR=SIGNED?[['BASE','5-0-5','odd'],['TITE','4-0-4','odd'],['HEAVY','4i-0-4i','odd'],['BEAR','3-0-3','odd'],['MASS','2-0-2','odd'],['OVER','4i-1-5','odd'],['UNDER','5-1-4i','odd'],['WIDE','9-0-9','odd'],
- ['INLAW','4-2i-2i-4','even'],['OUTLAW','5-3-3-5','even'],['VIPER','4-2-2-4','even'],['LOAD','9-3-1-5','even'],['CHOKE','4-0-4-9','even'],['BEAR','5-3-0-3-5','even'],['OVER','4-2-3-5','even'],['UNDER','5-3-2-4','even']]:[];
-const DEF_COV=SIGNED?['STAR','SCREW','RUTH','CLAMP','CLEO','BLACK','SINK','READ']:[];
-const DEF_PRESS=SIGNED?['SMOKE','FOG','WILD','CAT','OKIE','SOONER','STATE','COWBOY','FOX','MIKE','MOSS','MOW','TECH','RAIDER','SAW','SHARK','SWOOP','HOOP','IRONMAN','SPIDERMAN','SUPERMAN','THOR','WOLVERINE','BATMAN','KATANA','DOJO','JACK','SENSEI','ZEN','WARRIOR','OMEGA','BETA','CHARLIE','BOX','NICKEL','SPIKE','WILL','CHEAT']:[];
+ ['INLAW','4-2i-2i-4','even'],['OUTLAW','5-3-3-5','even'],['VIPER','4-2-2-4','even'],['LOAD','9-3-1-5','even'],['CHOKE','4-0-4-9','even'],['BEAR','5-3-0-3-5','even'],['OVER','4-2-3-5','even'],['UNDER','5-3-2-4','even']]:DEMO.fr;
+const DEF_COV=SIGNED?['STAR','SCREW','RUTH','CLAMP','CLEO','BLACK','SINK','READ']:DEMO.cov;
+const DEF_PRESS=SIGNED?['SMOKE','FOG','WILD','CAT','OKIE','SOONER','STATE','COWBOY','FOX','MIKE','MOSS','MOW','TECH','RAIDER','SAW','SHARK','SWOOP','HOOP','IRONMAN','SPIDERMAN','SUPERMAN','THOR','WOLVERINE','BATMAN','KATANA','DOJO','JACK','SENSEI','ZEN','WARRIOR','OMEGA','BETA','CHARLIE','BOX','NICKEL','SPIKE','WILL','CHEAT']:DEMO.press;
 let GLO=null;try{GLO=GL.load(PROGRAM)}catch(e){}
 const un=(a,b)=>{const seen=new Set(a.map(x=>String(x).toUpperCase()));return a.concat(b.filter(x=>!seen.has(String(x).toUpperCase())))};
 const gl=type=>GLO?GL.active(GLO,type).filter(t=>!t.side||t.side==='D'):[];
@@ -30,5 +49,31 @@ function addWord(type,name,x){name=String(name||'').trim().toUpperCase();if(!nam
  if(!ok){EXTRA[type]=EXTRA[type]||[];const dup=EXTRA[type].some(y=>(Array.isArray(y)?y[0]:y)===name);if(!dup)EXTRA[type].push(type==='front'?[name,x.code||'',x.package||'']:name)}
  return name}
 
-return{lists,addWord,forms:glForms,glo:()=>GLO,reload:()=>{try{GLO=GL.load(PROGRAM)}catch(e){}}}}
-root.DefVocab=DefVocab})(typeof window!=='undefined'?window:globalThis);
+
+/* ---- defender positions (letters) ---- */
+function positions(){
+ if(GLO){const t=GL.active(GLO,'position').filter(x=>!x.side||x.side==='D');if(t.length)return t.map((x,i)=>({id:x.id,name:x.name,letter:x.letter||'',desc:(x.meaning&&x.meaning.text)||'',o:x.order==null?i:x.order})).sort((a,b)=>a.o-b.o).map(({o,...r})=>r)}
+ try{const l=JSON.parse(localStorage.getItem(posKey(PROGRAM)));if(Array.isArray(l)&&l.length)return l}catch(e){}
+ return posDefaults(SIGNED)}
+/* list: [{id,name,letter,desc}]. Returns true when saved. */
+function setPositions(list){list=list.map(x=>({id:x.id,name:String(x.name||'').trim(),letter:String(x.letter||'').trim().toUpperCase(),desc:String(x.desc||'').trim()})).filter(x=>x.name&&x.letter);
+ if(GLO){try{const keep=new Set();list.forEach((x,i)=>{keep.add(x.id);let t=GL.byId(GLO,x.id);
+   if(!t){GL.add(GLO,{id:x.id,type:'position',name:x.name,side:'D',source:'coach',letter:x.letter,order:i,meaning:{text:x.desc}});return}
+   if(t.status!=='active')GL.activate(t);if(t.name!==x.name)GL.rename(GLO,t,x.name);t.letter=x.letter;t.order=i;GL.setMeaning(t,x.desc);GL.touch(t)});
+  GLO.terms.filter(t=>t.type==='position'&&t.status==='active'&&!keep.has(t.id)).forEach(t=>GL.retire(t));GL.save(GLO);return true}catch(e){return false}}
+ try{localStorage.setItem(posKey(PROGRAM),JSON.stringify(list));return true}catch(e){return false}}
+function resetPositions(){return setPositions(posDefaults(SIGNED))}
+
+return{lists,addWord,forms:glForms,glo:()=>GLO,positions,setPositions,resetPositions,posDefaults:()=>posDefaults(SIGNED),reload:()=>{try{GLO=GL.load(PROGRAM)}catch(e){}}}}
+root.DefVocab=DefVocab
+/* The demo glossary is first seeded by the offense Almanac with Deer Creek's defensive words. Swap those for generic ones, once, so the demo space has nothing of Deer Creek's.
+   Words a coach added in the demo are kept. Does nothing when there is no glossary yet (the lists above already carry the generic words). */
+DefVocab.demoGlossary=function(program){try{const g=GL.load(program);if(!g||g.demoDef)return false;
+ g.terms=g.terms.filter(t=>!(t.side==='D'&&t.source==='seed'&&['front','frontmod','shell','coverage','pressure','package','position'].includes(t.type)));
+ DEMO.fr.forEach(f=>GL.add(g,{type:'front',name:f[0],side:'D',source:'seed',package:f[2],meaning:{text:DEMO_MEAN[f[0]]||''}}));
+ DEMO.cov.forEach(c=>GL.add(g,{type:'coverage',name:c,side:'D',source:'seed',meaning:{text:DEMO_MEAN[c]||''}}));
+ DEMO.press.forEach(c=>GL.add(g,{type:'pressure',name:c,side:'D',source:'seed',meaning:{text:DEMO_MEAN[c]||''}}));
+ DEMO.pkg.forEach(c=>GL.add(g,{type:'package',name:c,side:'D',source:'seed',meaning:{text:''}}));
+ POS.demo.forEach((x,i)=>GL.add(g,{id:x[0],type:'position',name:x[1],side:'D',source:'seed',letter:x[2],order:i,meaning:{text:x[3]}}));
+ g.demoDef=1;GL.save(g);return true}catch(e){return false}};
+})(typeof window!=='undefined'?window:globalThis);
