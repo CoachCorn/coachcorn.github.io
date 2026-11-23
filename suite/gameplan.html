@@ -107,6 +107,7 @@ td .cc.empty{color:#3e5163;font-size:20px}
 <div id="toast"></div>
 <script src="../shared/glossary.js"></script>
 <script src="../shared/scout.js"></script>
+<script src="../shared/demoseedD.js"></script>
 <script>
 /* Gameplan grid (Staff Meeting). Coach-defined plan: columns and rows are whatever the coach types,
    each formation block holds a drawing, a predicted-defense strip and a grid of calls.
@@ -190,6 +191,7 @@ function svgOf(d,sel,cur,selL){const n=++svgN,used=new Set(),edit=selL!==undefin
  return s+'</svg>'}
 
 /* ---------- glossary ---------- */
+try{if(window.DemoSeedD)DemoSeedD.formations()}catch(e){}
 let GLO=null;function glossary(){try{GLO=window.GL?GL.load(PROGRAM):null}catch(e){GLO=null}return GLO}
 /* ---- standard formation drawings, kept on the glossary's formation terms (term.draw = {t,side,pers}) ---- */
 function fmParse(name){const m=String(name||'').trim().match(/^(.*?)\s+(LT|RT|LEFT|RIGHT)$/i);if(!m)return{base:String(name||'').trim(),side:''};const x=m[2].toUpperCase();return{base:m[1].trim(),side:(x==='LT'||x==='LEFT')?'LT':'RT'}}

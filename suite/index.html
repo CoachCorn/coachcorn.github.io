@@ -50,6 +50,11 @@ button,input{font:inherit;color:var(--tx)}
 .tile.soon{opacity:.6}.tile.soon .go{display:none}
 .tile .tag{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--mut);border:1px solid var(--line);border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:middle}
 #syncline{margin:22px auto 0;display:flex;align-items:center;justify-content:center;gap:8px;color:var(--mut);font-size:13px;flex-wrap:wrap}
+.swit{position:relative;display:inline-grid;grid-template-columns:1fr 1fr;margin-top:12px;padding:3px;border-radius:999px;background:#0b1118;border:1px solid var(--line);min-width:230px}
+.swit button{position:relative;z-index:1;border:0;background:none;color:var(--mut);font-weight:800;font-size:12px;letter-spacing:.08em;text-transform:uppercase;padding:9px 14px;min-height:36px;border-radius:999px;transition:color .2s}
+.swit button.on{color:#fff}
+.swit .pill{position:absolute;z-index:0;top:3px;bottom:3px;left:3px;width:calc(50% - 3px);border-radius:999px;background:var(--acc);box-shadow:0 2px 10px rgba(59,156,255,.35);transition:transform .25s cubic-bezier(.4,0,.2,1),background .25s}
+.swit.d .pill{transform:translateX(100%);background:#e0703a;box-shadow:0 2px 10px rgba(224,112,58,.35)}
 #syncline .side{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-right:6px}#syncline .side button{border:0;border-radius:0;background:var(--card);padding:6px 12px;font-weight:700;font-size:12px;text-transform:uppercase;color:var(--mut)}#syncline .side button.on{background:var(--acc);color:#fff}
 #syncline .sd{width:9px;height:9px;border-radius:50%;background:var(--mut)}
 #syncline .sd.ok{background:var(--ok);box-shadow:0 0 8px var(--ok)}#syncline .sd.bad{background:var(--bad)}#syncline .sd.busy{background:var(--warn)}
@@ -76,7 +81,7 @@ body.tool #home{display:none}body.tool #bar{display:flex}body.tool #views{displa
 details{margin-top:14px}summary{color:var(--mut);font-size:13px}
 </style></head><body>
 <div id="home">
- <div class="hero"><img class="k" src="icon-192.png" alt=""><div class="brand">KDNCE</div><div><span class="prog" id="pname"></span></div><div class="date" id="psub"></div></div>
+ <div class="hero"><img class="k" src="icon-192.png" alt=""><div class="brand">KDNCE</div><div><span class="prog" id="pname"></span></div><div class="date" id="psub"></div><div class="swit" id="swit" role="tablist" aria-label="Side of the ball"><span class="pill"></span><button data-side="O" role="tab">Offense</button><button data-side="D" role="tab">Defense</button></div></div>
  <div class="wrap"><div class="week" id="week"></div><div class="tiles" id="tiles"></div><div id="syncline"></div></div>
 </div>
 <div id="bar"><button class="home" id="homebtn">‹ Home</button><span class="ttl" id="ttl"></span><span class="sp"></span><button class="demob" id="demob1">Demo mode</button><span class="st" id="st"></span></div>
@@ -106,7 +111,6 @@ const DTOOLS=[
  {id:'dalmanac',name:'Defensive Almanac',desc:'Sideline log, predicted call',src:'dalmanac.html'},
  {id:'dscout',name:'Offense Scout',desc:'Their tendencies by formation, down and distance',src:'dscout.html'},
  {id:'dgameplan',name:'Gameplan',desc:'Their favorites by formation, our front, pressure, coverage',src:'dgameplan.html'},
- {id:'dsetup',name:'Setup',desc:'Position letters',src:'dsettings.html'},
  {id:'glossary',name:'Glossary',desc:'Fronts, coverages, pressures',src:'glossary.html'},
  {id:'stats',name:'Stats',desc:'Schedule and defensive stats',src:'stats.html'}];
 let SIDE='O';try{SIDE=localStorage.getItem('suite_side')||'O'}catch(e){}
@@ -158,9 +162,9 @@ function renderHome(){const s=SUITESYNC.status(),n=reviewCount(),ai=almInfo(),ng
  $('tiles').innerHTML=(SIDE==='D'?DTOOLS:TOOLS).map(t=>{const[c,svg]=IC[t.id];return`<button class="tile ${t.soon?'soon':''}" data-t="${t.id}"><span class="ic" style="background:${c}22;color:${c}">${svg}</span><span class="tx"><b>${t.name}${t.soon?'<span class="tag">SOON</span>':''}</b><span class="d">${desc(t)}</span></span><span class="go">›</span>${t.id==='glossary'&&n?`<span class="dot">${n}</span>`:''}</button>`}).join('');
  const ago=s.last?Math.round((Date.now()-s.last)/60000):null,cls=!s.signedIn?'':s.busy?'busy':s.error?'bad':'ok';
  const txt=s.signedIn?(s.busy?'Syncing…':s.error?esc(s.error):'Synced '+(ago===0?'just now':ago+' min ago'))+(navigator.onLine?'':' · offline'):'This device only · not syncing';
- $('syncline').innerHTML=`<span class="side"><button data-side="O" class="${SIDE==='O'?'on':''}">Offense</button><button data-side="D" class="${SIDE==='D'?'on':''}">Defense</button></span><span class="sd ${cls}"></span><span>${txt}</span><button id="syncbtn">${s.signedIn?'Sync':'Sign in'}</button><button id="setbtn">Settings</button>`;
+ $('syncline').innerHTML=`<span class="sd ${cls}"></span><span>${txt}</span><button id="syncbtn">${s.signedIn?'Sync':'Sign in'}</button><button id="setbtn">Settings</button>`;
  $('syncbtn').onclick=signInModal;$('setbtn').onclick=toSettings;
- document.querySelectorAll('[data-side]').forEach(b=>b.onclick=()=>setSide(b.dataset.side))}
+ document.querySelectorAll('[data-side]').forEach(b=>{b.classList.toggle('on',b.dataset.side===SIDE);b.setAttribute('aria-selected',b.dataset.side===SIDE);b.onclick=()=>setSide(b.dataset.side)});$('swit').classList.toggle('d',SIDE==='D')}
 function setSide(v){SIDE=v;try{localStorage.setItem('suite_side',v)}catch(e){}renderHome()}
 function barStatus(){const s=SUITESYNC.status();document.body.classList.toggle('isdemo',!s.signedIn);$('st').textContent=!navigator.onLine?'Offline':s.busy?'Syncing…':s.error?'Sync problem':s.signedIn?'Synced':''}
 $('tiles').onclick=e=>{const b=e.target.closest('[data-t]');if(b)open(b.dataset.t)};
@@ -168,8 +172,9 @@ let EDOPEN=false,CURT='';const BACK={};function homeLabel(){const bk=!!BACK[CURT
 $('homebtn').onclick=()=>{if(document.body.classList.contains('tool')&&BACK[CURT]&&made[CURT]){try{made[CURT].contentWindow.postMessage({goBack:1},location.origin);return}catch(e){}}goHome()};$('demob1').onclick=()=>signInModal();
 /* A tool can ask the shell to open another tool, e.g. the Almanac's Glossary button. */
 /* Settings opens over the current screen (no tab switch): the Almanac frame becomes a transparent overlay that shows only its Setup dialog. */
-function setClose(){const f=made.almanac;if(f){f.classList.remove('ovl');try{f.contentWindow.document.documentElement.classList.remove('ovl')}catch(e){}}document.body.classList.remove('setov')}
-function toSettings(){const f=frame(TOOLS[0]);let tries=0;const go=()=>{let w=null;try{w=f.contentWindow;if(!w||!w.openSetup||!w.document.documentElement)throw 0}catch(e){if(++tries<40)return setTimeout(go,250);return}
+function setClose(){const o=$('dsetov');if(o)o.remove();const f=made.almanac;if(f){f.classList.remove('ovl');try{f.contentWindow.document.documentElement.classList.remove('ovl')}catch(e){}}document.body.classList.remove('setov')}
+function toSettings(){if(SIDE==='D'){if($('dsetov'))return;const f=document.createElement('iframe');f.id='dsetov';f.src='dsettings.html';f.title='Defensive Setup';f.style.cssText='position:fixed;inset:0;width:100%;height:100%;border:0;z-index:40;background:#0f1720';document.body.appendChild(f);return}
+const f0=0;const f=frame(TOOLS[0]);let tries=0;const go=()=>{let w=null;try{w=f.contentWindow;if(!w||!w.openSetup||!w.document.documentElement)throw 0}catch(e){if(++tries<40)return setTimeout(go,250);return}
   w.document.documentElement.classList.add('ovl');document.body.classList.add('setov');f.classList.add('ovl');w.openSetup()};go()}
 function toAlm(id){open('almanac');const f=made.almanac;let tries=0;const go=()=>{let w=null;try{w=f.contentWindow;if(!w||!w.takeGrid)throw 0}catch(e){if(++tries<40)return setTimeout(go,250);return}w.takeGrid(id)};go()}
 function toFilm(txt){open('film');const f=made.film;let tries=0;const go=()=>{let w=null;try{w=f.contentWindow;if(!w||!w.takeAlmanac)throw 0}catch(e){if(++tries<40)return setTimeout(go,250);return}w.postMessage({almanac:txt},location.origin)};go()}
@@ -205,7 +210,7 @@ function signInModal(){const s=SUITESYNC.status();
  pwToggle('sc');pwToggle('sa');
  $('sx').onclick=closeM;
  $('rd').onclick=()=>{const b=$('rd');if(!b.dataset.arm){b.dataset.arm=1;b.textContent='Tap again: erase all demo data';return}
-  try{Object.keys(localStorage).filter(k=>['almanac_demo','glossary_v1_demo','gameplan_v1_demo','schedule_v1_demo','gp_cur','gp.demodeck','mr.demoset','oscout_v1_demo','dalmanac_v1_demo','dgameplan_v1_demo','dpos_v1_demo','demoseedD_v1'].includes(k)||k.indexOf('frd:')===0||k.indexOf('gpscout_v1_demo_')===0).forEach(k=>localStorage.removeItem(k))}catch(e){}location.reload()};
+  try{Object.keys(localStorage).filter(k=>['almanac_demo','glossary_v1_demo','gameplan_v1_demo','schedule_v1_demo','gp_cur','gp.demodeck','mr.demoset','oscout_v1_demo','dalmanac_v1_demo','dgameplan_v1_demo','dpos_v1_demo','dstrength_v1_demo','demoseedD_v1','demoseedD_fm1'].includes(k)||k.indexOf('frd:')===0||k.indexOf('gpscout_v1_demo_')===0).forEach(k=>localStorage.removeItem(k))}catch(e){}location.reload()};
  $('sg').onclick=async()=>{$('se').textContent='';try{await SUITESYNC.login($('su').value,$('sp').value,$('sc').value);closeM();renderHome();SUITESYNC.syncNow()}catch(e){$('se').textContent=e.message}};
  $('ss').onclick=async()=>{$('se').textContent='';try{await SUITESYNC.setup($('su').value,$('sp').value.trim().toLowerCase(),$('sn2').value,$('sc').value,$('sa').value);$('se').style.color='var(--ok)';$('se').textContent='Program set. Now tap Sign in.'}catch(e){$('se').style.color='';$('se').textContent=e.message}}}
 (()=>{let x0=null,y0=null;const h=$('home');h.addEventListener('touchstart',e=>{x0=e.touches[0].clientX;y0=e.touches[0].clientY},{passive:true});

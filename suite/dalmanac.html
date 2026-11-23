@@ -64,7 +64,7 @@ input[type=search]{background:var(--card);border:1px solid var(--line);border-ra
 <script>
 const SIGNED=(()=>{try{const s=JSON.parse(localStorage.getItem('suite_sync'));return !!(s&&s.token&&s.exp>Date.now())}catch(e){return false}})();
 const PROGRAM=SIGNED?'deer-creek':'demo';
-if(!SIGNED){SCOUTO.useDemoWords();DefVocab.demoGlossary(PROGRAM);DemoSeedD.ensure()}
+if(!SIGNED){SCOUTO.useDemoWords();DefVocab.demoGlossary(PROGRAM);DemoSeedD.all()}
 const ST=SCOUTO.store(PROGRAM),KEY='dalmanac_v1_'+PROGRAM;
 const $=id=>document.getElementById(id),esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const toast=m=>{const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',2400)};

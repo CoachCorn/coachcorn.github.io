@@ -64,7 +64,28 @@ function setPositions(list){list=list.map(x=>({id:x.id,name:String(x.name||'').t
  try{localStorage.setItem(posKey(PROGRAM),JSON.stringify(list));return true}catch(e){return false}}
 function resetPositions(){return setPositions(posDefaults(SIGNED))}
 
-return{lists,addWord,forms:glForms,glo:()=>GLO,positions,setPositions,resetPositions,posDefaults:()=>posDefaults(SIGNED),reload:()=>{try{GLO=GL.load(PROGRAM)}catch(e){}}}}
+/* Defensive strength: a per-program setting. Default Field/Boundary (Deer Creek). Kept in the glossary file when there is one (so it syncs), else on this device. */
+const STRENGTH_MODES=[
+ {id:'fb',name:'Field / Boundary',desc:'Strength is the field side. The wide side of the hash.'},
+ {id:'lr',name:'Left / Right',desc:'Strength is a fixed side, set each play.'},
+ {id:'pass',name:'To / Away from pass strength',desc:'Strength goes to the side with more eligible receivers.'},
+ {id:'te',name:'To / Away from the TE',desc:'Strength goes to the tight end side.'},
+ {id:'custom',name:'Custom',desc:'Write your own rule. It is kept as your note.'}];
+const MID_MODES=[
+ {id:'multi',name:'Side with more WRs, then QB throwing arm',desc:'Middle hash has no field. Go to the side with more WRs. If balanced (2x2), go to the QB\'s throwing arm side.'},
+ {id:'arm',name:'QB throwing arm side',desc:'Always the QB\'s throwing arm side.'},
+ {id:'left',name:'Left',desc:'Always left.'},{id:'right',name:'Right',desc:'Always right.'}];
+const strKey=pr=>'dstrength_v1_'+pr;
+const STR_DEF=()=>({mode:'fb',custom:'',mid:'multi'});
+function strength(){let v=null;if(GLO&&GLO.dstrength)v=GLO.dstrength;else try{v=JSON.parse(localStorage.getItem(strKey(PROGRAM)))}catch(e){}
+ const d=STR_DEF();return v&&typeof v==='object'?{mode:STRENGTH_MODES.some(m=>m.id===v.mode)?v.mode:d.mode,custom:String(v.custom||''),mid:MID_MODES.some(m=>m.id===v.mid)?v.mid:d.mid}:d}
+function setStrength(v){const d=STR_DEF(),o={mode:STRENGTH_MODES.some(m=>m.id===(v&&v.mode))?v.mode:d.mode,custom:String((v&&v.custom)||'').trim(),mid:MID_MODES.some(m=>m.id===(v&&v.mid))?v.mid:d.mid};
+ if(o.mode==='custom'&&!o.custom)return false;
+ if(GLO){try{GLO.dstrength=o;GL.save(GLO);return true}catch(e){return false}}
+ try{localStorage.setItem(strKey(PROGRAM),JSON.stringify(o));return true}catch(e){return false}}
+function resetStrength(){return setStrength(STR_DEF())}
+
+return{strength,setStrength,resetStrength,STRENGTH_MODES,MID_MODES,lists,addWord,forms:glForms,glo:()=>GLO,positions,setPositions,resetPositions,posDefaults:()=>posDefaults(SIGNED),reload:()=>{try{GLO=GL.load(PROGRAM)}catch(e){}}}}
 root.DefVocab=DefVocab
 /* The demo glossary is first seeded by the offense Almanac with Deer Creek's defensive words. Swap those for generic ones, once, so the demo space has nothing of Deer Creek's.
    Words a coach added in the demo are kept. Does nothing when there is no glossary yet (the lists above already carry the generic words). */

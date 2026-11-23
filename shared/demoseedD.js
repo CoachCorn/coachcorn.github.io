@@ -5,6 +5,7 @@
    Real stores written: oscout_v1_demo, dalmanac_v1_demo, dgameplan_v1_demo. */
 (function(root){
 const SIGNED=()=>{try{const s=JSON.parse(localStorage.getItem('suite_sync'));return!!(s&&s.token&&s.exp>Date.now())}catch(e){return false}};
+const FMFLAG='demoseedD_fm1';
 const FLAG='demoseedD_v1',OPP='Mesa Ridge';
 const rng=seed=>{let sd=seed;return()=>{sd|=0;sd=sd+0x6D2B79F5|0;let t=Math.imul(sd^sd>>>15,1|sd);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}};
 const wp=(rnd,a,w)=>{let r=rnd()*w.reduce((x,y)=>x+y,0);for(let i=0;i<a.length;i++){r-=w[i];if(r<0)return a[i]}return a[a.length-1]};
@@ -65,10 +66,28 @@ function seedPlan(){const KEY='dgameplan_v1_demo';let S=null;try{S=JSON.parse(lo
  const p={id:uid('p'),name:OPP+' week',scout:OPP,upd:Date.now(),blocks:top.map((f,i)=>({id:uid('b'),form:f,note:i===0?'Their base look. Stay balanced.':'',cells:mine[i]||{}}))};
  localStorage.setItem(KEY,JSON.stringify({v:1,plans:[p],cur:p.id,deleted:[]}))}
 
+/* Standard drawings for the demo formations, written into the demo glossary the same way "Save as standard" does it in the offense Gameplan.
+   Bunch is left undrawn on purpose: draw it once in the offense Gameplan, Save as standard, and it appears here, in the Defensive Almanac chips and in the Almanac. */
+
+function formations(){if(SIGNED()||typeof GL==='undefined')return;
+ try{if(localStorage.getItem(FMFLAG))return;const g=GL.load('demo');if(!g)return;
+  const LOS=150,base=()=>({X:{x:88,y:154,on:1},Z:{x:616,y:152,on:1},M:{x:165,y:190,on:0},Q:{x:235,y:208,on:1},T:{x:210,y:245,on:1},H:{x:525,y:168,on:0},Y:{x:395,y:152,on:0},F:{x:430,y:190,on:0},A:{x:300,y:230,on:0},B:{x:260,y:245,on:0},
+   LT:{x:163,y:LOS,on:1},LG:{x:199,y:LOS,on:1},C:{x:235,y:LOS,on:1},RG:{x:271,y:LOS,on:1},RT:{x:307,y:LOS,on:1}});
+  const set=(t,k,x,y)=>{t[k]={x,y,on:1}};
+  const F={
+   Trips:{side:'RT',pers:'10',fn:t=>{set(t,'Z',616,LOS);set(t,'Y',545,LOS);set(t,'H',580,174)}},
+   Twins:{side:'RT',pers:'10',fn:t=>{set(t,'Y',130,174);set(t,'H',560,174)}},
+   Ace:{side:'',pers:'11',fn:t=>{set(t,'M',350,LOS);set(t,'H',560,174)}},
+   Wing:{side:'RT',pers:'11',fn:t=>{set(t,'M',350,LOS);set(t,'Y',330,174);t.H.on=0}},
+   Slot:{side:'RT',pers:'10',fn:t=>{set(t,'H',560,174)}}};
+  let n=0;Object.keys(F).forEach(name=>{const t=GL.find(g,'formation',name);if(!t||(t.draw&&t.draw.t))return;const d=base();F[name].fn(d);t.draw={t:d,side:F[name].side,pers:F[name].pers,at:Date.now()};GL.touch(t);n++});
+  if(n)GL.save(g);localStorage.setItem(FMFLAG,'1')}catch(e){}}
+
 /* The keys Reset demo must clear for this side. */
-const KEYS=['oscout_v1_demo','dalmanac_v1_demo','dgameplan_v1_demo','dpos_v1_demo',FLAG];
+const KEYS=['oscout_v1_demo','dalmanac_v1_demo','dgameplan_v1_demo','dpos_v1_demo','dstrength_v1_demo',FLAG,FMFLAG];
 
 function ensure(){if(SIGNED())return;
  try{if(localStorage.getItem(FLAG))return;seedScout();seedAlmanac();seedPlan();localStorage.setItem(FLAG,'1')}catch(e){}}
-root.DemoSeedD={ensure,KEYS,OPP};
+function all(){ensure();formations()}
+root.DemoSeedD={ensure,formations,all,KEYS,OPP};
 })(typeof window!=='undefined'?window:globalThis);

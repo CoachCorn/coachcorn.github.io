@@ -23,12 +23,23 @@ main{padding:10px 12px;max-width:900px;margin:0 auto}
 .pt input.l{width:64px;text-align:center;font-weight:800;text-transform:uppercase}
 .pt tr.dup input.l{border-color:var(--bad)}
 .pt td.x button{background:none;border:0;color:var(--mut);font-size:20px;padding:4px 10px}
+.opt{display:flex;gap:10px;align-items:flex-start;padding:8px 2px;border-top:1px solid var(--line)}.opt:first-child{border-top:0}.opt input{width:20px;height:20px;margin:2px 0 0;flex:none}.opt b{font-weight:600}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
 .err{color:var(--bad);font-size:13px;margin-top:8px}
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#000c;padding:10px 16px;border-radius:10px;z-index:20;display:none}
 </style></head><body>
-<header><h1>Defensive Setup</h1><span style="flex:1"></span><span class="mut" id="meta"></span></header>
+<header><h1>Defensive Setup</h1><span style="flex:1"></span><span class="mut" id="meta"></span><button class="btn pri" id="done" style="display:none">Done</button></header>
 <main>
+ <div class="card">
+  <div class="lab">Defensive strength</div>
+  <p class="note" style="margin:0 0 8px">What "strength" means for your defense. Pressures and fronts that go to the strength use this.</p>
+  <div id="smodes"></div>
+  <input id="scustom" placeholder="Write your strength rule" autocomplete="off" style="display:none;width:100%;margin-top:6px;background:#0e1822;border:1px solid var(--line);border-radius:6px;padding:9px 7px">
+  <div class="lab" style="margin-top:12px">Ball on the middle hash</div>
+  <div id="mmodes"></div>
+  <div class="err" id="serr"></div>
+  <div class="row"><button class="btn bad" id="sreset">Back to Field / Boundary</button><span style="flex:1"></span><button class="btn pri" id="ssave">Save strength</button></div>
+ </div>
  <div class="card">
   <div class="lab">Position letters</div>
   <p class="note" style="margin:0 0 8px">Every program calls its defenders something different. Set the letter and the name for each position. Positions are kept in your glossary, so every device in the program uses the same ones.</p>
@@ -66,6 +77,17 @@ $('save').onclick=()=>{const err=$('err');err.textContent='';
  if(DV.setPositions(L)){L=DV.positions().map(x=>({...x}));draw();toast('Saved')}else err.textContent='Could not save on this device.'};
 $('reset').onclick=()=>{const b=$('reset');if(!b.dataset.arm){b.dataset.arm=1;b.textContent='Tap again: replace my positions';setTimeout(()=>{delete b.dataset.arm;b.textContent='Back to starting set'},4000);return}
  delete b.dataset.arm;b.textContent='Back to starting set';DV.resetPositions();L=DV.positions().map(x=>({...x}));draw();$('err').textContent='';toast('Starting set restored')};
+let ST={...DV.strength()};
+function drawS(){const R=(grp,list,cur)=>list.map(m=>`<label class="opt"><input type="radio" name="${grp}" value="${m.id}" ${m.id===cur?'checked':''}><span><b>${esc(m.name)}</b><div class="note">${esc(m.desc)}</div></span></label>`).join('');
+ $('smodes').innerHTML=R('sm',DV.STRENGTH_MODES,ST.mode);$('mmodes').innerHTML=R('mm',DV.MID_MODES,ST.mid);$('scustom').style.display=ST.mode==='custom'?'block':'none';$('scustom').value=ST.custom}
+$('smodes').addEventListener('change',e=>{if(e.target.name==='sm'){ST.mode=e.target.value;$('scustom').style.display=ST.mode==='custom'?'block':'none';if(ST.mode==='custom')$('scustom').focus()}});
+$('mmodes').addEventListener('change',e=>{if(e.target.name==='mm')ST.mid=e.target.value});
+$('scustom').addEventListener('input',e=>{ST.custom=e.target.value});
+$('ssave').onclick=()=>{$('serr').textContent='';if(DV.setStrength(ST)){ST={...DV.strength()};toast('Strength saved')}else $('serr').textContent=ST.mode==='custom'&&!ST.custom.trim()?'Write your rule for Custom.':'Could not save on this device.'};
+$('sreset').onclick=()=>{const b=$('sreset');if(!b.dataset.arm){b.dataset.arm=1;b.textContent='Tap again: reset strength';setTimeout(()=>{delete b.dataset.arm;b.textContent='Back to Field / Boundary'},4000);return}
+ delete b.dataset.arm;b.textContent='Back to Field / Boundary';DV.resetStrength();ST={...DV.strength()};drawS();$('serr').textContent='';toast('Strength reset')};
+if(window.parent!==window){$('done').style.display='';$('done').onclick=()=>parent.postMessage({settingsClosed:1},location.origin)}
+drawS();
 if(!SIGNED)$('meta').textContent='Demo space';
 draw();
 </script>

@@ -59,7 +59,7 @@ td.n,th.n{text-align:right;white-space:nowrap}
 <script>
 const SIGNED=(()=>{try{const s=JSON.parse(localStorage.getItem('suite_sync'));return !!(s&&s.token&&s.exp>Date.now())}catch(e){return false}})();
 const PROGRAM=SIGNED?'deer-creek':'demo';
-if(!SIGNED){SCOUTO.useDemoWords();DemoSeedD.ensure()}
+if(!SIGNED){SCOUTO.useDemoWords();DemoSeedD.all()}
 const ST=SCOUTO.store(PROGRAM);
 const $=id=>document.getElementById(id),esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let OPP=ST.active(),TAB='notes',PEND=null,LK={formation:'',down:1,dist:10,side:'Own',yd:25};
