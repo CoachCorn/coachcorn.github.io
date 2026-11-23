@@ -87,7 +87,7 @@ function impOpen(){modal(`<h3 style="margin-top:0">Import words from Hudl</h3><p
      GL.add(G,{type:w.type,name:w.name,side:'O',source:'import',needsReview:true,uses:w.type==='tag'?(w.uses.size?[...w.uses]:['run','pass']):[]});n++}
     GL.save(G);close();render();toast('Added '+n+' word'+(n===1?'':'s')+' to the glossary. They are in the Review list.')}
   }catch(e){box.innerHTML='<p class="note" style="color:var(--bad)">'+esc(e.message||String(e))+'</p>'}}}
-function render(){
+function render(){setTimeout(postBack,0);
  if(!window.GL){$('list').innerHTML='<p class="note">The glossary code did not load. Open this once with signal.</p>';return}
  if(!G){$('list').innerHTML='<p class="note">No glossary on this device yet for '+esc(PROGRAM)+'. Open the Almanac once; it builds the glossary from its lists.</p>';$('meta').textContent='';return}
  $('ttl').textContent='Glossary · '+G.name;$('meta').textContent='rev '+G.rev+' · '+G.terms.length+' terms';
@@ -144,8 +144,11 @@ function madRender(ty,t){const box=$('e_mad');if(!box)return;const M=MAD[ty];if(
  box.oninput=pv;box.onchange=pv;pv();
  $('mad_add').onclick=()=>{const m=$('e_m'),x=M.f(val());m.value=(m.value.trim()?m.value.trim()+' ':'')+x;toast('Added to the meaning')};
  $('mad_rep').onclick=()=>{$('e_m').value=M.f(val());toast('Meaning replaced')}}
-function modal(h){$('mbox').innerHTML=h;$('modal').classList.add('show')}
-function close(){$('modal').classList.remove('show')}
+/* the suite's top-left button reads Back inside a category or an edit box; Back closes the box or returns to the categories */
+function postBack(){try{parent.postMessage({backable:$('modal').classList.contains('show')||!S.home||!!S.q.trim()||S.review||S.nodef},location.origin)}catch(e){}}
+addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||!e.data.goBack)return;if($('modal').classList.contains('show')){close();return}S.home=true;S.type='';S.review=false;S.nodef=false;S.q='';$('q').value='';render()});
+function modal(h){$('mbox').innerHTML=h;$('modal').classList.add('show');postBack()}
+function close(){$('modal').classList.remove('show');postBack()}
 $('modal').onclick=e=>{if(e.target.id==='modal')close()};
 function edit(id){const t=id?GL.byId(G,id):null,tv=t?t.type:(S.type||'tag'),isTag=!t||t.type==='tag';
  modal(`<h3 style="margin-top:0">${t?'Edit '+esc(t.name):'New term'}</h3>
@@ -190,6 +193,6 @@ $('imp').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{load();co
  const r=GL.merge(G,inc);GL.save(G);render();toast(`Imported: ${r.added} new, ${r.updated} updated${r.clashes.length?', '+r.clashes.length+' name clashes skipped':''}`)}catch(err){toast(err.message||'Import failed')}e.target.value=''};
 /* Another tab (the Almanac) changed the glossary: reload it. */
 addEventListener('storage',e=>{if(window.GL&&e.key===GL.key(PROGRAM)){load();render()}});
-addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.glossary==='review'){S.review=true;load();render()}});
-load();if(G&&GL.reviewList(G).length)S.review=true;render();
+addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.glossary==='review'){load();if(G&&GL.reviewList(G).length){S.review=true;S.home=false}render()}});
+load();render();   // opens on the category tiles; the Review banner shows new words
 </script></body></html>

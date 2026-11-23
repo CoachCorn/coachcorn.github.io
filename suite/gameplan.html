@@ -732,7 +732,10 @@ function openCell(bi,key){const p=plan(),b=p.blocks[bi],r=p.rows.find(x=>x.id===
 let E=null;
 function edBack(){if(!E)return;const b=document.querySelector('#ed [data-e="save"]');if(b)b.click()}
 try{new MutationObserver(()=>{if(!$('modal').classList.contains('show'))$('mbox').style.width=''}).observe($('modal'),{attributes:true,attributeFilter:['class']})}catch(e){}
-try{new MutationObserver(()=>{try{parent.postMessage({gpEditor:$('ed').classList.contains('show')},location.origin)}catch(e){}}).observe($('ed'),{attributes:true,attributeFilter:['class']})}catch(e){}
+/* the suite's top-left button reads Back while the drawing editor or a dialog is open; Back saves the drawing or closes the dialog */
+function postBack(){try{parent.postMessage({backable:$('ed').classList.contains('show')||$('modal').classList.contains('show')},location.origin)}catch(e){}}
+try{const mo=new MutationObserver(postBack);mo.observe($('ed'),{attributes:true,attributeFilter:['class']});mo.observe($('modal'),{attributes:true,attributeFilter:['class']})}catch(e){}
+addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||!e.data.goBack)return;if($('modal').classList.contains('show')){$('modal').classList.remove('show');return}if(E)edBack()});
 const edB=()=>E&&E.lb?E.lb:plan().blocks[E.bi];
 function openDraw(bi,look){const p=plan(),b=p.blocks[bi];E={bi,look:look||null,d:clone(look?look.d:(b.draw||baseDraw())),sel:null,selL:null,mode:'move',cur:null,dot:false,arrow:true,col:COLS[0],grp:true,hist:[],drag:null};
  if(!E.d.t)E.d=baseDraw();$('ed').classList.add('show');edRender()}

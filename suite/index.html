@@ -121,8 +121,8 @@ function frame(t){if(made[t.id])return made[t.id];let el;
  $('views').appendChild(el);return made[t.id]=el}
 function open(id){const t=TOOLS.find(x=>x.id===id)||DTOOLS.find(x=>x.id===id);if(!t)return goHome();
  for(const k in made)made[k].classList.toggle('on',k===t.id);frame(t).classList.add('on');
- $('ttl').textContent=t.name;document.body.classList.add('tool');try{localStorage.setItem('suite_tab',t.id)}catch(e){}}
-function goHome(){document.body.classList.remove('tool');try{localStorage.setItem('suite_tab','')}catch(e){}renderHome()}
+ $('ttl').textContent=t.name;document.body.classList.add('tool');CURT=t.id;homeLabel();try{localStorage.setItem('suite_tab',t.id)}catch(e){}}
+function goHome(){document.body.classList.remove('tool');CURT='';homeLabel();try{localStorage.setItem('suite_tab','')}catch(e){}renderHome()}
 function reviewCount(){if(!window.GL)return 0;const g=GL.load(PROGRAM);return g?GL.reviewList(g).length:0}
 const ALMK=()=>{try{const s=JSON.parse(localStorage.getItem('suite_sync'));return(s&&s.token&&s.exp>Date.now())?'almanac_v1':'almanac_demo'}catch(e){return'almanac_demo'}};
 function curGame(){try{const A=JSON.parse(localStorage.getItem(ALMK()));const g=A&&A.games.find(x=>x.id===A.cur);if(!g)return'';const n=g.plays.filter(p=>p.k==='p').length;return esc(g.opp)+' · '+n+' play'+(n===1?'':'s')+(g.scout?' · scout loaded':'')}catch(e){return''}}
@@ -158,8 +158,8 @@ function renderHome(){const s=SUITESYNC.status(),n=reviewCount(),ai=almInfo(),ng
 function setSide(v){SIDE=v;try{localStorage.setItem('suite_side',v)}catch(e){}renderHome()}
 function barStatus(){const s=SUITESYNC.status();document.body.classList.toggle('isdemo',!s.signedIn);$('st').textContent=!navigator.onLine?'Offline':s.busy?'Syncing…':s.error?'Sync problem':s.signedIn?'Synced':''}
 $('tiles').onclick=e=>{const b=e.target.closest('[data-t]');if(b)open(b.dataset.t)};
-let EDOPEN=false;function homeLabel(){const bk=EDOPEN&&document.body.classList.contains('tool');$('homebtn').textContent=bk?'‹ Back':'‹ Home'}
-$('homebtn').onclick=()=>{if(EDOPEN){try{made.gameplan.contentWindow.edBack();return}catch(e){}}goHome()};$('demob1').onclick=()=>signInModal();
+let EDOPEN=false,CURT='';const BACK={};function homeLabel(){const bk=!!BACK[CURT]&&document.body.classList.contains('tool');$('homebtn').textContent=bk?'‹ Back':'‹ Home'}
+$('homebtn').onclick=()=>{if(document.body.classList.contains('tool')&&BACK[CURT]&&made[CURT]){try{made[CURT].contentWindow.postMessage({goBack:1},location.origin);return}catch(e){}}goHome()};$('demob1').onclick=()=>signInModal();
 /* A tool can ask the shell to open another tool, e.g. the Almanac's Glossary button. */
 /* Settings opens over the current screen (no tab switch): the Almanac frame becomes a transparent overlay that shows only its Setup dialog. */
 function setClose(){const f=made.almanac;if(f){f.classList.remove('ovl');try{f.contentWindow.document.documentElement.classList.remove('ovl')}catch(e){}}document.body.classList.remove('setov')}
@@ -167,7 +167,7 @@ function toSettings(){const f=frame(TOOLS[0]);let tries=0;const go=()=>{let w=nu
   w.document.documentElement.classList.add('ovl');document.body.classList.add('setov');f.classList.add('ovl');w.openSetup()};go()}
 function toAlm(id){open('almanac');const f=made.almanac;let tries=0;const go=()=>{let w=null;try{w=f.contentWindow;if(!w||!w.takeGrid)throw 0}catch(e){if(++tries<40)return setTimeout(go,250);return}w.takeGrid(id)};go()}
 function toFilm(txt){open('film');const f=made.film;let tries=0;const go=()=>{let w=null;try{w=f.contentWindow;if(!w||!w.takeAlmanac)throw 0}catch(e){if(++tries<40)return setTimeout(go,250);return}w.postMessage({almanac:txt},location.origin)};go()}
-addEventListener('message',e=>{if(e.origin!==location.origin||!e.data)return;if(e.data.settingsClosed){setClose();return}if('gpEditor' in e.data){EDOPEN=!!e.data.gpEditor;homeLabel();return}if(e.data.gamesChanged){Object.keys(made).forEach(k=>{if(k==='almanac')return;try{made[k].contentWindow.location.reload()}catch(x){}});return}if(e.data.toFilm){toFilm(e.data.toFilm);return}if(e.data.toAlmanac){toAlm(e.data.toAlmanac);return}if(!e.data.open)return;open(e.data.open);
+addEventListener('message',e=>{if(e.origin!==location.origin||!e.data)return;if(e.data.settingsClosed){setClose();return}if('backable' in e.data){for(const k in made){try{if(made[k].contentWindow===e.source)BACK[k]=!!e.data.backable}catch(x){}}homeLabel();return}if('gpEditor' in e.data){EDOPEN=!!e.data.gpEditor;BACK.gameplan=EDOPEN;homeLabel();return}if(e.data.gamesChanged){Object.keys(made).forEach(k=>{if(k==='almanac')return;try{made[k].contentWindow.location.reload()}catch(x){}});return}if(e.data.toFilm){toFilm(e.data.toFilm);return}if(e.data.toAlmanac){toAlm(e.data.toAlmanac);return}if(!e.data.open)return;open(e.data.open);
  if(e.data.gpLib&&e.data.open==='gameplan'){const send=()=>{try{made.gameplan.contentWindow.postMessage({gameplan:'library',kind:e.data.gpLib},location.origin)}catch(x){}};setTimeout(send,150);setTimeout(send,1500)}
  if(e.data.open==='glossary'&&made.glossary&&made.glossary.contentWindow)made.glossary.contentWindow.postMessage({glossary:'review'},location.origin)});
 addEventListener('storage',e=>{if(e.key&&(e.key.indexOf('glossary_v1_')===0||e.key.indexOf('schedule_v1_')===0)&&!document.body.classList.contains('tool'))renderHome()});
@@ -207,7 +207,8 @@ function signInModal(){const s=SUITESYNC.status();
 SUITESYNC.onChange(()=>{renderHome();barStatus();if(made.mreps&&made.mreps.tagName==='IFRAME'){const w=mrSrc();if(!made.mreps.src.endsWith(w.replace('..','')))made.mreps.src=w}});
 frame(TOOLS[0]); // load the Almanac in the background so it is ready (and so sync can reach it)
 let start='';try{start=localStorage.getItem('suite_tab')||''}catch(e){}
-start?open(start):renderHome();renderHome();barStatus();setInterval(()=>{if(!document.body.classList.contains('tool'))renderHome()},30000);
+renderHome();   // the app always opens on the home page
+barStatus();setInterval(()=>{if(!document.body.classList.contains('tool'))renderHome()},30000);
 SUITESYNC.start();
 if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script></body></html>
