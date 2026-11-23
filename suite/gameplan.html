@@ -391,6 +391,8 @@ function parseDef(text){const ok=[],bad=[],steps=[];let subj=null;
    steps.push((t)=>{P.forEach((k,i)=>{const p=on(t,k,235,LOS);
     if(/^(LT|LG|RG|RT|C)$/.test(k)){const xs=OLK.filter(o=>o!==k).map(o=>t[o].x);p.x=/^(left|boundary)$/i.test(sd)?Math.min(...xs)-OLSP:Math.max(...xs)+OLSP;p.y=LOS}
     else{const out=/^(left|boundary)$/i.test(sd)?-1:1,n=P.length-1-i;p.x=SIDEX(sd)+out*(n*32)+(out>0?8:-8)+(P.length>1?0:0);if(ball)p.y=LOS}})});ok.push(cl);continue}
+  if((m=cl.match(new RegExp('^'+PTOK+'\\s+(?:aligns?|lines? up|sets?)\\s+(?:(\\d+)\\s+yards?\\s+)?(?:directly\\s+)?behind\\s+(?:the\\s+)?'+PTOK,'i')))){subj=m[1];const A=m[1],n=m[2]?+m[2]:0,B=m[3];
+   steps.push(t=>{const q=t[B];if(!q)return;const p=on(t,A,q.x,q.y);p.x=q.x;p.y=q.y+(n?Math.round(n*YD):/^(LT|LG|RG|RT|C)$/.test(B)?Math.round(1.5*YD):24)});ok.push(cl);continue}
   if((m=cl.match(new RegExp('^'+PTOK+'\\s+(?:in|into)\\s+the\\s+backfield\\s+(beside|next to|behind)\\s+'+PTOK)))){subj=m[1];const A=m[1],B=m[3],how=m[2];
    steps.push(t=>{const p=on(t,A,t[B].x,t[B].y);p.x=how==='behind'?t[B].x:t[B].x+30;p.y=how==='behind'?t[B].y+28:t[B].y});ok.push(cl);continue}
   if((m=cl.match(new RegExp('^'+PTOK+'\\s+(?:stacked\\s+)?(behind|beside|next to|inside|outside)\\s+'+PTOK)))){subj=m[1];const A=m[1],how=m[2],B=m[3];
