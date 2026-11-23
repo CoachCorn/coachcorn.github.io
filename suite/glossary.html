@@ -14,6 +14,7 @@ select,button,input,textarea{font:inherit;color:var(--tx)}
 input[type=text],input[type=search],select,textarea{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px}
 textarea{width:100%;min-height:70px}
 .btn{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 12px;min-height:40px;text-transform:uppercase}
+.rbx{line-height:1.6}.rbx>div{margin-bottom:6px}.rbt{border-collapse:collapse;margin:6px 0;width:100%}.rbt th{text-align:left;font-size:12px;opacity:.7;font-weight:600;padding:2px 4px}.rbt td{padding:2px 4px}.rbt td:first-child{font-weight:700;width:52px}.rbt select{width:100%}
 .btn.pri{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:700}.btn.bad{color:var(--bad)}
 .chips{display:flex;flex-wrap:wrap;gap:4px}
 .chip{background:#223140;border:1px solid var(--line);border-radius:10px;padding:5px 9px;min-height:36px;font-weight:600;font-size:14px;text-transform:uppercase}
@@ -126,6 +127,9 @@ const OLA=[['base blocks',''],['down blocks',''],['reach blocks',''],['zone step
 const ALMK=()=>{try{const s=JSON.parse(localStorage.getItem('suite_sync'));return(s&&s.token&&s.exp>Date.now())?'almanac_v1':'almanac_demo'}catch(e){return'almanac_demo'}};
 function setLet(key,defs){let L=null;try{L=(JSON.parse(localStorage.getItem(ALMK()))||{}).lists}catch(e){}const a=(L&&L[key])||[];return defs.map((d,i)=>String(a[i]||d).toUpperCase().trim()).filter((v,i,A)=>v&&A.indexOf(v)===i)}
 const teLet=()=>setLet('pTE',['M','A','F']),rbLet=()=>setLet('pRB',['B','T']);
+const OLB=['PST','PSG','C','BSG','BST'],RAIM=[['the midline of the center (inside zone)','the midline of the center'],['the inside leg of the TE (wide / outside zone)','the inside leg of the TE'],['the inside leg of the 2nd puller (gap)','the inside leg of the 2nd puller']];
+function rbRow(id,who,te){return `<tr><td>${who}</td><td>${mSel('a_'+id,OLA.map(a=>a[0]),'—')}</td><td>${mSel('w_'+id,OLB.map(k=>'with the '+k),'—')}</td><td>${mSel('t_'+id,OLT,'(no target)')}</td><td>${te?'<button type="button" class="btn" data-rbx style="min-height:28px;padding:2px 8px">×</button>':''}</td></tr>`}
+function rbSync(box){box.querySelectorAll('.rbt tr').forEach(r=>{const a=r.querySelector('[data-m^="a_"]'),w=r.querySelector('[data-m^="w_"]');if(!a||!w)return;const on=/combo|double/.test(a.value);w.style.visibility=on?'visible':'hidden';if(!on)w.value='';const t=r.querySelector('[data-m^="t_"]');if(t)t.disabled=!a.value;r.style.opacity=a.value?1:.6})}
 const MP=['X','Z','H','Y','M','A','F','B','T','Q'],MOL=['LT','LG','C','RG','RT'],SIDES=['left','right','field','boundary'];
 const mSel=(id,opts,ph)=>`<select data-m="${id}" style="max-width:100%">${ph?`<option value="">${ph}</option>`:''}${opts.map(o=>`<option>${o}</option>`).join('')}</select>`;
 const mIn=(id,ph,w)=>`<input type="text" data-m="${id}" placeholder="${ph}" style="width:${w||140}px">`;
@@ -145,15 +149,28 @@ const MAD={
   f:v=>`${v.pers} personnel. ${v.surf}${v.desc?', '+v.desc:''}.`},
  pass:{h:'Routes by receiver number (counted from the side the concept goes to)',b:()=>`Count from the ${mSel('side',['left','right'])}.<br>${[1,2,3,4,5].map(n=>`#${n} ${mIn('r'+n,n<=4?'route':'(if 5 wide)',120)}`).join(' ')}<br>QB reads ${mIn('read','e.g. #3 to #2',140)}`,
   f:v=>`From the ${v.side}: `+[1,2,3,4,5].filter(n=>v['r'+n]).map(n=>`#${n} ${v['r'+n]}`).join(', ')+'.'+(v.read?` QB reads ${v.read}.`:'')},
- run:{h:'Scheme and ball carrier first, then one sentence per blocker',b:()=>`Build ${mSel('what',['the scheme and ball carrier','one blocker\'s rule'])}
-  <br>${mSel('sch',['Zone scheme','Gap scheme'])} to the ${mSel('poa',['call side','left','right','field','boundary'])}. ${mSel('rb',['T','B','Q'])} aims at ${mIn('aim','e.g. playside guard\'s outside hip',220)}. Read ${mIn('read','(optional) e.g. backside end',160)}
-  <br>TE in the scheme? ${mSel('te',['no','yes'])}
-  <br><b>Blocker</b> ${mSel('olp',['PST','PSG','C','BSG','BST',...teLet(),...rbLet().filter(x=>!teLet().includes(x))])} ${mSel('ola',OLA.map(a=>a[0]))} ${mSel('olw',['with the PST','with the PSG','with the C','with the BSG','with the BST','with the Y','with the M'],'(partner, for combos)')} ${mSel('olt',OLT,'(no target)')}
-  <br><span class="note">PS = playside (the side the run goes), BS = backside. Gaps are on the playside: the C gap is the 1st man outside the tackle, the 2nd level C gap is the 1st 2nd-level player outside the tackle. Power, counter and anything that blocks a TE (on or off the ball): set TE in the scheme to yes and your TE letters from Setup show up as blockers. Add the scheme sentence first, then switch Build to "one blocker's rule" and add a sentence for each blocker, e.g. "BSG pulls and traps the 1st man in the C gap", "PSG combos with the C to the M". Draw all looks draws these.</span>`,
-  f:v=>{if(/blocker/.test(v.what||'')){const a=OLA.find(x=>x[0]===v.ola)||OLA[0],w=v.olw?' '+v.olw:'',tg=v.olt?((a[1]&&w)?' '+a[1]+' ':' ')+v.olt:'';return `${v.olp} ${a[0]}${w}${tg}.`}
-   return `${v.sch} to the ${v.poa}. ${v.rb} aims at ${v.aim||'the hole'}.${v.read?' Read '+v.read+'.':''}${v.te==='yes'?' TE in the scheme.':''}`},
-  init:(box,t)=>{if(t&&(/\b(PS|BS) TE\b|TE in the scheme/i.test(t.meaning||'')||new RegExp('(^|\\.\\s+)('+teLet().join('|')+')\\s+(pulls|traps|kicks|wraps|leads|down|base|reach|arc|combos|double|hinges|cuts|scoops|climbs|zone)','i').test(t.meaning||''))){const e=box.querySelector('[data-m=te]');if(e)e.value='yes'}},
-  sync:(box,v)=>{const yes=v.te==='yes',e=box.querySelector('[data-m=olp]'),T=teLet().filter(x=>!['PST','PSG','C','BSG','BST'].includes(x));if(!e)return;e.querySelectorAll('option').forEach(o=>{if(T.includes(o.value))o.hidden=!yes});if(!yes&&T.includes(e.value))e.value='PST'}},
+ run:{h:'Fill in the whole play, then Replace meaning once',b:()=>`<div class="rbx">
+  <div>${mSel('sch',['Zone scheme','Gap scheme'])} to the ${mSel('poa',['call side','left','right','field','boundary'])}</div>
+  <div>${mSel('rb',['T','B','Q'])} aims at ${mSel('aim',RAIM.map(a=>a[0]),'(type your own)')} ${mIn('aimx','or type your own',170)}</div>
+  <div>Read ${mIn('read','(optional) e.g. backside end',200)}</div>
+  <table class="rbt"><thead><tr><th>Blocker</th><th>Rule</th><th>With</th><th>Target</th><th></th></tr></thead><tbody>${OLB.map(k=>rbRow(k,k)).join('')}</tbody><tbody id="rb_te"></tbody></table>
+  <button type="button" class="btn" id="rb_addte" style="min-height:32px;padding:4px 10px">+ Add TE</button> <span class="note">Leave a rule blank to skip that blocker. PS = playside (the side the run goes), BS = backside. Gaps are playside: C gap = 1st man outside the tackle; 2nd level C gap = 1st 2nd-level player outside the tackle.</span></div>`,
+  f:v=>{const aim=v.aimx||(RAIM.find(a=>a[0]===v.aim)||[])[1]||'the hole';let o=`${v.sch} to the ${v.poa}. ${v.rb} aims at ${aim}.${v.read?' Read '+v.read+'.':''}`;
+   const rows=[...OLB.map(k=>[k,k]),...Object.keys(v).filter(k=>/^p_te\d+$/.test(k)).map(k=>[v[k],k.slice(2)])];
+   rows.forEach(([who,id])=>{const a=OLA.find(x=>x[0]===v['a_'+id]);if(!who||!a)return;const w=/combo|double/.test(a[0])&&v['w_'+id]?' '+v['w_'+id]:'',tg=v['t_'+id]?((a[1]&&w)?' '+a[1]+' ':' ')+v['t_'+id]:'';o+=` ${who} ${a[0]}${w}${tg}.`});return o},
+  after:(box,pv,t)=>{let n=0;const add=(who,a,w,tg)=>{const id='te'+(n++),tb=box.querySelector('#rb_te');tb.insertAdjacentHTML('beforeend',rbRow(id,mSel('p_'+id,teLet()),1));const r=tb.lastElementChild,set=(k,x)=>{const e=r.querySelector(`[data-m="${k}_${id}"]`);if(e&&x)e.value=x};set('p',who);set('a',a);set('w',w);set('t',tg);rbSync(box);pv()};
+   box.querySelector('#rb_addte').onclick=()=>add(teLet()[0]);
+   box.addEventListener('click',e=>{const x=e.target.closest('[data-rbx]');if(x){x.closest('tr').remove();pv()}});
+   box.addEventListener('change',e=>{if(e.target.dataset.m==='sch'){const a=box.querySelector('[data-m=aim]');if(a&&!box.querySelector('[data-m=aimx]').value)a.value=/Gap/.test(e.target.value)?RAIM[2][0]:RAIM[0][0]}rbSync(box)});
+   const m=String((t&&t.meaning)||'');let q;
+   if((q=m.match(/(Zone|Gap) scheme to the ([a-z ]+?)\.\s+([TBQ]) aims at (.+?)\./i))){const sv=(k,x)=>{const e=box.querySelector(`[data-m=${k}]`);if(e)e.value=x};sv('sch',q[1][0].toUpperCase()+q[1].slice(1).toLowerCase()+' scheme');sv('poa',q[2].toLowerCase());sv('rb',q[3].toUpperCase());const ai=RAIM.find(a=>a[1]===q[4]);if(ai)sv('aim',ai[0]);else{sv('aim','');sv('aimx',q[4])}
+    const rd=m.match(/Read (.+?)\./);if(rd)sv('read',rd[1])}
+   else{const a=box.querySelector('[data-m=aim]');if(a)a.value=RAIM[0][0]}
+   const ACT=OLA.map(a=>a[0].replace(/ /g,'\\s+')).sort((a,b)=>b.length-a.length).join('|');
+   m.split(/\.\s+|\.$/).forEach(sn=>{const r=sn.trim().match(new RegExp('^(PST|PSG|C|BSG|BST|[A-Z])\\s+('+ACT+')(?:\\s+(with the \\w+))?(?:\\s+to)?(?:\\s+(.+))?$'));if(!r)return;
+    const a=OLA.find(x=>new RegExp('^'+x[0].replace(/ /g,'\\s+')+'$').test(r[2]))[0],tg=r[4]&&OLT.includes(r[4])?r[4]:'';
+    if(OLB.includes(r[1])){const s=(k,x)=>{const e=box.querySelector(`[data-m="${k}_${r[1]}"]`);if(e&&x)e.value=x};s('a',a);s('w',r[3]);s('t',tg)}else if(teLet().includes(r[1]))add(r[1],a,r[3],tg)});
+   rbSync(box)}},
  tag:{h:'What it changes and on which plays',b:()=>`${mIn('who','who, e.g. #2 or Y',90)} ${mIn('chg','what changes, e.g. runs a seam instead',240)} on ${mSel('on',['pass plays','run plays','run and pass plays'])}.`,
   f:v=>`${v.who?v.who+' ':''}${v.chg}${v.chg?' ':''}on ${v.on}.`},
  oneword:{h:'What it calls',b:()=>`Formation ${mIn('fm','e.g. Trips',110)} Left hash ${mIn('L','call',120)} Right hash ${mIn('R','call',120)} ${mIn('x','anything else (optional)',200)}`,
@@ -161,7 +178,7 @@ const MAD={
 function madRender(ty,t){const box=$('e_mad');if(!box)return;const M=MAD[ty];if(!M){box.style.display='none';return}box.style.display='block';
  box.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center"><b>Build the definition</b><span class="note">${esc(M.h)}</span></div><div style="margin:8px 0;line-height:2.3">${M.b()}</div><div class="note" id="mad_pv" style="margin-bottom:6px"></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="mad_add">Add to meaning</button><button class="btn" id="mad_rep">Replace meaning</button></div>`;
  const val=()=>{const v={};box.querySelectorAll('[data-m]').forEach(e=>v[e.dataset.m]=e.value.trim());return v},pv=()=>{$('mad_pv').textContent='Preview: '+M.f(val())};
- const sy=()=>{if(M.sync)M.sync(box,val())};if(M.init)M.init(box,t);
+ const sy=()=>{if(M.sync)M.sync(box,val())};if(M.init)M.init(box,t);if(M.after)M.after(box,pv,t);
  box.oninput=pv;box.onchange=()=>{sy();pv()};sy();pv();
  $('mad_add').onclick=()=>{const m=$('e_m'),x=M.f(val());m.value=(m.value.trim()?m.value.trim()+' ':'')+x;toast('Added to the meaning')};
  $('mad_rep').onclick=()=>{$('e_m').value=M.f(val());toast('Meaning replaced')}}
