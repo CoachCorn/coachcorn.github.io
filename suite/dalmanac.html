@@ -36,7 +36,7 @@ main{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:10px;padd
 .pbox{border-left:3px solid var(--acc)}.pbox.sc{border-left-color:var(--warn)}
 .lg{display:flex;gap:6px;padding:7px 2px;border-top:1px solid var(--line);font-size:13px;align-items:flex-start}
 .lg b{white-space:nowrap}.lg .x{margin-left:auto;background:none;border:0;color:var(--mut);font-size:16px;padding:2px 6px}
-.stat{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}.stat div{background:#102030;border:1px solid var(--line);border-radius:8px;padding:6px 8px}.stat b{display:block;font-size:18px}
+.stat{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}.stat div{background:#102030;border:1px solid var(--line);border-radius:8px;padding:6px 8px}.stat b{display:block;font-size:18px}.stat .tl,.stat .lfb{cursor:pointer}.stat .on{border-color:var(--blue)!important;background:#16385a!important}.lfb{background:none;border:1px solid transparent;border-radius:6px;color:inherit;font:inherit;padding:0 3px}.rpb i{font-style:normal;opacity:.5;margin:0 1px}
 input[type=text]::-webkit-inner-spin-button{display:none}
 .step{display:inline-flex;align-items:center;gap:6px}
 .step input{width:64px;font-size:20px;font-weight:700;text-align:center;background:transparent;border:1px solid var(--line);border-radius:8px;padding:6px 0}
@@ -89,17 +89,17 @@ function fresh(prev){const g=G();return{dn:prev?prev.dn:1,di:prev?prev.di:10,sid
 const ballOn=x=>x.side==='Own'?+x.yd:100-x.yd;
 const effOf=(dn,di,g)=>dn===1?g>=4:dn===2?g>=Math.ceil(di/2):g>=di;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
-const drafted=p=>({dn:p.dn,di:p.di,side:p.side,yd:p.yd,hash:p.hash||'',form:p.form||'',call:p.call||'',concept:p.concept||'',pkg:p.pkg||'',front:p.front||'',fcode:p.fcode||'',mods:[...(p.mods||[])],press:p.press||'',cov:p.cov||'',rp:p.rp||'',dir:p.dir||'',result:p.result||'',td:!!p.td,gain:p.gain||0,havoc:[...(p.havoc||[])]});
+const drafted=p=>({dn:p.dn,di:p.di,side:p.side,yd:p.yd,hash:p.hash||'',form:p.form||'',call:p.call||'',concept:p.concept||'',pkg:p.pkg||'',front:p.front||'',fcode:p.fcode||'',mods:[...(p.mods||[])],press:p.press||'',cov:p.cov||'',rp:p.rp||'',dir:p.dir||'',result:p.result||'',td:!!p.td,dtd:!!p.dtd,hvOff:false,gain:p.gain||0,havoc:[...(p.havoc||[])]});
 /* the next snap, from the play that was just logged (a coach can change anything before logging) */
 function advanceFrom(p){const nxt=fresh(p);nxt.hash=p.hash||'';
  const dn=+p.dn,di=+p.di,f0=+p.f,gain=+p.gain||0;
- const turnover=p.td||p.result==='Interception'||(dn>=4&&gain<di&&p.result!=='Penalty');
+ const turnover=p.td||p.dtd||p.result==='Interception'||(dn>=4&&gain<di&&p.result!=='Penalty');
  if(p.result==='Penalty')return nxt;
  if(turnover){nxt.dn=1;nxt.di=10;nxt.side='Own';nxt.yd=25;nxt.hash='';return nxt}
  const f=clamp(f0+gain,1,99);nxt.side=f<=50?'Own':'Opp';nxt.yd=f<=50?f:100-f;
  if(gain>=di){nxt.dn=1;nxt.di=Math.min(10,100-f)}else{nxt.dn=dn+1;nxt.di=Math.max(1,di-gain)}
  return nxt}
-const endsDrive=p=>p.result!=='Penalty'&&(p.td||p.result==='Interception'||(+p.dn>=4&&(+p.gain||0)<+p.di));
+const endsDrive=p=>p.result!=='Penalty'&&(p.td||p.dtd||p.result==='Interception'||(+p.dn>=4&&(+p.gain||0)<+p.di));
 
 /* A logged play, turned into the same row shape the scout reader makes, so both boxes use the same look-up. */
 function asRow(p){const dc=p.call?SCOUTO.decode(p.call):null;
@@ -170,8 +170,9 @@ function pressChips(){const L=lists(),q=PQ.trim().toUpperCase(),shown=L.press.fi
 function covChips(){const L=lists(),q=CQ.trim().toUpperCase(),shown=L.cov.filter(x=>!q||x.includes(q)||x===d.cov);
  return shown.map(x=>ch('cov',x,esc(x),d.cov===x)).join('')+addRow('cov','New coverage name')}
 const stepper=(id,val,a)=>`<div class="step"><button class="chip" data-a="${a}m">−</button><input type="text" inputmode="numeric" id="${id}" value="${val}"><button class="chip" data-a="${a}p">+</button></div>`;
-function resHtml(){const RES=['Rush','Complete','Incomplete','Sack','Scramble','Interception','Fumble','Penalty'];
- return`<div class="lab">Result</div><div class="chips">${RES.map(x=>ch('result',x,x,d.result===x,'res')).join('')}${ch('td','1','TD',d.td,'res')}</div>
+function resHtml(){if((d.rp==='R'||d.result==='Rush')&&+d.gain<0&&!d.hvOff&&!d.havoc.includes('TFL'))d.havoc.push('TFL');
+ const RES=['Rush','Complete','Incomplete','Sack','Scramble','Interception','Fumble','Penalty'];
+ return`<div class="lab">Result</div><div class="chips">${RES.map(x=>ch('result',x,x,d.result===x,'res')).join('')}${ch('td','1','TD',d.td,'res')}${ch('dtd','1','DEF TD',d.dtd,'res')}</div>
   <div class="row" style="margin-top:8px"><span class="mut">Yards</span>${stepper('gain',d.gain,'g')}<div class="chips">${[-5,0,2,4,6,8,10,15,20].map(v=>ch('gq',v,(v>0?'+':'')+v,+d.gain===v)).join('')}</div></div>
   <div class="row"><span class="mut">Havoc</span><div class="chips">${['TFL','SACK','PBU','FF'].map(x=>ch('havoc',x,x,d.havoc.includes(x),'hv')).join('')}</div></div>`}
 function sitChips(){return`<div class="row"><span class="mut">Down</span><div class="chips">${[1,2,3,4].map(n=>ch('dn',n,n,+d.dn===n)).join('')}</div></div>
@@ -351,8 +352,11 @@ $('ent').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b
  else if(k==='concept'){if(d.concept&&d.concept.toUpperCase()===v.toUpperCase())d.concept='';else{d.concept=v;const c=conceptList().find(x=>x.name.toUpperCase()===v.toUpperCase());if(c&&d.rp!=='RPO')d.rp=c.type==='run'?'R':'P'}}
  else if(k==='pkg'){d.pkg=v;const g=G();if(g){g.pkg=v;save()}}
  else if(k==='front'){const[n,c]=v.split('|');if(d.front===n&&d.fcode===c){d.front='';d.fcode=''}else{d.front=n;d.fcode=c}}
- else if(k==='mods'||k==='havoc'){const a=d[k],i=a.indexOf(v);i<0?a.push(v):a.splice(i,1)}
- else if(k==='td')d.td=!d.td;
+ else if(k==='mods'||k==='havoc'){const a=d[k],i=a.indexOf(v);i<0?a.push(v):a.splice(i,1);
+  if(k==='havoc'&&v==='PBU'&&i<0){d.rp='P';if(!['Incomplete','Interception'].includes(d.result)){d.result='Incomplete';d.gain=0}}
+  if(k==='havoc'&&v==='TFL')d.hvOff=i>=0}
+ else if(k==='dtd'){d.dtd=!d.dtd;if(d.dtd){d.td=false;if(d.rp==='R'){d.result='Fumble';d.rp='R'}else{d.result='Interception';d.rp='P'}d.gain=0}}
+ else if(k==='td'){d.td=!d.td;if(d.td)d.dtd=false}
  else if(k==='press')d.press=v;
  else d[k]=d[k]===v?'':v;
  if(k==='result'&&d.result==='Sack'){d.rp='P';if(+d.gain>0)d.gain=-d.gain}
@@ -364,8 +368,8 @@ function logPlay(){const g=G();if(!g)return;readNum('gain');
  if(!d.result){toast('Pick a result');return}if(!d.form){toast('Pick their formation');return}
  let gain=['Incomplete','Interception'].includes(d.result)?0:(+d.gain||0);if(d.result==='Sack'&&gain>0)gain=-gain;
  const rp=d.rp||({Rush:'R',Complete:'P',Incomplete:'P',Sack:'P',Scramble:'P',Interception:'P'}[d.result]||'');
- const hv=[...d.havoc];if(rp==='R'&&gain<0&&!hv.includes('TFL'))hv.push('TFL');if(d.result==='Sack'&&!hv.includes('SACK'))hv.push('SACK');if(d.result==='Interception'&&!hv.includes('PBU'))hv.push('PBU');
- const p={pid:edit||'p'+Date.now().toString(36),ts:Date.now(),dn:+d.dn,di:+d.di,side:d.side,yd:+d.yd,f:ballOn(d),hash:d.hash,form:d.form,call:d.call,concept:d.concept||(d.call&&SCOUTO.decode(d.call).known?SCOUTO.decode(d.call).concept:''),pkg:d.pkg,front:d.front,fcode:d.fcode,mods:[...d.mods],press:d.press,cov:d.cov,rp,dir:d.dir,result:d.result,td:d.td,gain,havoc:hv};
+ const hv=[...d.havoc];if(rp==='R'&&gain<0&&!d.hvOff&&!hv.includes('TFL'))hv.push('TFL');if(d.result==='Sack'&&!hv.includes('SACK'))hv.push('SACK');if(d.result==='Interception'&&!hv.includes('PBU'))hv.push('PBU');
+ const p={pid:edit||'p'+Date.now().toString(36),ts:Date.now(),dn:+d.dn,di:+d.di,side:d.side,yd:+d.yd,f:ballOn(d),hash:d.hash,form:d.form,call:d.call,concept:d.concept||(d.call&&SCOUTO.decode(d.call).known?SCOUTO.decode(d.call).concept:''),pkg:d.pkg,front:d.front,fcode:d.fcode,mods:[...d.mods],press:d.press,cov:d.cov,rp,dir:d.dir,result:d.result,td:d.td,dtd:!!d.dtd,gain,havoc:hv};
  if(d.pkg)g.pkg=d.pkg;
  if(d.form&&DV.glo()&&!glForms().includes(SCOUTO.famOf(d.form)))addWord('formation',d.form,{side:'O'});
  if(edit){const i=g.plays.findIndex(x=>x.pid===edit);if(i>=0){p.ts=g.plays[i].ts;g.plays[i]=p}edit=null;resume();save();renderAll();toast('Saved changes');return}
@@ -374,17 +378,20 @@ function logPlay(){const g=G();if(!g)return;readNum('gain');
  d=advanceFrom(p);d.pkg=g.pkg||d.pkg;FQ=FRQ=PQ=CQ='';QT='';save();renderAll();toast('Logged play '+PL(g).length+(endsDrive(p)?' · new drive':''))}
 
 /* ---------- right panel ---------- */
+let LF='';/* log filter set by tapping a stat tile: R P RPO eff exp hav, '' = all plays */
+const LFN={R:'Runs',P:'Passes',RPO:'RPOs',eff:'Opponent efficient plays',exp:'Explosive plays (15+)',hav:'Havoc plays'};
 function renderSide(){const g=G(),s=$('side');if(!g){s.innerHTML='';return}
  const P=real(g),n=P.length,typed=P.filter(p=>p.rp),c={R:0,P:0,RPO:0};typed.forEach(p=>c[p.rp]++);
- const yds=P.reduce((a,p)=>a+p.gain,0),eff=P.filter(p=>effOf(p.dn,p.di,p.gain)).length,ex=P.filter(p=>p.gain>=15).length,hv=P.filter(p=>p.havoc.length||['Sack','Interception'].includes(p.result)).length;
+ const yds=P.reduce((a,p)=>a+p.gain,0),eff=P.filter(p=>effOf(p.dn,p.di,p.gain)).length,ex=P.filter(p=>p.gain>=15).length,hv=P.filter(p=>p.havoc.length||p.dtd||['Sack','Interception'].includes(p.result)).length;
  const pc=(a,b)=>b?Math.round(100*a/b)+'%':'–';
  let dn=1,idx=0;const items=[];
  g.plays.forEach(p=>{
-  if(p.k==='d'||p.k==='q'||p.k==='h'){dn++;items.push(`<div class="mk">${p.k==='d'?'New drive':p.k==='h'?'Halftime':'End Q'+p.n}</div>`);return}
-  if(p.k==='x'){items.push('<div class="mk">Timeout / no play</div>');return}
-  idx++;items.push(`<div class="lg ${edit===p.pid?'ed':''}"><b>${idx}</b><div><b>${p.dn}&amp;${p.di}</b> ${esc(p.form)} <span class="mut">${esc(p.hash)} · D${dn}</span><br><span class="mut">${esc([p.pkg,p.front,(p.mods||[]).join(' '),p.press,p.cov].filter(Boolean).join(' · ')||'no call logged')}</span><br>${p.call?`<small class="mut">${esc(p.call.toLowerCase())}</small><br>`:''}${p.concept?`<b class="cn">${esc(p.concept)}</b> `:''}${esc(p.rp)}${p.dir?' '+esc(p.dir):''} ${esc(p.result)}${p.td?' TD':''} ${p.gain>0?'+':''}${p.gain}${p.havoc.length?' · '+esc(p.havoc.join(' ')):''}</div><button class="x" data-edit="${p.pid}" title="Edit this play">✎</button><button class="x" data-del="${p.pid}" title="Delete this play">✕</button></div>`)});
+  if(p.k==='d'||p.k==='q'||p.k==='h'){dn++;if(!LF)items.push(`<div class="mk">${p.k==='d'?'New drive':p.k==='h'?'Halftime':'End Q'+p.n}</div>`);return}
+  if(p.k==='x'){if(!LF)items.push('<div class="mk">Timeout / no play</div>');return}
+  idx++;if(LF&&!({R:p.rp==='R',P:p.rp==='P',RPO:p.rp==='RPO',eff:effOf(p.dn,p.di,p.gain),exp:p.gain>=15,hav:p.havoc.length||['Sack','Interception'].includes(p.result)||p.dtd}[LF]))return;items.push(`<div class="lg ${edit===p.pid?'ed':''}"><b>${idx}</b><div><b>${p.dn}&amp;${p.di}</b> ${esc(p.form)} <span class="mut">${esc(p.hash)} · D${dn}</span><br><span class="mut">${esc([p.pkg,p.front,(p.mods||[]).join(' '),p.press,p.cov].filter(Boolean).join(' · ')||'no call logged')}</span><br>${p.call?`<small class="mut">${esc(p.call.toLowerCase())}</small><br>`:''}${p.concept?`<b class="cn">${esc(p.concept)}</b> `:''}${esc(p.rp)}${p.dir?' '+esc(p.dir):''} ${esc(p.result)}${p.td?' TD':''}${p.dtd?' DEF TD':''} ${p.gain>0?'+':''}${p.gain}${p.havoc.length?' · '+esc(p.havoc.join(' ')):''}</div><button class="x" data-edit="${p.pid}" title="Edit this play">✎</button><button class="x" data-del="${p.pid}" title="Delete this play">✕</button></div>`)});
  s.innerHTML=`<div class="lab"><span>${esc(g.opp)}</span><span>${PL(g).length} plays</span></div>
- <div class="stat"><div><span class="mut">Run / pass / RPO</span><b>${pc(c.R,typed.length)} / ${pc(c.P,typed.length)} / ${pc(c.RPO,typed.length)}</b></div><div><span class="mut">Yds / play</span><b>${n?(yds/n).toFixed(1):'–'}</b></div><div><span class="mut">Eff allowed</span><b>${pc(eff,n)}</b></div><div><span class="mut">Explosive (15+)</span><b>${pc(ex,n)}</b></div><div><span class="mut">Havoc</span><b>${pc(hv,n)}</b></div><div><span class="mut">Plays</span><b>${n}</b></div></div>`+items.reverse().join('');
+ <div class="stat"><div><span class="mut">Run / pass / RPO</span><b class="rpb">${[['R',c.R],['P',c.P],['RPO',c.RPO]].map(([k,v])=>`<button class="lfb ${LF===k?'on':''}" data-lf="${k}">${pc(v,typed.length)}</button>`).join('<i>/</i>')}</b></div><div><span class="mut">Yds / play</span><b>${n?(yds/n).toFixed(1):'–'}</b></div><div class="tl ${LF==='eff'?'on':''}" data-lf="eff"><span class="mut">Opp. eff</span><b>${pc(eff,n)}</b></div><div class="tl ${LF==='exp'?'on':''}" data-lf="exp"><span class="mut">Opp. exp (15+)</span><b>${pc(ex,n)}</b></div><div class="tl ${LF==='hav'?'on':''}" data-lf="hav"><span class="mut">Havoc plays</span><b>${pc(hv,n)}</b></div><div class="tl ${!LF?'on':''}" data-lf=""><span class="mut">Total play log</span><b>${n}</b></div></div>${LF?`<div class="mut" style="margin:0 0 6px">Showing: ${LFN[LF]} · <a href="#" data-lf="" style="color:var(--blue)">show all</a></div>`:''}`+items.reverse().join('');
+ s.querySelectorAll('[data-lf]').forEach(b=>b.onclick=e=>{e.preventDefault();const v=b.dataset.lf;LF=(v&&LF===v)?'':v;renderSide()});
  s.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{if(!confirm('Delete this play?'))return;g.plays=g.plays.filter(p=>p.pid!==b.dataset.del);if(edit===b.dataset.del){edit=null;resume()}save();renderAll()});
  s.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{const p=g.plays.find(x=>x.pid===b.dataset.edit);if(!p)return;edit=p.pid;d=drafted(p);ADD=null;FQ=FRQ=PQ=CQ='';renderAll();try{$('ent').scrollTop=0}catch(e){}})}
 function renderAll(){renderTop();renderEntry();renderSide()}
@@ -400,7 +407,7 @@ function csv(g){const q=v=>{const s=v==null?'':String(v);return /[",\n]/.test(s)
   o['EFF']=p.result==='Penalty'?'':(effOf(p.dn,p.di,p.gain)?'Y':'N');o['EXPLOSIVE?']=p.gain>=15?'Y':'';
   o['DEF FRONT']=[p.front,...(p.mods||[])].filter(Boolean).join(' ');o['DC COVERAGE']=p.cov;o['BLITZ']=p.press;
   o['NOTES']=[p.pkg?'PKG '+p.pkg:'',p.concept?'CONCEPT '+p.concept:'',p.havoc.length?'HAVOC '+p.havoc.join('/'):''].filter(Boolean).join('; ');
-  o['HASH']=p.hash;o['PLAY TYPE']=p.rp==='R'?'Run':p.rp?'Pass':'';o['RESULT']=p.result+(p.td?', TD':'');o['OFF FORM']=p.form;o['OFF PLAY']=p.call;o['PASS CONCEPT']=p.rp==='P'?(p.concept||''):'';o['PLAY DIR']=p.dir;o['RPO']=p.rp==='RPO'?'Y':'';
+  o['HASH']=p.hash;o['PLAY TYPE']=p.rp==='R'?'Run':p.rp?'Pass':'';o['RESULT']=p.result+(p.td?', TD':'')+(p.dtd?', DEF TD':'');o['OFF FORM']=p.form;o['OFF PLAY']=p.call;o['PASS CONCEPT']=p.rp==='P'?(p.concept||''):'';o['PLAY DIR']=p.dir;o['RPO']=p.rp==='RPO'?'Y':'';
   rows.push(HEAD.map(h=>q(o[h])).join(','))});return rows.join('\n')}
 $('exp').onclick=()=>{const g=G();if(!g||!PL(g).length){toast('No plays to export');return}
  const blob=new Blob([csv(g)],{type:'text/csv'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=(g.opp||'game').replace(/[^A-Za-z0-9]+/g,'_')+'_defense_'+(g.date||'').slice(0,10)+'.csv';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)};
