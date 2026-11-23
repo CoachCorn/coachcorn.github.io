@@ -2,6 +2,11 @@
    Standard drawings are saved on the glossary's formation terms (term.draw = {t,side,pers}); stdDraw() turns one into a drawing and svgOf() draws it.
    TODO: switch gameplan.html to load this file instead of its own copy, so there is only one. Needs: clone() defined before this loads. */
 const clone=window.clone||(o=>JSON.parse(JSON.stringify(o)));
+/* position letters: the program's own letters (Almanac lists pWR / pTE / pRB) for the standard slots; same as gameplan.html */
+const PSW=window.PSW||['X','Z','H','Y'],PST=window.PST||['M','A','F'],PSR=window.PSR||['B','T'];
+const ALMK=window.ALMK||(()=>{try{const s=JSON.parse(localStorage.getItem('suite_sync'));return(s&&s.token&&s.exp>Date.now())?'almanac_v1':'almanac_demo'}catch(e){return'almanac_demo'}});
+const almData=window.almData||(()=>{try{return JSON.parse(localStorage.getItem(ALMK()))}catch(e){return null}});
+const lab=window.lab||(k=>{const A=almData(),L=(A&&A.lists)||{},g=(key,defs)=>{const i=defs.indexOf(k);if(i<0)return null;const v=L[key]&&L[key][i];return v?String(v).toUpperCase():null};return g('pWR',PSW)||g('pTE',PST)||g('pRB',PSR)||k});
 const OFF=40;   // the line of scrimmage sits 40 px (about 3 yards) lower than in version 1 drawings, so the defense has room
 const OLK=['LT','LG','C','RG','RT'],SK=['Q','X','Z','M','H','Y','F','A','B','T'];
 const LKEY=[['#5aa9ff','Motion'],['#ef5b5b','Shift'],['#2fbf71','Ball carrier'],['#f2b632','Carrier on read']];

@@ -135,9 +135,10 @@ function predHtml(b,rows){const mine=rowsOf(rows,b.form);if(!mine.length)return`
   <div class="bar"><span class="r" style="width:${s.run||0}%">${s.run>=12?'Run '+s.run:''}</span><span class="p" style="width:${s.pass||0}%">${s.pass>=12?'Pass '+s.pass:''}</span><span class="o" style="width:${s.rpo||0}%">${s.rpo>=12?'RPO '+s.rpo:''}</span></div>
   <div class="note">${s.eff!=null?'Their efficiency '+s.eff+'% · ':''}${top?'Calls: '+top:''}</div>`}
 function drawHtml(base){const g=DV.glo();let t=null;try{t=g&&GL.find(g,'formation',nice(base))||g&&GL.find(g,'formation',base)}catch(e){}
- const d=t&&t.draw&&t.draw.t?stdDraw(t,''):null;
+ let d=null;try{d=t&&t.draw&&t.draw.t?stdDraw(t,''):null;if(d){const h=svgOf(d);return h.replace('<svg viewBox','<svg style="width:100%;height:auto;display:block" viewBox')}}catch(e){d=null}
  if(!d)return`<div class="note" style="padding:16px;text-align:center">No standard drawing for ${esc(nice(base))} yet.<br>Draw it once in the Gameplan (offense) with Save as standard, and it shows here.</div>`;
- return svgOf(d).replace('<svg viewBox','<svg style="width:100%;height:auto;display:block" viewBox')}
+ return`<div class="note" style="padding:16px;text-align:center">No standard drawing for ${esc(nice(base))} yet.<br>Draw it once in the Gameplan (offense) with Save as standard, and it shows here.</div>`}
+function persOfForm(base){const g=DV.glo();let t=null;try{t=g&&(GL.find(g,'formation',nice(base))||GL.find(g,'formation',base))}catch(e){}return t&&t.draw&&t.draw.pers||''}
 function render(){
  $('psel').innerHTML=S.plans.length?S.plans.map(p=>`<option value="${p.id}" ${p.id===S.cur?'selected':''}>${esc(p.name)}</option>`).join(''):'<option>No plan yet</option>';
  const p=P(),ns=SO.names();$('ssel').innerHTML='<option value="">(none)</option>'+ns.map(n=>`<option ${p&&p.scout===n?'selected':''}>${esc(n)}</option>`).join('');
@@ -149,7 +150,7 @@ function render(){
  p.blocks.forEach((b,bi)=>{b._F=favs(rows,b.form);const tg=tagsOf(rows,b.form);
   m.innerHTML+=`<section class="block" data-b="${b.id}">
    <div class="bhead"><div class="bname">${esc(nice(b.form))}${tg.length?` <span style="font-size:13px">${tg.map(t=>`<span class="tag" title="tag seen on ${t[1]} play(s)">${esc(t[0])}</span>`).join('')}</span>`:''}</div>
-    <span class="mut">${b._F.n} plays</span><button class="btn sm" data-a="up">↑</button><button class="btn sm" data-a="dn">↓</button><button class="btn sm bad" data-a="del">Delete</button></div>
+    ${persOfForm(b.form)?`<span class="tag" title="Personnel">${esc(persOfForm(b.form))}</span>`:''}<span class="mut">${b._F.n} plays</span><button class="btn sm" data-a="up">↑</button><button class="btn sm" data-a="dn">↓</button><button class="btn sm bad" data-a="del">Delete</button></div>
    <div class="top"><div class="draw">${drawHtml(b.form)}</div><div class="pred">${predHtml(b,rows)}<textarea data-note="${b.id}" placeholder="Anything you want to remember (box count, a tell)">${esc(b.note||'')}</textarea></div></div>
    <div class="grid"><div class="gh"></div>${COLS.map(c=>`<div class="gh"><b>${c.label}</b>${c.sub?`<span>${c.sub}</span>`:''}</div>`).join('')}
    ${ROWS.map(r=>`<div class="rl">${r.label}</div>`+COLS.map(c=>`<div class="${c.auto?'':'cell'}" ${c.auto?'':`data-cell="${b.id}|${r.id}|${c.id}"`}>${cellHtml(b,r.id,c)}</div>`).join('')).join('')}</div></section>`});
