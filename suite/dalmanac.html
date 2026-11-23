@@ -255,7 +255,10 @@ function applyQuick(txt,commit){const out={bits:[],unk:[],hadResult:false};let t
  if(gain!=null){if(d.result==='Sack'&&gain>0)gain=-gain;if(['Incomplete','Interception'].includes(d.result))gain=0;d.gain=clamp(gain,-99,99);out.bits.push((d.gain>0?'+':'')+d.gain+' yds')}
  toks=toks.filter((t,i)=>!drop.includes(i));
  /* situation */
- const sr=parseSitR(toks.join(' '),null),so=sr.o;
+ /* a glossary word with a number in it (Cover 3, Cover 2) must survive the situation parser, which strips every loose number */
+ const L0=lists(),W0=[...L0.cov,...L0.pkg,...L0.press,...L0.mods,...formList(),...conceptList().map(c=>c.name)].map(x=>String(x)).filter(x=>/\s/.test(x)&&/\d/.test(x)).sort((a,b)=>b.length-a.length);
+ let jt=toks.join(' ');W0.forEach(w=>{const re=new RegExp('(^|\\s)'+w.trim().replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/\s+/g,'\\s+')+'(?=\\s|$)','ig');jt=jt.replace(re,(m,a)=>a+w.trim().replace(/\s+/g,'_'))});
+ const sr=parseSitR(jt,null),so=sr.o;sr.rest=sr.rest.flatMap(w=>w.split('_'));
  if(so.dn!=null){d.dn=so.dn;d.di=so.di;out.bits.push(so.dn+' & '+so.di)}if(so.yd!=null){d.yd=so.yd;d.side=so.side;out.bits.push(so.side+' '+so.yd)}if(so.hash){d.hash=so.hash;out.bits.push({L:'left',M:'middle',R:'right'}[so.hash]+' hash')}
  const left=sr.rest.map(U);
  /* glossary words */
@@ -421,7 +424,7 @@ $('exp').onclick=()=>{const g=G();if(!g||!PL(g).length){toast('No plays to expor
 
 addEventListener('storage',e=>{if(e.key===ST.KEY){renderEntry()}if(e.key==='glossary_v1_'+PROGRAM){DV.reload();renderEntry()}});
 load();if(!D.games.length&&ST.active()){const n=ST.active();D.games.push({id:'d'+Date.now(),opp:n,date:new Date().toISOString(),scout:n,pkg:'',plays:[]});D.cur=D.games[0].id;save()}
-resume();renderAll();
+resume();FOC="sit";renderAll();
 /* The suite shell's sync writes this device's copy; take it in (nothing unsaved is ever held here: every change saves at once). */
 function takeSync(){const cur=D.cur;load();if(D.games.find(g=>g.id===cur))D.cur=cur;if(edit&&!G().plays.find(x=>x.pid===edit)){edit=null;resume()}renderAll()}
 addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.dalmanac==='changed')takeSync()});
