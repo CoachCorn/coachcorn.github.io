@@ -130,10 +130,10 @@ const MAD={
    const yd=/inside|outside/.test(v.rel)&&v.n?v.n+' ':'',lm=v.lm==='(no landmark)'?'':' '+v.lm;
    if(!lm)return `${v.p} aligns to the ${v.side}${bl}.`;
    return `${v.p} aligns ${yd}${v.rel} ${v.side}${lm}${bl}.`}},
- motion:{h:'Who moves, what kind, where it ends',b:()=>`${mSel('p',MP)} ${mSel('ty',['jet motion','short motion','in motion','out motion','in and out motion','orbit motion','return motion','shifts'])} ${mSel('side',['','left','right','field','boundary'],'')} ${mSel('end',['','into his route','into the flat','to the landing spot','into the backfield'],'')} ${mIn('when','Snap when... (optional)',220)}
-  <br><span class="note">Side is where the motion goes (blank = across for jet / orbit / return, toward the ball for short / in, toward the sideline for out). "Shifts" then use a landmark: write it as a formation tag sentence, e.g. "Z shifts to the field hash".</span>`,
-  f:v=>{if(v.ty==='shifts')return `${v.p} shifts to the ${v.side||'field'}.${v.when?' '+v.when.replace(/\.?$/,'.'):''}`;
-   return `${v.p} runs ${v.ty}${v.side?' to the '+v.side:''}${v.end?' '+v.end:''}.${v.when?' '+v.when.replace(/\.?$/,'.'):''}`}},
+ motion:{h:'Who moves, what kind, where it ends',b:()=>`${mSel('p',MP)} ${mSel('ty',['jet motion','short motion','in motion','out motion','orbit motion','shifts'])} ${mSel('side',['','to the left','to the right','to the field','to the boundary','from the field to the boundary','from the boundary to the field'],'')} Return ${mSel('ret',['No','Yes'])} ${mSel('end',['','into his route','into the flat','to the landing spot','into the backfield'],'')} ${mIn('when','Snap when... (optional)',220)}
+  <br><span class="note">Direction is where the motion goes (blank = across for jet / orbit, toward the ball for short / in, toward the sideline for out). "Shifts" then use a landmark: write it as a formation tag sentence, e.g. "Z shifts to the field hash".</span>`,
+  f:v=>{const sd=v.side?' '+v.side:'';if(v.ty==='shifts')return `${v.p} shifts${sd||' to the field'}.${v.when?' '+v.when.replace(/\.?$/,'.'):''}`;
+   return `${v.p} runs ${v.ty}${sd}${v.ret==='Yes'?' and returns':''}${v.end?' '+v.end:''}.${v.when?' '+v.when.replace(/\.?$/,'.'):''}`}},
  formation:{h:'Personnel, surface and receivers',b:()=>`${mSel('pers',['10','11','12','20','21','22','13'])} personnel. ${mSel('surf',['2x2','3x1','2x1','3x2','1x1','4x1','empty'])} ${mIn('desc','e.g. trips to the call side, X on the numbers',300)}`,
   f:v=>`${v.pers} personnel. ${v.surf}${v.desc?', '+v.desc:''}.`},
  pass:{h:'Routes by receiver number (counted from the side the concept goes to)',b:()=>`Count from the ${mSel('side',['left','right'])}.<br>${[1,2,3,4,5].map(n=>`#${n} ${mIn('r'+n,n<=4?'route':'(if 5 wide)',120)}`).join(' ')}<br>QB reads ${mIn('read','e.g. #3 to #2',140)}`,
