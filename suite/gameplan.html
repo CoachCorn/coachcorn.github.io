@@ -369,11 +369,23 @@ const PNAME={'left tackle':'LT','right tackle':'RT','left guard':'LG','right gua
 const PTOK='(LT|LG|RG|RT|Q|X|Z|M|H|Y|F|A|B|T|C)';
 function normDef(x){let t=String(x||'').replace(/\([^)]*\)/g,' ');for(const k in PNAME)t=t.replace(new RegExp('\\b'+k+'\\b','gi'),PNAME[k]);t=t.replace(/\b(?:boundary|field)\s+(?=(?:LT|LG|RG|RT|Q|X|Z|M|H|Y|F|A|B|T|C)\b)/gi,'');return t.replace(/,/g,' ').replace(/\s+/g,' ').trim()}
 const SIDEX=sd=>/^(left|boundary)$/i.test(sd)?HASHX:HASHR;
+/* field landmarks for alignments ("X aligns on the hash to the field", "Z aligns 2 yards outside the EMOL to the right").
+   The drawing has the ball on the left hash, so field = right and boundary = left. */
+const LMRX='(inside edge of the hash|outside edge of the hash|hash|top of the numbers|bottom of the numbers|numbers|emol|end man on the line|between #?2 and #?3|sideline)';
+function lmX(t,lm,sd,k,n,io){const lt=/^(left|boundary)$/i.test(sd),out=lt?-1:1,L=String(lm).toLowerCase();let x;
+ if(L==='hash')x=lt?HASHX:HASHR;else if(L==='inside edge of the hash')x=(lt?HASHX:HASHR)-out*YD;else if(L==='outside edge of the hash')x=(lt?HASHX:HASHR)+out*YD;
+ else if(L==='top of the numbers')x=lt?NT:VW-NT;else if(L==='bottom of the numbers')x=lt?NB:VW-NB;else if(L==='numbers')x=lt?NUMX:VW-NUMX;else if(L==='sideline')x=lt?2*YD:VW-2*YD;
+ else if(/emol|end man/.test(L)){const ln=Object.keys(t).filter(q=>q!==k&&t[q].on&&!t[q].df&&Math.abs(t[q].y-LOS)<6);const xs=ln.map(q=>t[q].x);x=xs.length?(lt?Math.min(...xs):Math.max(...xs)):(lt?HASHX-3*YD:HASHR+3*YD)}
+ else if(/between/.test(L)){const o=rcvOrder({t:Object.fromEntries(Object.entries(t).filter(([q])=>q!==k))},lt?'L':'R');const a=t[o[1]],b=t[o[2]];x=a&&b?(a.x+b.x)/2:(lt?HASHX-6*YD:HASHR+2*YD)}
+ if(n)x+=(io==='inside'?-out:out)*n*YD;return Math.max(8,Math.min(VW-8,Math.round(x)))}
 function parseDef(text){const ok=[],bad=[],steps=[];let subj=null;
  const clauses=normDef(text).split(/\s*(?:;|\.\s|\.$|\bthen\b)\s*/i).map(x=>x.trim()).filter(Boolean);
  const players=str=>(str.match(new RegExp('\\b'+PTOK+'\\b','g'))||[]);
  for(let cl of clauses){let m,P;
   if(/\b(snaps?|snapped)\b|^tackle over$|^the mirror/i.test(cl)){ok.push(cl);continue}
+  if((m=cl.match(new RegExp('^'+PTOK+'\\s+(?:aligns?|lines? up|moves?|goes|sets?|splits?)\\s+(?:(\\d+)\\s+yards?\\s+(inside|outside)\\s+(?:of\\s+)?(?:the\\s+)?|(?:on|at|to)\\s+(?:the\\s+)?)?(?:(left|right|field|boundary)\\s+)?'+LMRX+'(?:\\s+(?:to|on)\\s+the\\s+(left|right|field|boundary)(?:\\s+side)?)?(.*)$','i')))){
+   const A=m[1],n=m[2]?+m[2]:0,io=(m[3]||'').toLowerCase(),lm=m[5],rest=m[7]||'';let sd=m[4]||m[6];subj=A;
+   steps.push(t=>{const p=on(t,A,235,LOS);const s2=sd||(p.x>=(t.Q?t.Q.x:235)?'right':'left');p.x=lmX(t,lm,s2,A,n,io);if(/on the (?:line|ball)/i.test(rest))p.y=LOS;else if(/off the (?:line|ball)/i.test(rest))p.y=LOS+YD});ok.push(cl);continue}
   if((m=cl.match(new RegExp('^((?:'+PTOK+'(?:/|\\s*and\\s*)?)+)\\s+(?:moves?|goes|slides?|lines? up|shifts?|aligns?|sets?)\\s+(?:over\\s+)?(?:to|on|at)\\s+(?:the\\s+)?(left|right|field|boundary)(?:\\s+(?:side|hash))?(.*)$')))){
    P=players(m[1]);const sd=m[2],ball=/on the (?:ball|line)/i.test(m[3]||'');subj=P[P.length-1];
    steps.push((t)=>{P.forEach((k,i)=>{const p=on(t,k,235,LOS);

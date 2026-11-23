@@ -124,8 +124,11 @@ const MP=['X','Z','H','Y','M','A','F','B','T','Q'],MOL=['LT','LG','C','RG','RT']
 const mSel=(id,opts,ph)=>`<select data-m="${id}" style="max-width:100%">${ph?`<option value="">${ph}</option>`:''}${opts.map(o=>`<option>${o}</option>`).join('')}</select>`;
 const mIn=(id,ph,w)=>`<input type="text" data-m="${id}" placeholder="${ph}" style="width:${w||140}px">`;
 const MAD={
- ftag:{h:'Who goes where',b:()=>`${mSel('p',[...MP,...MOL])} ${mSel('v',['moves to the','lines up on the','stacked behind','beside','inside','outside','in the backfield beside','in the backfield behind'])} ${mSel('w',[...SIDES,...MP])} ${mSel('l',['','on the line'])} <br><span class="note">Add more players by building again; each adds a sentence.</span>`,
-  f:v=>{const sideV=/^(moves to the|lines up on the)$/.test(v.v);const w=sideV&&!SIDES.includes(v.w)?'right':v.w;return `${v.p} ${v.v.replace('lines up on the','moves to the')} ${w}${sideV?'':''}${v.l?' '+v.l:''}.`}},
+ ftag:{h:'Who goes where',b:()=>`${mSel('p',[...MP,...MOL])} ${mSel('v',['aligns on','moves to the','stacked behind','beside','inside','outside','in the backfield beside','in the backfield behind'])} ${mSel('n',['','1 yard','2 yards','3 yards','4 yards','5 yards'],'')} ${mSel('io',['outside','inside'])} ${mSel('lm',['the hash','the inside edge of the hash','the outside edge of the hash','the top of the numbers','the bottom of the numbers','the numbers','the EMOL','between #2 and #3','the sideline'])} ${mSel('w',[...SIDES,...MP])} ${mSel('l',['','on the line','off the line'])}
+  <br><span class="note">"Aligns on" uses the landmark and side (field = wide side). The yards box makes it "2 yards outside the EMOL". Other verbs use the last box: a side, or the player to line up on. Build again for each player; each adds a sentence.</span>`,
+  f:v=>{const ln=v.l?' '+v.l:'';if(v.v==='aligns on'){const side=SIDES.includes(v.w)?v.w:'field',lm=v.lm.replace(/^the /,'');const where=v.n?`${v.n} ${v.io} the ${lm}`:`on the ${lm}`;return `${v.p} aligns ${where.replace('on the between','between')} to the ${side}${ln}.`}
+   if(v.v==='moves to the'){const side=SIDES.includes(v.w)?v.w:'right';return `${v.p} moves to the ${side}${ln}.`}
+   return `${v.p} ${v.v} ${MP.includes(v.w)||MOL.includes(v.w)?v.w:'Z'}${ln}.`}},
  motion:{h:'Who moves, how and when',b:()=>`${mSel('p',MP)} ${mSel('v',['motions to the','shifts to the'])} ${mSel('w',SIDES)}. ${mIn('when','Snap when... (optional)',220)}`,
   f:v=>`${v.p} ${v.v} ${v.w}.${v.when?' '+v.when.replace(/\.?$/,'.'):''}`},
  formation:{h:'Personnel, surface and receivers',b:()=>`${mSel('pers',['10','11','12','20','21','22','13'])} personnel. ${mSel('surf',['2x2','3x1','2x1','3x2','1x1','4x1','empty'])} ${mIn('desc','e.g. trips to the call side, X on the numbers',300)}`,
