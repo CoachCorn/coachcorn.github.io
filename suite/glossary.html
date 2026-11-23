@@ -40,13 +40,14 @@ tr.r{cursor:pointer}tr.r:active{background:#223140}
  <div id="list"></div>
 </main>
 <div class="modal" id="modal"><div class="box" id="mbox"></div></div><div id="toast"></div>
-<script src="../shared/glossary.js"></script><script src="../shared/importer.js"></script><script src="../shared/filedrop.js"></script>
+<script src="../shared/glossary.js"></script><script src="../shared/defvocab.js"></script><script src="../shared/importer.js"></script><script src="../shared/filedrop.js"></script>
 <script>
 /* Standalone glossary editor. Reads and writes the same device copy the Almanac uses (shared/glossary.js).
    No seeding here: the first open of the Almanac seeds a program's glossary. */
 const SIGNED=(()=>{try{const s=JSON.parse(localStorage.getItem('suite_sync'));return !!(s&&s.token&&s.exp>Date.now())}catch(e){return false}})();
 addEventListener('storage',e=>{if(e.key==='suite_sync'){let n=false;try{const x=JSON.parse(e.newValue);n=!!(x&&x.token&&x.exp>Date.now())}catch(_){}if(n!==SIGNED)location.reload()}});
 const PROGRAM=SIGNED?(new URLSearchParams(location.search).get('program')||'deer-creek'):'demo';
+if(!SIGNED&&window.DefVocab)DefVocab.demoGlossary(PROGRAM);
 const TYPES=[['formation','Formations'],['ftag','Formation tags'],['motion','Motion / Shift'],['tag','Play tags'],['run','Run concepts'],['pass','Pass concepts'],['oneword','One words'],...(SIGNED?[['glf','Green light']]:[]),['route','Routes'],['front','Fronts'],['frontmod','Front tags'],['coverage','Coverages'],['shell','Shells']];
 const DEF_SIDE=t=>['front','frontmod','coverage','shell'].includes(t)?'D':'O';
 const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));

@@ -58,6 +58,7 @@ main{padding:12px;max-width:1500px;margin:0 auto}
 <script src="../shared/scout.js"></script>
 <script src="../shared/scoutO.js"></script>
 <script src="../shared/defvocab.js"></script>
+<script src="../shared/demoseedD.js"></script>
 <script src="../shared/fielddraw.js"></script>
 <script>
 /* Defensive gameplan grid. One plan per opponent (their offense scout). One block per formation of theirs; the grid fills the favorites from the scout:
@@ -66,6 +67,7 @@ main{padding:12px;max-width:1500px;margin:0 auto}
    Stored on this device under dgameplan_v1_<program>. Not synced between devices yet. */
 const SIGNED=(()=>{try{const s=JSON.parse(localStorage.getItem('suite_sync'));return !!(s&&s.token&&s.exp>Date.now())}catch(e){return false}})();
 const PROGRAM=SIGNED?'deer-creek':'demo';
+if(!SIGNED){SCOUTO.useDemoWords();DefVocab.demoGlossary(PROGRAM);DemoSeedD.all()}
 const KEY='dgameplan_v1_'+PROGRAM,SO=SCOUTO.store(PROGRAM),DV=DefVocab(PROGRAM,SIGNED);
 const $=id=>document.getElementById(id),esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const toast=m=>{const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',2400)};
@@ -187,7 +189,7 @@ $('main').addEventListener('change',ev=>{const id=ev.target.dataset&&ev.target.d
 function modal(html,after){$('mbox').innerHTML=html;$('modal').style.display='flex';if(after)after()}
 function closeModal(){$('modal').style.display='none';$('mbox').innerHTML=''}
 $('modal').addEventListener('click',ev=>{if(ev.target.id==='modal'||ev.target.closest('[data-m=close]'))closeModal()});
-addEventListener('keydown',ev=>{if(ev.key==='Escape'&&$('modal').style.display==='flex')closeModal()});
+addEventListener('keydown',ev=>{if(ev.key==='Escape'&&$('modal').style.display==='flex'){ev.preventDefault();closeModal()}});
 function cellModal(bid,row,colId){const p=P(),b=p.blocks.find(x=>x.id===bid),col=COLS.find(c=>c.id===colId),rw=ROWS.find(r=>r.id===row),k=row+'|'+colId;b.cells=b.cells||{};
  const L=()=>{const l=DV.lists();return col.type==='front'?l.fr.map(x=>x[0]+'|'+x[1]):col.type==='pressure'?l.press:l.cov};
  const lab=v=>col.type==='front'?v.split('|')[0]+(v.split('|')[1]?' '+v.split('|')[1]:''):v;

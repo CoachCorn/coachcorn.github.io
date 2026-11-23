@@ -116,6 +116,7 @@ html,button,.chip,input,select{touch-action:manipulation;-webkit-tap-highlight-c
 <div class="modal" id="modal"><div class="box" id="mbox"></div></div>
 <script src="../shared/glossary.js"></script>
 <script src="../shared/demoseed.js"></script>
+<script src="../shared/demoseedD.js"></script>
 <script>
 /* ===== PROGRAM SETTINGS: change this block (and the lists below) to set the app up for another program ===== */
 /* Signed out = demo space (own storage, generic football calls, nothing of Deer Creek's). Signed in = the program's real data. */
@@ -199,6 +200,7 @@ function load(){if(!SIGNED&&window.DemoSeed)DemoSeed.ensure();try{A=JSON.parse(l
  if(A.v<14){for(const g of A.games)(g.plays||[]).forEach((p,k)=>{if(!p.pid){p.pid='o'+k;p.ts=k}});A.v=14}
  if(A.v<15){const L=A.lists;if(L.expRun==12||L.expRun==null)L.expRun=15;if(L.expPass==16||L.expPass==null)L.expPass=15;A.v=15}
  try{glInit()}catch(e){GLO=null}
+ try{if(!SIGNED&&GLO&&window.DemoSeedD&&DemoSeedD.aliasesInto(GLO))GL.save(GLO)}catch(e){}
  if(!A.games.length||(!SIGNED&&!A.sampled&&!A.games.some(g=>g.demo)))buildDemo(true);
  if(!A.cur||!A.games.find(g=>g.id===A.cur))A.cur=A.games[0].id;save()}
 const newPid=()=>'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
@@ -303,6 +305,10 @@ function quickO(txt,dd){const out={bits:[],unk:[]};let toks=String(txt||'').repl
  /* glossary words, longest first */
  const L=A.lists,T=[],left=sr.rest.map(U),add=(k,a)=>(a||[]).forEach(x=>T.push([U(x).split(' '),k,x]));
  add('ft',L.ftags);add('mo',L.motions);add('fm',L.formations);add('glf',L.glfs);if(useOW())add('ow',L.owcs);add('run',L.runs);add('pass',L.passes);add('tag',L.tagsRun);add('tag',L.tagsPass);
+ /* shorthand from the glossary's "Also called": lands in the same slot as the full name and logs as the full name */
+ if(glOn()){const AK={ft:['ftags'],mo:['motions'],fm:['formations'],glf:['glfs'],ow:['owcs'],run:['runs'],pass:['passes'],tag:['tagsRun','tagsPass']};
+  for(const k in AK)for(const lk of AK[k]){const ty=GLX_MAP[lk].type;GLO.terms.forEach(t=>{if(t.type!==ty||t.status!=='active'||!(t.aliases||[]).length)return;const cn=(L[lk]||[]).find(x=>U(String(x))===U(t.name));if(cn==null)return;
+    t.aliases.forEach(a=>{a=String(a||'').trim();if(a&&U(a)!==U(t.name))T.push([U(a).split(/\s+/),k,cn])})})}}
  const ORD=['ft','mo','fm','glf','ow','run','pass','tag'],rest=[];
  for(let i=0;i<left.length;){let best=0,c=[];
   T.forEach(t=>{const n=t[0].length;if(n&&i+n<=left.length&&t[0].every((w,j)=>w===left[i+j])){if(n>best){best=n;c=[t]}else if(n===best)c.push(t)}});
@@ -915,7 +921,7 @@ function wireReport(){const b=document.getElementById('mbox');b.querySelectorAll
 document.getElementById('rep').onclick=()=>openReport('report');document.getElementById('stats').onclick=()=>openReport('stats');
 function modal_close(){document.getElementById('modal').classList.remove('show')}
 try{new MutationObserver(()=>{if(document.documentElement.classList.contains('ovl')&&!document.getElementById('modal').classList.contains('show')){document.documentElement.classList.remove('ovl');try{parent.postMessage({settingsClosed:1},location.origin)}catch(e){}}}).observe(document.getElementById('modal'),{attributes:true,attributeFilter:['class']})}catch(e){}
-load();d=freshDraft(lastNext());renderAll();
+load();d=freshDraft(lastNext());FOCID="qbar";renderAll();
 
 /* Tab from a text box goes to the next text box (Shift+Tab: the previous one), skipping the buttons in between */
 document.addEventListener('keydown',ev=>{if(ev.key!=='Tab'||ev.altKey||ev.ctrlKey||ev.metaKey)return;const TX='input:not([type]),input[type=text],input[type=number],input[type=search],input[type=tel],input[type=email],textarea';
