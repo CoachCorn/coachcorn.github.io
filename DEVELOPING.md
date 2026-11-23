@@ -44,7 +44,7 @@ Headless tests: Playwright (Python) against that server. Run test scripts with `
 - **The repo is public.** The Deer Creek film and game files already in `film-room/` stay (Noah's decision). Do not add rosters or player data.
 
 ## Scope
-Noah's rule: Louis can do whatever the defensive side needs, as long as it does not break the offensive side. Before merging, open the suite signed out (demo mode), check the Gameplan, Almanac, Glossary and Film Room tabs still load, and confirm any shared file you touched (`shared/*.js`, `suite/index.html`, `suite/sync.js`) behaves the same for offense. Defensive vocabulary decisions are in `docs/defense-vocabulary-decisions-2026-11-23.md` and the overall handoff in `docs/handoff-2026-11-23.md` (Over/Under are fixed to the defense's left and right; positions, packages and strength are program settings).
+Noah's rule: Louis can do whatever the defensive side needs, as long as it does not break the offensive side. Before merging, open the suite signed out (demo mode), check the Gameplan, Almanac, Glossary and Film Room tabs still load, and confirm any shared file you touched (`shared/*.js`, `suite/index.html`, `suite/sync.js`) behaves the same for offense. Defensive vocabulary decisions are in `docs/defense-vocabulary-decisions-2026-11-23.md` and the overall handoff in `docs/handoff-2026-11-23.md` (the predictor and glossary docs are in `docs/` too) (Over/Under are fixed to the defense's left and right; positions, packages and strength are program settings).
 
 ## Branch and merge workflow (suggested, not yet agreed)
 1. Work on a branch (start from `louis-defense`), not on `main`.
