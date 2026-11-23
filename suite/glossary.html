@@ -120,6 +120,8 @@ function renderHome(){const act=G.terms.filter(t=>t.status==='active'),rvl=GL.re
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px">${used.map(([k,l])=>tile(k,l)).join('')}</div>`;
  document.querySelectorAll('[data-cat]').forEach(b=>b.onclick=()=>{const k=b.dataset.cat;S.home=false;if(k==='__review'){S.review=true;S.type=''}else{S.type=k;S.review=false}S.nodef=false;render()})}
 /* ---- fill-in-the-blanks definition builder: writes the meaning in the sentence shapes Draw all looks can read ---- */
+const OLA=[['base blocks',''],['down blocks',''],['reach blocks',''],['zone steps to',''],['combos','to'],['double teams','to'],['pulls and traps',''],['pulls and kicks out',''],['pulls and wraps for',''],['pulls and leads up on',''],['pulls and logs',''],['hinges',''],['cuts off',''],['scoops',''],['climbs to','']],
+ OLT=['the man on him','the 1st man in the A gap','the 1st man in the B gap','the 1st man in the C gap','the 1st man in the D gap','the DE','the 3 technique','the shade','the nose','the M','the W','the S','the backer','the next man inside','the next man outside'];
 const MP=['X','Z','H','Y','M','A','F','B','T','Q'],MOL=['LT','LG','C','RG','RT'],SIDES=['left','right','field','boundary'];
 const mSel=(id,opts,ph)=>`<select data-m="${id}" style="max-width:100%">${ph?`<option value="">${ph}</option>`:''}${opts.map(o=>`<option>${o}</option>`).join('')}</select>`;
 const mIn=(id,ph,w)=>`<input type="text" data-m="${id}" placeholder="${ph}" style="width:${w||140}px">`;
@@ -139,14 +141,12 @@ const MAD={
   f:v=>`${v.pers} personnel. ${v.surf}${v.desc?', '+v.desc:''}.`},
  pass:{h:'Routes by receiver number (counted from the side the concept goes to)',b:()=>`Count from the ${mSel('side',['left','right'])}.<br>${[1,2,3,4,5].map(n=>`#${n} ${mIn('r'+n,n<=4?'route':'(if 5 wide)',120)}`).join(' ')}<br>QB reads ${mIn('read','e.g. #3 to #2',140)}`,
   f:v=>`From the ${v.side}: `+[1,2,3,4,5].filter(n=>v['r'+n]).map(n=>`#${n} ${v['r'+n]}`).join(', ')+'.'+(v.read?` QB reads ${v.read}.`:'')},
- run:{h:'Scheme, point of attack, aiming point, read',b:()=>`${mSel('sch',['Zone scheme','Gap scheme'])} to the ${mSel('poa',['call side','left','right','field','boundary'])}. ${mSel('rb',['T','B','Q'])} aims at ${mIn('aim','e.g. playside guard\'s outside hip',220)}. Read ${mIn('read','(optional) e.g. backside end',160)}
-  <br><b>OL blocking</b> Playside ${mSel('ps',['zone step (covered / uncovered)','reach','down (gap, down, backer)','base','double to the backer'],'(rule)')} Backside ${mSel('bs',['zone step and cut off','hinge','scoop','down','cut off'],'(rule)')}
-  <br>Puller ${mSel('pl',['none','backside guard','backside tackle','backside guard and tackle','center','playside guard'])} ${mSel('pj',['kicks out the end man','wraps for the backer','leads up the hole','logs the end man'],'(job)')}
-  <br>Doubles and notes ${mIn('ol','(optional) e.g. C and PSG combo to the Mike',260)}`,
-  f:v=>{let o=`${v.sch} to the ${v.poa}. ${v.rb} aims at ${v.aim||'the hole'}.${v.read?' Read '+v.read+'.':''}`;
-   const r=[v.ps&&'playside '+v.ps,v.bs&&'backside '+v.bs].filter(Boolean);if(r.length)o+=` OL: ${r.join(', ')}.`;
-   if(v.pl&&v.pl!=='none'){const pl=v.pl[0].toUpperCase()+v.pl.slice(1);o+=` ${pl} ${/and/.test(v.pl)?'pull':'pulls'}${v.pj?' and '+(/and/.test(v.pl)?v.pj.replace(/^(\w+)s\b/,'$1'):v.pj):''}.`}
-   if(v.ol)o+=' '+v.ol.replace(/\.?$/,'.');return o}},
+ run:{h:'Scheme and ball carrier first, then one sentence per blocker',b:()=>`Build ${mSel('what',['the scheme and ball carrier','one blocker\'s rule'])}
+  <br>${mSel('sch',['Zone scheme','Gap scheme'])} to the ${mSel('poa',['call side','left','right','field','boundary'])}. ${mSel('rb',['T','B','Q'])} aims at ${mIn('aim','e.g. playside guard\'s outside hip',220)}. Read ${mIn('read','(optional) e.g. backside end',160)}
+  <br><b>Blocker</b> ${mSel('olp',['PST','PSG','C','BSG','BST','Y','M','A','F','H','B'])} ${mSel('ola',OLA.map(a=>a[0]))} ${mSel('olw',['with the PST','with the PSG','with the C','with the BSG','with the BST','with the Y','with the M'],'(partner, for combos)')} ${mSel('olt',OLT,'(no target)')}
+  <br><span class="note">PS = playside (the side the run goes), BS = backside. Add the scheme sentence first, then switch Build to "one blocker's rule" and add a sentence for each blocker, e.g. "BSG pulls and traps the 1st man in the C gap", "PSG combos with the C to the M". Draw all looks draws these.</span>`,
+  f:v=>{if(/blocker/.test(v.what||'')){const a=OLA.find(x=>x[0]===v.ola)||OLA[0],w=v.olw?' '+v.olw:'',tg=v.olt?((a[1]&&w)?' '+a[1]+' ':' ')+v.olt:'';return `${v.olp} ${a[0]}${w}${tg}.`}
+   return `${v.sch} to the ${v.poa}. ${v.rb} aims at ${v.aim||'the hole'}.${v.read?' Read '+v.read+'.':''}`}},
  tag:{h:'What it changes and on which plays',b:()=>`${mIn('who','who, e.g. #2 or Y',90)} ${mIn('chg','what changes, e.g. runs a seam instead',240)} on ${mSel('on',['pass plays','run plays','run and pass plays'])}.`,
   f:v=>`${v.who?v.who+' ':''}${v.chg}${v.chg?' ':''}on ${v.on}.`},
  oneword:{h:'What it calls',b:()=>`Formation ${mIn('fm','e.g. Trips',110)} Left hash ${mIn('L','call',120)} Right hash ${mIn('R','call',120)} ${mIn('x','anything else (optional)',200)}`,
