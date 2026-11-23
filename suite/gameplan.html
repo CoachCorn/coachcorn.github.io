@@ -157,7 +157,9 @@ function baseDraw(){const t={},put=(k,x,y,on)=>t[k]={x,y,on};
  OLK.forEach((k,i)=>put(k,235-2*OLSP+i*OLSP,LOS,1));return{t,l:[],v:2}}
 let svgN=0;
 function pathD(pts,curve){const P=pts.map(p=>[+p[0],+p[1]]);if(!curve||P.length<3)return'M'+P.map(p=>p[0]+' '+p[1]).join(' L');let d='M'+P[0][0]+' '+P[0][1];
- for(let i=0;i<P.length-1;i++){const p0=P[i-1]||P[i],p1=P[i],p2=P[i+1],p3=P[i+2]||p2;d+=' C'+(p1[0]+(p2[0]-p0[0])/6)+' '+(p1[1]+(p2[1]-p0[1])/6)+','+(p2[0]-(p3[0]-p1[0])/6)+' '+(p2[1]-(p3[1]-p1[1])/6)+','+p2[0]+' '+p2[1]}return d}
+ const cl=(vx,vy,max)=>{const m=Math.hypot(vx,vy);return m>max&&m>0?[vx*max/m,vy*max/m]:[vx,vy]};   // cap each handle so short segments next to long ones can't loop or kink
+ for(let i=0;i<P.length-1;i++){const p0=P[i-1]||P[i],p1=P[i],p2=P[i+1],p3=P[i+2]||p2,sl=Math.hypot(p2[0]-p1[0],p2[1]-p1[1])*.4,a=cl((p2[0]-p0[0])/6,(p2[1]-p0[1])/6,sl),b=cl((p3[0]-p1[0])/6,(p3[1]-p1[1])/6,sl);
+  d+=' C'+(p1[0]+a[0]).toFixed(1)+' '+(p1[1]+a[1]).toFixed(1)+','+(p2[0]-b[0]).toFixed(1)+' '+(p2[1]-b[1]).toFixed(1)+','+p2[0]+' '+p2[1]}return d}
 function svgOf(d,sel,cur,selL){const n=++svgN,used=new Set(),edit=selL!==undefined;
  const lines=(d.l||[]).concat(cur?[cur]:[]);lines.forEach(l=>used.add(l.col||'#ffffff'));
  let s=`<svg viewBox="0 ${VT} ${VW} ${VH-VT}" xmlns="http://www.w3.org/2000/svg"><defs>`+[...used].map(c=>`<marker id="a${n}${c.slice(1)}" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L8 4L0 8z" fill="${c}"/></marker>`).join('')+`</defs>`;
@@ -817,8 +819,13 @@ function openDraw(bi,look){const p=plan(),b=p.blocks[bi];E={bi,look:look||null,d
  if(!E.d.t)E.d=baseDraw();$('ed').classList.add('show');edRender()}
 function rdp(P,eps){if(P.length<3)return P;let mx=0,ix=0;const a=P[0],z=P[P.length-1],dx=z[0]-a[0],dy=z[1]-a[1],m=Math.hypot(dx,dy)||1;for(let i=1;i<P.length-1;i++){const d=Math.abs(dy*P[i][0]-dx*P[i][1]+z[0]*a[1]-z[1]*a[0])/m;if(d>mx){mx=d;ix=i}}
  if(mx<=eps)return[a,z];const L=rdp(P.slice(0,ix+1),eps),R=rdp(P.slice(ix),eps);return L.slice(0,-1).concat(R)}
+/* curved freehand: skip the finger wobble inside the player's circle, resample evenly, then smooth (endpoints stay put) */
+function smoothFree(pts){const a=pts.map(p=>[+p[0],+p[1]]);if(a.length<3)return a;const s0=a[0];let i=1;while(i<a.length-1&&Math.hypot(a[i][0]-s0[0],a[i][1]-s0[1])<14)i++;const b=[s0,...a.slice(i)];
+ const R=[b[0]];let acc=0,STEP=7;for(let j=1;j<b.length;j++){let p=b[j-1];const q=b[j];let seg=Math.hypot(q[0]-p[0],q[1]-p[1]);while(acc+seg>=STEP){const t=(STEP-acc)/seg;p=[p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t];R.push(p);seg=Math.hypot(q[0]-p[0],q[1]-p[1]);acc=0}acc+=seg}
+ const last=b[b.length-1];if(Math.hypot(last[0]-R[R.length-1][0],last[1]-R[R.length-1][1])>2)R.push(last);else R[R.length-1]=last;
+ let S=R;for(let k=0;k<3;k++)S=S.map((p,j)=>j===0||j===S.length-1?p:[(S[j-1][0]+2*p[0]+S[j+1][0])/4,(S[j-1][1]+2*p[1]+S[j+1][1])/4]);return S}
 function finishFree(){const c=E.cur;E.cur=null;if(!c||c.pts.length<2)return;let len=0;for(let i=1;i<c.pts.length;i++)len+=Math.hypot(c.pts[i][0]-c.pts[i-1][0],c.pts[i][1]-c.pts[i-1][1]);if(len<12)return;
- let eps=c.curve?3:11,P=rdp(c.pts,eps);while(P.length>(c.curve?22:8)&&eps<30){eps+=1.5;P=rdp(c.pts,eps)}
+ const raw=c.curve?smoothFree(c.pts):c.pts;let eps=c.curve?2.5:11,P=rdp(raw,eps);while(P.length>(c.curve?22:8)&&eps<30){eps+=1.5;P=rdp(raw,eps)}
  if(!c.curve&&P.length===2){const a=P[0],z=P[1],dx=z[0]-a[0],dy=z[1]-a[1],ang=Math.atan2(Math.abs(dx),Math.abs(dy))*180/Math.PI;if(ang<7)P=[a,[a[0],z[1]]];else if(ang>83)P=[a,[z[0],a[1]]]}
  P=P.map(q=>[Math.round(q[0]),Math.round(q[1])]);snap();E.d.l.push({pts:P,dot:c.dot,arrow:c.arrow,blk:c.blk,curve:!!c.curve&&P.length>=3,col:c.col});convShift();E.selL=null;E.sel=null}
 const blkLine=(from,to,col)=>{const edge=(a,b,r)=>{const dx=b.x-a.x,dy=b.y-a.y,m=Math.hypot(dx,dy)||1;return[Math.round(a.x+dx/m*r),Math.round(a.y+dy/m*r)]};return{pts:[edge(from,to,12),edge(to,from,14)],blk:1,col}};
