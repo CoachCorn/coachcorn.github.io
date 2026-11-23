@@ -143,16 +143,16 @@ const TC={Q:'#ffffff',X:'#5aa9ff',Z:'#a3e635',M:'#f2b632',H:'#2fbf71',Y:'#c58bff
    Numbers are 6 ft tall: top 9 yards (27 ft) from the sideline, bottom 21 ft. */
 const PXFT=4.4,YD=3*PXFT,LOS=110+OFF,VW=Math.round(160*PXFT),VH=250+OFF,VT=-70,HASHX=Math.round(53.333*PXFT),HASHR=HASHX+Math.round(66*PXFT),NSHIFT=4,NB=Math.round((21-NSHIFT)*PXFT),NT=Math.round((27-NSHIFT)*PXFT); // numbers drawn NSHIFT ft closer to the sideline than the NFHS spec, at Noah's request
 const L1=LOS-28,L2=LOS-66,L3=LOS-112,DP={   // defensive templates, spread for readability (LBs ~7 yds wider apart, safeties wider and deeper)
- '4-3-4':[['DE1','DE',163,L1],['DT1','DT',211,L1],['DT2','DT',259,L1],['DE2','DE',307,L1],['WL','W',150,L2],['ML','M',235,L2],['SL','S',320,L2],['CB1','CB',40,LOS-58],['CB2','CB',450,LOS-58],['FS','FS',170,L3],['SS','SS',300,L3]],
- '3-4-4':[['DE1','DE',163,L1],['NT','NT',235,L1],['DE2','DE',307,L1],['OL1','W',100,LOS-42],['IL1','M',190,L2],['IL2','M',280,L2],['OL2','S',370,LOS-42],['CB1','CB',40,LOS-58],['CB2','CB',450,LOS-58],['FS','FS',170,L3],['SS','SS',300,L3]],
- '3-3-5':[['DE1','DE',163,L1],['NT','NT',235,L1],['DE2','DE',307,L1],['WL','W',155,L2],['ML','M',235,L2],['SL','S',315,L2],['CB1','CB',40,LOS-58],['CB2','CB',450,LOS-58],['FS','FS',170,L3],['SS','SS',300,L3],['NB','N',380,LOS-46]],
- '4-2-5':[['DE1','DE',163,L1],['DT1','DT',211,L1],['DT2','DT',259,L1],['DE2','DE',307,L1],['WL','W',190,L2],['ML','M',280,L2],['CB1','CB',40,LOS-58],['CB2','CB',450,LOS-58],['FS','FS',170,L3],['SS','SS',300,L3],['NB','N',380,LOS-46]]};
+ '4-3-4':[['DE1','DE',163,L1],['DT1','DT',211,L1],['DT2','DT',259,L1],['DE2','DE',307,L1],['WL','W',185,L2],['ML','M',265,L2],['SL','S',415,L2],['CB1','CB',40,LOS-58],['CB2','CB',450,LOS-58],['FS','FS',170,L3],['SS','SS',300,L3]],
+ '3-4-4':[['DE1','DE',163,L1],['NT','NT',235,L1],['DE2','DE',307,L1],['OL1','W',100,LOS-42],['IL1','M',205,L2],['IL2','M',290,L2],['OL2','S',410,LOS-42],['CB1','CB',40,LOS-58],['CB2','CB',450,LOS-58],['FS','FS',170,L3],['SS','SS',300,L3]],
+ '3-3-5':[['DE1','DE',163,L1],['NT','NT',235,L1],['DE2','DE',307,L1],['WL','W',180,L2],['ML','M',260,L2],['SL','S',330,L2],['CB1','CB',40,LOS-58],['CB2','CB',450,LOS-58],['FS','FS',170,L3],['SS','SS',300,L3],['NB','N',416,LOS-46]],
+ '4-2-5':[['DE1','DE',163,L1],['DT1','DT',211,L1],['DT2','DT',259,L1],['DE2','DE',307,L1],['WL','W',205,L2],['ML','M',290,L2],['CB1','CB',40,LOS-58],['CB2','CB',450,LOS-58],['FS','FS',170,L3],['SS','SS',300,L3],['NB','N',416,LOS-46]]};
 function addDefense(t,pre){pre=DP[pre]?pre:'4-3-4';Object.keys(t).forEach(k=>{if(t[k].df)delete t[k]});DP[pre].forEach(([k,lab,x,y])=>{const w=k==='CB1'?t.X:k==='CB2'?t.Z:null;if(w&&w.on)x=w.x;t['D_'+k]={x,y,on:1,df:1,lab}});return pre}
 const OLSP=36;   // spacing between offensive linemen
 const NUMX=Math.round((NB+NT)/2);
 function baseDraw(){const t={},put=(k,x,y,on)=>t[k]={x,y,on};
  put('X',NUMX,114+OFF,1);put('Z',VW-NUMX,112+OFF,1);   // X and Z start on the numbers, each on his side
- put('M',165,150+OFF,1);put('Q',235,168+OFF,1);put('T',210,205+OFF,1);put('H',385,128+OFF,1);
+ put('M',165,150+OFF,1);put('Q',235,168+OFF,1);put('T',210,205+OFF,1);put('H',HASHR,128+OFF,1);
  put('Y',395,112+OFF,0);put('F',430,150+OFF,0);put('A',300,190+OFF,0);put('B',260,205+OFF,0);
  OLK.forEach((k,i)=>put(k,235-2*OLSP+i*OLSP,LOS,1));return{t,l:[],v:2}}
 let svgN=0;
@@ -450,13 +450,15 @@ function olDraw(d,text,s){const t=d.t,L=d.l=(d.l||[]),R=olRules(text);if(!R.leng
  const KEY={PSG:ps[0],PST:ps[1],BSG:bs[0],BST:bs[1],C:'C','PS TE':teK(1),'BS TE':teK(-1)},key=k=>k in KEY?KEY[k]:unlab(k),P=k=>key(k)&&t[key(k)]&&t[key(k)].on?t[key(k)]:null;
  const te=KEY['PS TE']?t[KEY['PS TE']]:null;
  const gx={a:(C.x+t[ps[0]].x)/2,b:(t[ps[0]].x+t[ps[1]].x)/2,c:te?(t[ps[1]].x+te.x)/2:t[ps[1]].x+s*OLSP*.55,d:(te?te.x:t[ps[1]].x+s*OLSP)+s*OLSP*.55};
- const D=Object.keys(t).filter(k=>t[k].df&&t[k].on).map(k=>t[k]),dl=D.filter(q=>q.y>LOS-3*YD),lb=D.filter(q=>q.y<=LOS-3*YD&&q.y>LOS-7*YD);
+ const D=Object.keys(t).filter(k=>t[k].df&&t[k].on).map(k=>t[k]),dl=D.filter(q=>q.y>LOS-3.6*YD),lb=D.filter(q=>q.y<=LOS-3.6*YD&&q.y>LOS-7*YD);
  const near=(arr,x,y,max)=>{let b=null,bd=1e9;arr.forEach(q=>{const dd=Math.hypot(q.x-x,(q.y-y)*.6);if(dd<bd){bd=dd;b=q}});return b&&(max==null||Math.abs(b.x-x)<=max)?b:null};
  const lab=(l,x)=>near(D.filter(q=>String(q.lab||'').toUpperCase()===l),x,LOS-2*YD);
  const spot=(x,y)=>({x:Math.round(x),y:Math.round(y),sp:1}),bl=(p,q)=>q.sp?{pts:[[Math.round(p.x+(q.x-p.x)/(Math.hypot(q.x-p.x,q.y-p.y)||1)*12),Math.round(p.y+(q.y-p.y)/(Math.hypot(q.x-p.x,q.y-p.y)||1)*12)],[q.x,q.y]],blk:1,col:'#ffffff'}:blkLine(p,q,'#ffffff');
- const target=(tg,p)=>{if(!tg)return null;let m;
-  if((m=tg.match(/(?:2nd|second) level\s+(?:the\s+)?([abcd])\s+gap/))){const x=gx[m[1]];return near(lb,x,LOS-5*YD,OLSP*1.3)||spot(x,LOS-5*YD)}
-  if(/(?:2nd|second) level.*outside (?:of )?the (tackle|te)/.test(tg)){const x=/te$/.test(tg)?gx.d:gx.c;return near(lb.filter(q=>(q.x-t[ps[1]].x)*s>-6),x,LOS-5*YD,OLSP*1.6)||spot(x,LOS-5*YD)}
+ const PSB=lb.filter(q=>(q.x-C.x)*s>-4);
+ const target=(tg,p,first)=>{if(!tg)return null;let m;
+  if(first){const x=(m=tg.match(/([abcd])\s+gap/))?gx[m[1]]:/outside (?:of )?the te/.test(tg)?gx.d:gx.c;return near(dl,x,LOS-2*YD,OLSP*1.3)||spot(x,LOS-1.6*YD)}
+  if((m=tg.match(/(?:2nd|second) level\s+(?:the\s+)?([abcd])\s+gap/))){const x=gx[m[1]];return near(PSB,x,LOS-5*YD,OLSP*2.4)||spot(x,LOS-5*YD)}
+  if(/(?:2nd|second) level.*outside (?:of )?the (tackle|te)/.test(tg)){const x=/te$/.test(tg)?gx.d:gx.c;return near(PSB,x,LOS-5*YD,OLSP*2.4)||spot(x,LOS-5*YD)}
   if((m=tg.match(/(?:(?:1st|first) man in\s+)?(?:the\s+)?([abcd])\s+gap/))){const x=gx[m[1]];return near(dl,x,LOS-2*YD,OLSP*.8)||near(lb,x,LOS-5*YD,OLSP*.9)||spot(x,LOS-1.6*YD)}
   if(/outside (?:of )?the tackle/.test(tg))return near(dl,gx.c,LOS-2*YD,OLSP)||spot(gx.c,LOS-1.6*YD);
   if(/\bde\b|defensive end/.test(tg))return near(D.filter(q=>/^DE$/i.test(q.lab||'')),p.x+s*OLSP*2,LOS-2*YD)||near(dl,gx.c,LOS-2*YD,OLSP*1.5)||spot(gx.c,LOS-1.6*YD);
@@ -470,7 +472,7 @@ function olDraw(d,text,s){const t=d.t,L=d.l=(d.l||[]),R=olRules(text);if(!R.leng
  const end=(a,b,r)=>{const dx=b.x-a.x,dy=b.y-a.y,m=Math.hypot(dx,dy)||1;return[Math.round(b.x-dx/m*r),Math.round(b.y-dy/m*r)]};
  let n=0,pulls=0;const climbed=[];R.forEach(r=>{const p=P(r.p);if(!p)return;const T=target(r.tg,p),toC=p===C?-s:(C.x>p.x?1:-1),a=r.a;n++;
   if(/trap|kick|wrap|lead|log/.test(a)){const PL=Math.max(LOS+1.7*YD,p.y+.6*YD)+(pulls++)*.8*YD,back=[Math.round(p.x+s*.5*YD),Math.round(PL)],pts=[[p.x,p.y],back];
-   const tg=T||(/trap|kick/.test(a)?target('the 1st man in the c gap',p):/log/.test(a)?target('the de',p):spot(gx.b,LOS-5*YD));
+   const first=/trap|kick|log/.test(a),tg=first?target(r.tg||'the c gap',p,1):(T||spot(gx.b,LOS-5*YD));
    if(/trap|kick/.test(a))pts.push([Math.round(tg.x-s*1.4*YD),Math.round(PL)]);
    else if(/log/.test(a))pts.push([Math.round(tg.x+s*.3*YD),Math.round(PL)],[Math.round(tg.x+s*1.3*YD),Math.round(LOS-.2*YD)]);
    else pts.push([Math.round((te?gx.c:gx.b)-s*.3*YD),Math.round(PL)],[Math.round(te?gx.c:gx.b),Math.round(LOS+.2*YD)]);
