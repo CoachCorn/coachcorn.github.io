@@ -1,4 +1,4 @@
-const V='almanac-v76';
+const V='almanac-v77';
 const FILES=['./','index.html','manifest.webmanifest','icon-192.png','icon-512.png','../shared/glossary.js','../shared/filedrop.js','../shared/demoseed.js'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(V).then(c=>c.addAll(FILES)));self.skipWaiting()});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==V).map(x=>caches.delete(x)))).then(()=>self.clients.claim()))});

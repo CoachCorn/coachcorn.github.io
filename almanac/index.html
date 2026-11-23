@@ -256,6 +256,74 @@ function advance(p){let f=p.f,down=p.down,dist=p.dist,newDrive=false;
  else if(p.td||p.result==='INT'||p.result==='FUM'){newDrive=true;f=25;down=1;dist=10}
  else{f=Math.max(1,Math.min(99,f+p.gain));if(p.gain>=dist){down=1;dist=f>=90?100-f:10}else{down++;dist-=p.gain;if(down>4){newDrive=true;f=100-f;down=1;dist=10}}}
  return{nd:newDrive,next:{down,dist,f}}}
+/* ---------- Type the play: glossary words land in their slots; the situation and result come out of the text (same idea as the gameplan grid's call bar) ---------- */
+let QB='';
+const QCL=(v,a,b)=>Math.min(b,Math.max(a,v));
+const HASHW={L:'L',LT:'L',LEFT:'L',R:'R',RT:'R',RIGHT:'R',M:'M',MID:'M',MIDDLE:'M'};
+const QRES={RUSH:'RUSH',RUN:'RUSH',COMP:'COMP',COMPLETE:'COMP',CATCH:'COMP',INC:'INC',INCOMPLETE:'INC',SACK:'SACK',SCRAM:'SCRAM',SCRAMBLE:'SCRAM',PEN:'PEN',PENALTY:'PEN',INT:'INT',INTERCEPTION:'INT',PICK:'INT',FUM:'FUM',FUMBLE:'FUM'};
+function qParseSit(txt){const forms=null;let s=' '+String(txt||'').toUpperCase().replace(/[,;]/g,' ')+' ',o={},m;
+ s=s.replace(/\b(\d)(ST|ND|RD|TH)\b/g,'$1');
+ if(m=s.match(/\b([1-4])\s*(?:&|AND|\/)\s*(\d{1,2})\b/)){o.dn=+m[1];o.di=+m[2];s=s.replace(m[0],' ')}
+ if(m=s.match(/\b(LEFT|LT|L|RIGHT|RT|R|MIDDLE|MID|M)\s*HASH\b/)||s.match(/\bHASH\s*(LEFT|LT|RIGHT|RT|MIDDLE|MID|[LRM])\b/)){o.hash=HASHW[m[1]];s=s.replace(m[0],' ')}
+ s=s.replace(/\bHASH\b/g,' ');
+ if(m=s.match(/(^|\s)([+-])\s*(\d{1,2})(?=\s|$)/)){const y=+m[3];if(y>=1&&y<=50){o.side=m[2]==='-'?'Own':'Opp';o.yd=y;s=s.replace(m[0],' ')}}
+ else if(m=s.match(/\b(OWN|OPP|OPPONENT)\s*(\d{1,2})\b/)){o.side=m[1]==='OWN'?'Own':'Opp';o.yd=QCL(+m[2],1,50);s=s.replace(m[0],' ')}
+ const nums=(s.match(/(^|\s)\d{1,2}(?=\s|$)/g)||[]).map(x=>+x.trim());
+ if(o.dn==null&&nums.length>=2&&nums[0]>=1&&nums[0]<=4){o.dn=nums[0];o.di=Math.max(1,nums[1]);nums.splice(0,2)}
+ if(o.yd==null&&nums.length&&o.dn!=null){const y=nums[0];if(y>=1&&y<=50){o.side=y===50?'Own':'Opp';o.yd=y}}
+ s=s.replace(/(^|\s)\d{1,2}(?=\s|$)/g,' ');
+ const words=s.split(/\s+/).filter(w=>w&&w!=='AND');const rest=[];
+ words.forEach(w=>{if(HASHW[w]&&o.hash==null)o.hash=HASHW[w];else rest.push(w)});
+ const t=rest.join(' ');if(false&&forms){const F=(forms||[]).map(x=>[x,SCOUTO.famOf(x)]);let hit=F.find(x=>x[1]===SCOUTO.famOf(t));
+  if(!hit){const st=F.filter(x=>x[1].startsWith(SCOUTO.famOf(t)));if(st.length===1)hit=st[0]}
+  if(!hit){const inc=F.filter(x=>x[1].includes(SCOUTO.famOf(t)));if(inc.length===1)hit=inc[0]}
+  if(hit){o.form=hit[1];rest.length=0}}
+ return{o,rest}}
+
+function quickO(txt,dd){const out={bits:[],unk:[]};let toks=String(txt||'').replace(/[,;]+/g,' ').split(/\s+/).filter(Boolean);if(!toks.length)return out;
+ const U=t=>t.toUpperCase(),isNum=t=>/^[+-]?\d{1,2}$/.test(t);
+ const take=i=>{let g=null,neg=false,j=i+1;
+  while(j<toks.length&&['FOR','OF','LOSS','GAIN','BY'].includes(U(toks[j]))){if(U(toks[j])==='LOSS')neg=true;j++}
+  if(j+1<toks.length&&U(toks[j])==='NO'&&U(toks[j+1])==='GAIN'){g=0;j+=2}
+  else if(j<toks.length&&isNum(toks[j])){g=parseInt(toks[j],10);if(neg&&g>0)g=-g;j++}
+  if(g!=null&&j<toks.length&&/^(YDS?|YARDS?)$/.test(U(toks[j])))j++;
+  return{g,end:j}};
+ const ri=toks.findIndex(t=>QRES[U(t)]),ti=toks.findIndex(t=>U(t)==='TD');let gain=null,drop=[],hadTD=false;
+ if(ri>=0){dd.result=QRES[U(toks[ri])];out.bits.push(dd.result);const r=take(ri);gain=r.g;for(let k=ri;k<r.end;k++)drop.push(k)}
+ if(ti>=0){hadTD=true;drop.push(ti);if(ri<0){const r=take(ti);if(r.g!=null)gain=r.g;for(let k=ti;k<r.end;k++)drop.push(k)}}
+ if(ri<0&&ti<0){const m=toks.join(' ').match(/(?:^|\s)([+-]?\d{1,2})\s*(YDS?|YARDS?)(?=\s|$)/i);if(m){gain=parseInt(m[1],10);toks=toks.join(' ').replace(m[0],' ').split(/\s+/).filter(Boolean)}}
+ toks=toks.filter((t,i)=>!drop.includes(i));
+ const sr=qParseSit(toks.join(' ')),so=sr.o;
+ if(so.dn!=null){dd.down=so.dn;dd.dist=so.di;out.bits.push(so.dn+' & '+so.di)}
+ if(so.yd!=null){dd.f=so.side==='Own'?so.yd:100-so.yd;out.bits.push(so.side+' '+so.yd)}
+ if(so.hash){dd.hash=so.hash;out.bits.push({L:'left',M:'middle',R:'right'}[so.hash]+' hash');if(dd.hash==='M')dd.fib=null;if(dd.hash!=='M'&&dd.fib)dd.dir=((dd.fib==='Y')===(dd.hash==='L'))?'LT':'RT';else dd.dir=null}
+ if(hadTD){dd.td=true;out.bits.push('TD')}
+ if(gain!=null){if(dd.result==='SACK'&&gain>0)gain=-gain;if(dd.result==='INC'||dd.result==='INT')gain=0;dd.gain=QCL(gain,-99,99);out.bits.push((dd.gain>0?'+':'')+dd.gain+' yds')}
+ else if(hadTD&&so.yd!=null||hadTD){dd.gain=100-dd.f}
+ /* glossary words, longest first */
+ const L=A.lists,T=[],left=sr.rest.map(U),add=(k,a)=>(a||[]).forEach(x=>T.push([U(x).split(' '),k,x]));
+ add('ft',L.ftags);add('mo',L.motions);add('fm',L.formations);add('glf',L.glfs);if(useOW())add('ow',L.owcs);add('run',L.runs);add('pass',L.passes);add('tag',L.tagsRun);add('tag',L.tagsPass);
+ const ORD=['ft','mo','fm','glf','ow','run','pass','tag'],rest=[];
+ for(let i=0;i<left.length;){let best=0,c=[];
+  T.forEach(t=>{const n=t[0].length;if(n&&i+n<=left.length&&t[0].every((w,j)=>w===left[i+j])){if(n>best){best=n;c=[t]}else if(n===best)c.push(t)}});
+  if(!best){rest.push(left[i]);i++;continue}
+  c.sort((a,b)=>ORD.indexOf(a[1])-ORD.indexOf(b[1]));const t=c[0],v=t[2];
+  if(t[1]==='ft'){if(!dd.ftags.includes(v))dd.ftags.push(v);out.bits.push('formation tag '+v)}
+  else if(t[1]==='mo'){dd.motion=v;out.bits.push('motion '+v)}
+  else if(t[1]==='fm'){dd.formation=v;out.bits.push('formation '+v)}
+  else if(t[1]==='glf'){dd.glf=v;if(!dd.call&&!dd.owc)dd.ptype='pass';out.bits.push('GLF '+v)}
+  else if(t[1]==='ow'){dd.owc=v;dd.call=null;const w=OW[v];if(w)dd.ptype=w.t;out.bits.push('one word '+v)}
+  else if(t[1]==='run'||t[1]==='pass'){dd.owc=null;dd.call=v;dd.ptype=t[1];out.bits.push((t[1]==='run'?'run ':'pass ')+v)}
+  else{if(!dd.tags.includes(v))dd.tags.push(v);out.bits.push('play tag '+v)}
+  i+=best}
+ if(dd.owc)owApply(dd);
+ if(dd.result&&!dd.call&&!dd.owc){if(dd.result==='RUSH')dd.ptype='run';else if(['COMP','INC','SACK','INT'].includes(dd.result))dd.ptype='pass'}
+ out.unk=rest;out.hasResult=!!dd.result;return out}
+function qbRead(o){return(o.bits.length?'Understood: '+o.bits.join(' · '):'')+(o.unk.length?' | Not in your lists: '+o.unk.join(', ')+' (use + Other)':'')}
+function qbPreview(){const c=JSON.parse(JSON.stringify(d)),o=quickO(QB,c),el=document.getElementById('qbread');if(el)el.textContent=qbRead(o)}
+function qbEnter(){const o=quickO(QB,d);QB=o.unk.join(' ').toLowerCase();FOCID='qbar';
+ if(d.result&&!o.unk.length){QB='';logPlay();return}
+ renderEntry();const el=document.getElementById('qbread');if(el)el.textContent=qbRead(o);if(!d.result)toast('Applied. Add a result (rush 6, comp 12...) to log it.')}
 function logPlay(){if(!d.result){toast('Pick a result');return}
  const p=Object.assign({k:'p'},d);p.tags=[...(d.tags||[])];p.ftags=[...(d.ftags||[])];p.tag=p.tags.join(' ');p.ftag=p.ftags.join(' ');if(p.call)p.call=al(p.call);if(p.owc){owApply(p);p.tag=p.tags.join(' ');p.call=owLong(p.owc,p.hash);p.ptype=(OW[p.owc]||{t:p.ptype}).t}else p.owc=null;delete p.autoT;
  {const U=x=>String(x||'').toUpperCase(),gl=(A.lists.glfs||[]).map(U);if(!p.glf&&p.formation&&gl.includes(U(p.formation)))p.glf=U(p.formation);
@@ -279,6 +347,7 @@ function renderEntry(){const L=A.lists,e=edit!==null,mg=MGR()&&!e;
  let h='<div class="ent">';
  h+=`<div class="s12" style="display:flex;justify-content:flex-end;gap:8px;align-items:center">${mg?'<span class="note" style="flex:1"><b>Manager mode:</b> log down, distance, ball, hash, run or pass, result, yards and players. A coach adds the calls later from the log.</span>':''}<button class="chip ${MGR()?'on':''}" data-a="mgr">Manager mode${MGR()?': on':''}</button></div>`;
  if(CONFIG.blankUntilPlan&&!G().plan)h+=G().noPlan?`<div class="s12 card" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="note" style="flex:1;min-width:200px">Tagging ${esc2(G().opp)} without a gameplan: every button is shown.</span><button class="btn" data-a="gpopen">Paste gameplan</button></div>`:`<div class="s12 card" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="note" style="flex:1;min-width:200px">No gameplan loaded for ${esc2(G().opp)}. Formation tags, motions, formations and play tags stay blank until you paste it.</span><button class="btn pri" data-a="gpopen">Paste gameplan</button><button class="btn" data-a="gpnone">No gameplan, tag as I go</button></div>`;
+ if(!mg)h+=C('s12','Type the play',`<span class="note">1 10 -28 Rt Hash, tags, motion, formation, play, result. Enter adds it (and logs it when it has a result).</span>`,`<input id="qbar" type="text" placeholder="1 10 -28 Rt Hash  Stack  Trade  Kong  Charger  Rush 6" autocomplete="off" autocapitalize="off" enterkeyhint="go" value="${QB.replace(/"/g,'&quot;')}" style="width:100%;padding:10px 12px;font-size:17px;font-weight:600;background:transparent;color:var(--tx);border:1px solid var(--line);border-radius:8px"><div class="note" id="qbread" style="min-height:18px;margin-top:6px;color:var(--ok)"></div>`);
  h+=C('s2','Down','',`<div class="chips">${[1,2,3,4].map(n=>chip('down',n,n,d.down===n)).join('')}</div>`);
  h+=C('s6','Distance','',`<div class="chips">${[1,2,3,4,5,6,7,8,9,10].map(n=>chip('dist',n,n,d.dist===n)).join('')}<input type="number" inputmode="numeric" id="distx" class="chipin ${d.dist>10?'on':''}" placeholder="11+" value="${d.dist>10?d.dist:''}"></div>`);
  h+=C('s4','Ball on',ylFmt(d.f),`<div class="chips" style="align-items:center;justify-content:center">${chip('side','own','Own',ylSide(d.f)==='own')}${chip('side','opp','Opp',ylSide(d.f)==='opp')}<div class="step"><button class="chip" data-a="ym">−</button><input type="number" inputmode="numeric" id="ylx" min="1" max="50" value="${ylNum(d.f)}" style="width:62px;font-size:20px;font-weight:700;text-align:center;background:transparent;color:var(--tx);border:1px solid var(--line);border-radius:6px;padding:4px 0"><button class="chip" data-a="yp">+</button></div></div>`);
@@ -322,7 +391,9 @@ document.getElementById('gsel').innerHTML=A.games.map(g=>`<option value="${g.id}
 function renderAll(){renderHdr();renderEntry();renderLog()}
 function nextSB(id){const a=[...document.querySelectorAll('#entry input[type=search]')].map(e=>e.id),i=a.indexOf(id);return i>=0&&i<a.length-1?a[i+1]:null}
 function adv(id){const n=nextSB(id);const t=n&&document.getElementById(n);if(t){t.focus();try{t.scrollIntoView({block:'center'})}catch(e){}}}
-document.getElementById('entry').addEventListener('keydown',ev=>{if(ev.key==='Enter'&&ev.target.id&&ev.target.id.indexOf('cs_')===0){ev.preventDefault();const k=ev.target.dataset.k,q=ev.target.value.trim().toUpperCase();if(!q){adv(ev.target.id);return}const nx=nextSB(ev.target.id);const box=document.getElementById('cc_'+k);const m=[...box.querySelectorAll('[data-g]')].filter(b=>b.style.display!=='none'&&!b.classList.contains('on'));const ex=m.find(b=>b.dataset.v.toUpperCase()===q)||m[0];if(ex){FOCID=nx;ex.click();if(FOCID){FOCID=null;adv(ev.target.id)}}else{const o=box.querySelector('[data-a=oth]');if(o){window.AUTOQ=q;FOCID=nx;o.click();if(FOCID){FOCID=null;adv(ev.target.id)}}}return}
+document.getElementById('entry').addEventListener('input',ev=>{if(ev.target.id==='qbar'){QB=ev.target.value;qbPreview()}});
+document.getElementById('entry').addEventListener('keydown',ev=>{if(ev.key==='Enter'&&ev.target.id==='qbar'){ev.preventDefault();if(!QB.trim())return;qbEnter();return}
+ if(ev.key==='Enter'&&ev.target.id&&ev.target.id.indexOf('cs_')===0){ev.preventDefault();const k=ev.target.dataset.k,q=ev.target.value.trim().toUpperCase();if(!q){adv(ev.target.id);return}const nx=nextSB(ev.target.id);const box=document.getElementById('cc_'+k);const m=[...box.querySelectorAll('[data-g]')].filter(b=>b.style.display!=='none'&&!b.classList.contains('on'));const ex=m.find(b=>b.dataset.v.toUpperCase()===q)||m[0];if(ex){FOCID=nx;ex.click();if(FOCID){FOCID=null;adv(ev.target.id)}}else{const o=box.querySelector('[data-a=oth]');if(o){window.AUTOQ=q;FOCID=nx;o.click();if(FOCID){FOCID=null;adv(ev.target.id)}}}return}
 {const c=Object.keys(LS).find(k=>LS[k].id===ev.target.id);if(c&&ev.key==='Enter'){ev.preventDefault();if(!SQ[c].trim()){adv(ev.target.id);return}lsPick(c,SQ[c]);SQ[c]='';FOCID=nextSB(LS[c].id)||LS[c].id;save();renderEntry();return}}
 if(ev.key==='Enter'&&ev.target.id==='tgsrch'){ev.preventDefault();if(!SQ.target.trim()){adv('tgsrch');return}pickTarget(SQ.target);SQ.target='';FOCID=nextSB('tgsrch');save();renderEntry();return}
 if(ev.key==='Enter'&&ev.target.id==='plsrch'){ev.preventDefault();if(!SQ.player.trim()){adv('plsrch');return}pickPlayer(SQ.player);SQ.player='';FOCID=nextSB('plsrch');save();renderEntry();return}

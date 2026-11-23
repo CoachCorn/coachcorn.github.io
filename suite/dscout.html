@@ -35,6 +35,7 @@ td.n,th.n{text-align:right;white-space:nowrap}
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#000c;padding:10px 16px;border-radius:10px;z-index:20;display:none}
 .big{font-size:20px;font-weight:800}
 .good{color:var(--ok)}.warnc{color:var(--warn)}
+.favrow{display:flex;flex-wrap:wrap;gap:6px 18px;margin-bottom:2px}.fav{display:inline-flex;flex-direction:column;align-items:flex-start;line-height:1.15}.fav small{font-size:11px;color:var(--mut);text-transform:lowercase}.fav b{font-size:15px;text-transform:uppercase}.fav em{font-style:normal;font-size:12px;color:var(--mut)}.fav.first b{color:var(--acc)}
 </style></head><body>
 <header><h1>Offense Scout</h1><select id="opp"></select><button class="btn" id="newopp">+ Opponent</button><span style="flex:1"></span><span class="mut" id="meta"></span></header>
 <main>
@@ -81,9 +82,20 @@ const pct=v=>v==null?'–':v+'%';
 const dl=(d,t)=>d==null?'':`<span class="d ${Math.abs(d)>=15?'hi':''}">${d>0?'▲':d<0?'▼':'='}${Math.abs(d)}</span>`;
 function bar(r){const a=r.run||0,b=r.pass||0,c=r.rpo||0;return`<div class="bar"><span class="r" style="width:${a}%">${a>=12?'Run '+a:''}</span><span class="p" style="width:${b}%">${b>=12?'Pass '+b:''}</span><span class="o" style="width:${c}%">${c>=12?'RPO '+c:''}</span></div>`}
 
+function favSide(x,min){if(!x.n)return'<span class="mut">no plays</span>';
+ return`<div class="favrow">`+x.top.map((t,i)=>`<span class="fav ${i===0?'first':''}"><small>${t.calls&&t.calls.length?esc(t.calls.map(c=>c.w).join(' / ').toLowerCase()):'&nbsp;'}</small><b>${esc(t.name)}</b><em>${t.p}%</em></span>`).join('')+`</div><span class="mut">${x.n} runs${x.n<min?', small sample':''}</span>`}
+function favCard(rows){const f=SCOUTO.favRuns(rows);if(!f.n)return'';const by=SCOUTO.favRunsByForm(rows);
+ let h=`<div class="card"><div class="lab"><span>Favorite runs</span><span class="note">${f.n} run plays</span></div>
+  <table><tr><th></th><th>Favorite run concepts (call word above, share of that side's runs)</th></tr>
+  <tr><td><b>Field run</b></td><td>${favSide(f.field,SCOUTO.MIN)}</td></tr>
+  <tr><td><b>Boundary run</b></td><td>${favSide(f.bdy,SCOUTO.MIN)}</td></tr></table>
+  <div class="note">Field = wide side, opposite the hash the ball is on. Middle hash (${f.mid} runs) and runs with no direction logged (${f.nodir}) are not counted on either side.</div>`;
+ if(by.length)h+=`<details style="margin-top:8px"><summary class="note">By formation (${by.length})</summary><table><tr><th>Formation</th><th>Field run</th><th>Boundary run</th></tr>`+by.slice(0,14).map(x=>`<tr><td>${esc(x.form)}</td><td>${favSide(x.fr.field,SCOUTO.MIN)}</td><td>${favSide(x.fr.bdy,SCOUTO.MIN)}</td></tr>`).join('')+`</table></details>`;
+ return h+'</div>'}
 function notesView(rows){const T=SCOUTO.tendencies(rows),a=T.all;
  let h=`<div class="card"><div class="lab">${esc(OPP)} · all plays</div>${bar(a)}<div class="row" style="margin-top:8px"><span><b>${a.n}</b> plays</span><span>Run <b>${pct(a.run)}</b></span><span>Pass <b>${pct(a.pass)}</b></span><span>RPO <b>${pct(a.rpo)}</b></span><span>Efficiency <b>${pct(a.eff)}</b></span></div>
   <div class="note">▲ / ▼ = points above or below this opponent's own average. Bold blue = 15 or more points off. Groups need ${SCOUTO.MIN}+ plays. Efficiency here is the opponent's offense (Hudl EFF column), so higher is worse for us.</div></div>`;
+ h+=favCard(rows);
  for(const c of T.cuts){if(!c.groups.length)continue;
   h+=`<div class="card"><div class="lab">${esc(c.label)}</div><table><tr><th>Group</th><th class="n">Plays</th><th class="n">Run</th><th class="n">Pass</th><th class="n">RPO</th><th class="n">Eff</th><th>Top calls</th></tr>`+
    c.groups.map(g=>`<tr><td>${esc(g.name)}</td><td class="n">${g.n}</td><td class="n">${pct(g.run)}${dl(g.dRun)}</td><td class="n">${pct(g.pass)}${dl(g.dPass)}</td><td class="n">${pct(g.rpo)}${dl(g.dRpo)}</td><td class="n">${pct(g.eff)}${dl(g.dEff)}</td><td class="note">${g.top.map(t=>esc(t.name)+' '+t.p+'%').join(' · ')}</td></tr>`).join('')+`</table></div>`}

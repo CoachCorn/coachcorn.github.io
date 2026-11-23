@@ -16,9 +16,11 @@ const famOf=s=>U(s).replace(/\(FIB\)/g,'').replace(/\b(LT|RT|LEFT|RIGHT)\b\.?/g,
 const WORDS={LA:['Power','run','L'],CHARGER:['Power','run','R'],CAROLINA:['GY Counter','run','L'],PANTHER:['GY Counter','run','R'],VEGAS:['Buck Sweep','run','L'],RAIDER:['Buck Sweep','run','R'],
  PITT:['GT Counter','run','L'],PITTSBURGH:['GT Counter','run','L'],STEELER:['GT Counter','run','R'],LAP:['Cross','pass','L'],RACE:['Cross','pass','R'],
  FLASH:['Verticals','pass',null],STRIKE:['Verticals','pass',null],SOONERS:['Zone Insert','run',null],WASHINGTON:['Zone Insert','run',null],COMMANDER:['Zone Insert','run',null],
- BRONCHOS:['Sail','pass',null],CAL:['Cross','pass',null],MINERS:['Verticals','pass',null],AGGIES:['Shock','pass',null],STANFORD:['Post-Spike','pass',null],TULSA:['Post-Spike','pass',null],
+ BRONCHOS:['Sail','pass',null],CAL:['Cross','pass',null],MINERS:['Verticals','pass',null],AGGIES:['Aggies','pass',null],STANFORD:['Post-Spike','pass',null],TULSA:['Post-Spike','pass',null],
  BRUINS:['Jet Sweep','run',null],FALCON:['Jet Sweep','run',null],STATE:['GY Counter','run',null],TROJANS:['GY Counter','run',null],TROJAN:['GY Counter','run',null],
  TEXAS:['Buck Sweep','run',null],HOUSTON:['GT Counter','run',null]};
+/* concept names (Power, GY Counter, ...) with run or pass, from the call-word table. The call word (CHARGER, PANTHER) is the tag; the concept is the play. */
+function concepts(){const m={};Object.keys(WORDS).forEach(k=>{const w=WORDS[k];if(!m[w[0]])m[w[0]]={name:w[0],type:w[1]}});m['Solid']=m['Solid']||{name:'Solid',type:'run'};return Object.values(m)}
 function decode(call){const t=U(call).split(' ').filter(Boolean),hits=t.filter(x=>WORDS[x]);
  if(t.includes('SOLID')){const w=hits.length?WORDS[hits[hits.length-1]]:null;return{known:true,concept:'Solid',type:'run',dir:w?w[2]:null}}
  if(!hits.length)return{known:false,concept:null,type:null,dir:null};const w=WORDS[hits[hits.length-1]];return{known:true,concept:w[0],type:w[1],dir:w[2]}}
@@ -77,6 +79,18 @@ function tendencies(rows){const all=split(rows),out={all,cuts:[]};
  cut('Formation + down & distance',x=>x.fam&&x.fam+' | '+dnd(x),k=>{const[a,b]=k.split(' | ');return a+' · '+DND_LABEL(b)});
  return out}
 
+/* Favorite runs by side of the field. Field = the wide side (opposite the hash the ball is on); boundary = the short side. Run plays only (RPOs left out).
+   The play direction (L/R) and the hash are read from the same side of the ball, so a run to the left from the right hash is a field run. Middle hash has no field or boundary, so those plays are counted apart.
+   Returns top run concepts for each side with the play count behind them. Used by the Offense Scout and, later, the defensive gameplan grid. */
+function favRuns(rows){const run=rows.filter(x=>x.kind==='R'),out={field:[],bdy:[],mid:0,nodir:0,n:run.length};
+ run.forEach(x=>{if(x.dir!=='L'&&x.dir!=='R'){out.nodir++;return}if(x.h!=='L'&&x.h!=='R'){out.mid++;return}(x.dir===x.h?out.bdy:out.field).push(x)});
+ const top=a=>{const m={},cw={};a.forEach(x=>{const k=x.cn||'(no call logged)';m[k]=(m[k]||0)+1;if(x.call){const w=U(x.call);(cw[k]=cw[k]||{})[w]=(cw[k][w]||0)+1}});
+  return Object.entries(m).sort((p,q)=>q[1]-p[1]).slice(0,4).map(([name,n])=>({name,n,p:Math.round(100*n/a.length),calls:Object.entries(cw[name]||{}).sort((p,q)=>q[1]-p[1]).slice(0,2).map(([w,c])=>({w,n:c}))}))};
+ return{n:out.n,mid:out.mid,nodir:out.nodir,field:{n:out.field.length,top:top(out.field)},bdy:{n:out.bdy.length,top:top(out.bdy)}}}
+/* the same, one row per formation family that has at least MIN runs to each side combined */
+function favRunsByForm(rows){const m={};rows.forEach(x=>{if(x.fam)(m[x.fam]=m[x.fam]||[]).push(x)});
+ return Object.entries(m).map(([f,v])=>({form:f,fr:favRuns(v)})).filter(x=>x.fr.field.n+x.fr.bdy.n>=MIN).sort((a,b)=>(b.fr.field.n+b.fr.bdy.n)-(a.fr.field.n+a.fr.bdy.n))}
+
 /* Live look-up for the sideline: the opponent offense is in a formation, on this down and distance, on this hash.
    Fall back until a group has at least MIN plays and say which level answered, as the defensive scout does. */
 function lookup(rows,look){const fam=famOf(look.formation),db=dnd({dn:look.down,di:look.dist}),zn=S.zoneOf(look.f);
@@ -104,5 +118,5 @@ function store(program){const KEY='oscout_v1_'+program;
   remove:n=>{const o=read();delete o.opps[n];if(o.active===n)o.active='';write(o)},
   rows:n=>{const e=read().opps[n];return e?e.games.filter(g=>!g.off).flatMap(g=>g.rows):[]}}}
 
-root.SCOUTO={MIN,decode,parseOffense,readFile,tendencies,lookup,split,famOf,dnd,store};
+root.SCOUTO={MIN,concepts,decode,parseOffense,readFile,tendencies,favRuns,favRunsByForm,lookup,split,famOf,dnd,store};
 })(typeof window!=='undefined'?window:globalThis);
