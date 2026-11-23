@@ -836,4 +836,11 @@ document.getElementById('rep').onclick=()=>openReport('report');document.getElem
 function modal_close(){document.getElementById('modal').classList.remove('show')}
 try{new MutationObserver(()=>{if(document.documentElement.classList.contains('ovl')&&!document.getElementById('modal').classList.contains('show')){document.documentElement.classList.remove('ovl');try{parent.postMessage({settingsClosed:1},location.origin)}catch(e){}}}).observe(document.getElementById('modal'),{attributes:true,attributeFilter:['class']})}catch(e){}
 load();d=freshDraft(lastNext());renderAll();
+
+/* Tab from a text box goes to the next text box (Shift+Tab: the previous one), skipping the buttons in between */
+document.addEventListener('keydown',ev=>{if(ev.key!=='Tab'||ev.altKey||ev.ctrlKey||ev.metaKey)return;const TX='input:not([type]),input[type=text],input[type=number],input[type=search],input[type=tel],input[type=email],textarea';
+ const t=ev.target;if(!t.matches||!t.matches(TX))return;const scope=t.closest('[role=dialog],.modal,#modal,#mbox')||document;
+ const all=[...scope.querySelectorAll(TX)].filter(e=>!e.disabled&&!e.readOnly&&e.offsetParent!==null&&getComputedStyle(e).visibility!=='hidden');
+ const i=all.indexOf(t);if(i<0||all.length<2)return;const n=all[(i+(ev.shiftKey?-1:1)+all.length)%all.length];ev.preventDefault();n.focus();try{n.select&&n.select()}catch(e){}},true);
+
 </script><script src="../shared/filedrop.js"></script></body></html>
