@@ -5,7 +5,7 @@ const enc=new TextEncoder();
 const b64u=buf=>btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 const ub64u=s=>Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')+'==='.slice((s.length+3)%4)),c=>c.charCodeAt(0));
 const hex=buf=>[...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
-const PROG=/^[a-z0-9][a-z0-9-]{1,40}$/, DOCKEY=/^(glossary|schedule|gameplan|game\/[A-Za-z0-9_.-]{1,80}|film\/[A-Za-z0-9_.-]{1,80})$/;
+const PROG=/^[a-z0-9][a-z0-9-]{1,40}$/, DOCKEY=/^(glossary|schedule|gameplan|dgameplan|dgame\/[A-Za-z0-9_.-]{1,80}|oscout\/[A-Za-z0-9_.-]{1,80}|game\/[A-Za-z0-9_.-]{1,80}|film\/[A-Za-z0-9_.-]{1,80})$/;
 const MAX_BODY=1500000, TOKEN_DAYS=60, LOCK_FAILS=10, LOCK_MIN=15, PBKDF2_ITER=20000;
 
 async function pbkdf2(code,salt){const k=await crypto.subtle.importKey('raw',enc.encode(code),'PBKDF2',false,['deriveBits']);

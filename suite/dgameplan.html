@@ -72,7 +72,7 @@ const toast=m=>{const t=$('toast');t.textContent=m;t.style.display='block';clear
 const uid=p=>p+Math.random().toString(36).slice(2,8);
 
 /* ---------- storage ---------- */
-let S;function load(){try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){S=null}if(!S||!Array.isArray(S.plans))S={v:1,plans:[],cur:''};if(!S.plans.find(p=>p.id===S.cur))S.cur=S.plans[0]?S.plans[0].id:''}
+let S;function load(){try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){S=null}if(!S||!Array.isArray(S.plans))S={v:1,plans:[],cur:'',deleted:[]};if(!Array.isArray(S.deleted))S.deleted=[];if(!S.plans.find(p=>p.id===S.cur))S.cur=S.plans[0]?S.plans[0].id:''}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('Could not save: storage is full')}}
 const P=()=>S.plans.find(p=>p.id===S.cur)||null;
 
@@ -103,7 +103,7 @@ $('ssel').onchange=e=>{const p=P();if(!p)return;p.scout=e.target.value;p.upd=Dat
 $('top3').onclick=()=>{const p=P();if(!p)return;const rows=scoutRows(p);if(!rows.length){toast('This plan has no scout loaded');return}
  if(p.blocks.some(b=>Object.keys(b.cells||{}).length||b.note)&&!confirm('Replace the formations with their top 3? Your fronts, pressures, coverages and notes on the current ones are removed.'))return;
  p.blocks=topBlocks(rows,3);p.upd=Date.now();save();render()};
-$('delplan').onclick=()=>{const p=P();if(!p||!confirm('Delete the plan "'+p.name+'"?'))return;S.plans=S.plans.filter(x=>x.id!==p.id);S.cur='';load();save();render()};
+$('delplan').onclick=()=>{const p=P();if(!p||!confirm('Delete the plan "'+p.name+'"?'))return;S.plans=S.plans.filter(x=>x.id!==p.id);S.deleted.push(p.id);S.cur=S.plans[0]?S.plans[0].id:'';save();render()};
 $('addf').onclick=()=>{const p=P();if(!p){toast('Make a plan first');return}
  const rows=scoutRows(p),cnt=Object.fromEntries(formCounts(rows)),have=new Set(p.blocks.map(b=>b.form)),all=[...Object.keys(cnt)];DV.forms().forEach(f=>{const u=f.toUpperCase();if(!all.includes(u))all.push(u)});
  modal(`<h3>Add a formation</h3><div class="note" style="margin-bottom:8px">Their formations first, most-played on top. Everything in your glossary is here too. Type a new one to add it to the glossary.</div>
@@ -194,6 +194,7 @@ function cellModal(bid,row,colId){const p=P(),b=p.blocks.find(x=>x.id===bid),col
   $('modal').addEventListener('click',function h(e){if(e.target.id==='modal'||e.target.closest('[data-m=close]')){$('modal').removeEventListener('click',h);done()}})})}
 
 addEventListener('storage',e=>{if(e.key===SO.KEY||e.key==='glossary_v1_'+PROGRAM){DV.reload();Object.keys(FC).forEach(k=>delete FC[k]);if($('modal').style.display!=='flex')render()}});
+addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.dgameplan==='changed'&&$('modal').style.display!=='flex'){const c=S.cur;load();if(S.plans.find(x=>x.id===c))S.cur=c;render()}});
 load();if(!S.plans.length&&SO.names().length&&SIGNED){/* first visit: nothing is made for you; the empty screen offers a new plan */}
 render();
 </script>

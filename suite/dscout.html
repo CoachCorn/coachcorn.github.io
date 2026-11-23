@@ -138,5 +138,6 @@ $('newopp').onclick=()=>{$('imp').scrollIntoView();toast('Choose a file below, t
 addEventListener('storage',e=>{if(e.key===ST.KEY){OPP=ST.active();renderAll()}});
 if(!SIGNED)$('meta').textContent='Demo space';
 renderAll();
+addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.oscout==='changed'){try{if(!ST.get(OPP))OPP=ST.active();renderAll()}catch(x){}}});
 </script>
 </body></html>

@@ -115,9 +115,9 @@ function store(program){const KEY='oscout_v1_'+program;
   /* mode 'replace' swaps all games; 'add' appends the new games to the ones already stored */
   put:(name,P,mode,src)=>{const o=read(),ex=o.opps[name];let games=P.games.map(g=>({name:g.name,rows:g.rows,off:false}));
    if(ex&&mode==='add'){const k=ex.games.length;games=ex.games.concat(games.map((g,i)=>({...g,name:/^Game \d/.test(g.name)?'Game '+(k+i+1)+' (plays '+(g.rows[0]?g.rows[0].pn:'')+'–'+(g.rows.length?g.rows[g.rows.length-1].pn:'')+')':g.name})))}
-   o.opps[name]={name,at:new Date().toISOString(),src:src||'',games};o.active=name;return write(o)},
-  setGameOff:(name,i,off)=>{const o=read();if(o.opps[name]&&o.opps[name].games[i]){o.opps[name].games[i].off=!!off;write(o)}},
-  remove:n=>{const o=read();delete o.opps[n];if(o.active===n)o.active='';write(o)},
+   o.opps[name]={name,at:new Date().toISOString(),upd:Date.now(),src:src||'',games};if(o.del)delete o.del[name];o.active=name;return write(o)},
+  setGameOff:(name,i,off)=>{const o=read();if(o.opps[name]&&o.opps[name].games[i]){o.opps[name].games[i].off=!!off;o.opps[name].upd=Date.now();write(o)}},
+  remove:n=>{const o=read();delete o.opps[n];(o.del=o.del||{})[n]=Date.now();if(o.active===n)o.active='';write(o)},
   rows:n=>{const e=read().opps[n];return e?e.games.filter(g=>!g.off).flatMap(g=>g.rows):[]}}}
 
 root.SCOUTO={MIN,concepts,decode,parseOffense,readFile,tendencies,favRuns,favPass,favRunsByForm,lookup,split,famOf,dnd,store};

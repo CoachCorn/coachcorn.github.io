@@ -77,7 +77,11 @@ function conceptList(){const m={};SCOUTO.concepts().forEach(c=>m[c.name.toUpperC
 
 
 /* ---------- data ---------- */
-let D;function load(){try{D=JSON.parse(localStorage.getItem(KEY))}catch(e){D=null}if(!D||!D.games)D={v:1,games:[],cur:null};if(!D.cur||!D.games.find(g=>g.id===D.cur))D.cur=D.games[0]?D.games[0].id:null}
+let D;function load(){try{D=JSON.parse(localStorage.getItem(KEY))}catch(e){D=null}if(!D||!D.games)D={v:1,games:[],cur:null};if(!D.cur||!D.games.find(g=>g.id===D.cur))D.cur=D.games[0]?D.games[0].id:null;migrate()}
+/* Sync needs every play and marker to carry a permanent id, a time (for order) and an edit time. Older saves get them here, the same way on every device. */
+function migrate(){D.games.forEach(g=>{let prev=0,n=0;(g.plays||[]).forEach(x=>{if(x.k&&x.k!=='p'){if(!x.pid){x.pid='zm'+prev+'_'+(n++);x.ts=prev+1}}else{if(!x.pid){x.pid='o'+prev+'_'+(n++);x.ts=x.ts||prev+1}x.ts=x.ts||prev+1;prev=x.ts;n=0}if(!x.upd)x.upd=x.ts})})}
+const mk=(m,at)=>{const t=at||Date.now();return Object.assign({pid:'zm'+t.toString(36)+Math.random().toString(36).slice(2,5),ts:t,upd:t},m)};
+const gone=(g,...xs)=>{g.deleted=(g.deleted||[]).concat(xs.filter(x=>x&&x.pid).map(x=>x.pid))};
 function save(){try{localStorage.setItem(KEY,JSON.stringify(D))}catch(e){toast('Could not save: storage is full')}}
 const G=()=>D.games.find(g=>g.id===D.cur);
 /* A game's list holds plays and markers. Markers: {k:'d'} new drive, {k:'q',n} end of a quarter, {k:'h'} halftime, {k:'x'} timeout / no play. A play has no k (older saves) or k:'p'. */
@@ -140,14 +144,14 @@ $('gsel').onchange=e=>{D.cur=e.target.value;resume();save();renderAll()};
 $('ssel').onchange=e=>{const g=G();if(!g)return;g.scout=e.target.value;save();renderEntry()};
 function resume(){const g=G();edit=null;ADD=null;const last=g&&real(g).slice(-1)[0];d=last?advanceFrom(last):fresh();if(g&&g.pkg)d.pkg=g.pkg}
 const dnum=g=>g.plays.filter(p=>p.k==='d'||p.k==='q'||p.k==='h').length+1;
-$('newdrive').onclick=()=>{const g=G();if(!g)return;g.plays.push({k:'d'});if(!edit){d=fresh(d);d.dn=1;d.di=10;d.side='Own';d.yd=25;d.hash=''}save();renderAll();toast('New drive · Drive '+dnum(g))};
+$('newdrive').onclick=()=>{const g=G();if(!g)return;g.plays.push(mk({k:'d'}));if(!edit){d=fresh(d);d.dn=1;d.di=10;d.side='Own';d.yd=25;d.hash=''}save();renderAll();toast('New drive · Drive '+dnum(g))};
 $('qtr').onclick=()=>{const g=G();if(!g)return;const pl=g.plays,h=pl.some(p=>p.k==='h'),q1=pl.some(p=>p.k==='q'&&p.n===1),q3=pl.some(p=>p.k==='q'&&p.n===3);let m;
- if(!h&&!q1)m={k:'q',n:1};else if(!h)m={k:'h'};else if(!q3)m={k:'q',n:3};else{toast('All quarter breaks marked (use Undo to fix)');return}
+ if(!h&&!q1)m=mk({k:'q',n:1});else if(!h)m=mk({k:'h'});else if(!q3)m=mk({k:'q',n:3});else{toast('All quarter breaks marked (use Undo to fix)');return}
  pl.push(m);save();renderAll();toast(m.k==='h'?'End of Q2 (halftime) marked':'End of Q'+m.n+' marked')};
-$('half').onclick=()=>{const g=G();if(!g)return;if(g.plays.some(p=>p.k==='h')){toast('Halftime already marked');return}g.plays.push({k:'h'});if(!edit){d=fresh(d);d.dn=1;d.di=10;d.side='Own';d.yd=25;d.hash=''}save();renderAll();toast('Halftime marked')};
-$('noplay').onclick=()=>{const g=G();if(!g)return;g.plays.push({k:'x'});save();renderAll();toast('Timeout / no play marked')};
-$('undo').onclick=()=>{const g=G();if(!g||!g.plays.length)return;let x=g.plays.pop(),msg='Removed ';
- if(x.auto&&g.plays.length&&isPlay(g.plays[g.plays.length-1])){g.plays.pop();msg+='the last play and its new drive'}else msg+=isPlay(x)?'the last play':x.k==='q'?'the quarter break':x.k==='h'?'halftime':x.k==='x'?'the no-play mark':'the new drive';
+$('half').onclick=()=>{const g=G();if(!g)return;if(g.plays.some(p=>p.k==='h')){toast('Halftime already marked');return}g.plays.push(mk({k:'h'}));if(!edit){d=fresh(d);d.dn=1;d.di=10;d.side='Own';d.yd=25;d.hash=''}save();renderAll();toast('Halftime marked')};
+$('noplay').onclick=()=>{const g=G();if(!g)return;g.plays.push(mk({k:'x'}));save();renderAll();toast('Timeout / no play marked')};
+$('undo').onclick=()=>{const g=G();if(!g||!g.plays.length)return;let x=g.plays.pop(),msg='Removed ';gone(g,x);
+ if(x.auto&&g.plays.length&&isPlay(g.plays[g.plays.length-1])){gone(g,g.plays[g.plays.length-1]);g.plays.pop();msg+='the last play and its new drive'}else msg+=isPlay(x)?'the last play':x.k==='q'?'the quarter break':x.k==='h'?'halftime':x.k==='x'?'the no-play mark':'the new drive';
  resume();save();renderAll();toast(msg)};
 
 /* ---------- entry ---------- */
@@ -373,9 +377,9 @@ function logPlay(){const g=G();if(!g)return;readNum('gain');
  const p={pid:edit||'p'+Date.now().toString(36),ts:Date.now(),dn:+d.dn,di:+d.di,side:d.side,yd:+d.yd,f:ballOn(d),hash:d.hash,form:d.form,call:d.call,concept:d.concept||(d.call&&SCOUTO.decode(d.call).known?SCOUTO.decode(d.call).concept:''),pkg:d.pkg,front:d.front,fcode:d.fcode,mods:[...d.mods],press:d.press,cov:d.cov,rp,dir:d.dir,result:d.result,td:d.td,dtd:!!d.dtd,gain,havoc:hv};
  if(d.pkg)g.pkg=d.pkg;
  if(d.form&&DV.glo()&&!glForms().includes(SCOUTO.famOf(d.form)))addWord('formation',d.form,{side:'O'});
- if(edit){const i=g.plays.findIndex(x=>x.pid===edit);if(i>=0){p.ts=g.plays[i].ts;g.plays[i]=p}edit=null;resume();save();renderAll();toast('Saved changes');return}
- g.plays.push(p);
- if(endsDrive(p))g.plays.push({k:'d',auto:true});
+ if(edit){const i=g.plays.findIndex(x=>x.pid===edit);if(i>=0){p.ts=g.plays[i].ts;p.upd=Date.now();g.plays[i]=p}edit=null;resume();save();renderAll();toast('Saved changes');return}
+ p.upd=p.ts;g.plays.push(p);
+ if(endsDrive(p))g.plays.push(mk({k:'d',auto:true},p.ts+1));
  d=advanceFrom(p);d.pkg=g.pkg||d.pkg;FQ=FRQ=PQ=CQ='';QT='';save();renderAll();toast('Logged play '+PL(g).length+(endsDrive(p)?' · new drive':''))}
 
 /* ---------- right panel ---------- */
@@ -393,7 +397,7 @@ function renderSide(){const g=G(),s=$('side');if(!g){s.innerHTML='';return}
  s.innerHTML=`<div class="lab"><span>${esc(g.opp)}</span><span>${PL(g).length} plays</span></div>
  <div class="stat"><div><span class="mut">Run / pass / RPO</span><b class="rpb">${[['R',c.R],['P',c.P],['RPO',c.RPO]].map(([k,v])=>`<button class="lfb ${LF===k?'on':''}" data-lf="${k}">${pc(v,typed.length)}</button>`).join('<i>/</i>')}</b></div><div><span class="mut">Yds / play</span><b>${n?(yds/n).toFixed(1):'–'}</b></div><div class="tl ${LF==='eff'?'on':''}" data-lf="eff"><span class="mut">Opp. eff</span><b>${pc(eff,n)}</b></div><div class="tl ${LF==='exp'?'on':''}" data-lf="exp"><span class="mut">Opp. exp (15+)</span><b>${pc(ex,n)}</b></div><div class="tl ${LF==='hav'?'on':''}" data-lf="hav"><span class="mut">Havoc plays</span><b>${pc(hv,n)}</b></div><div class="tl ${!LF?'on':''}" data-lf=""><span class="mut">Total play log</span><b>${n}</b></div></div>${LF?`<div class="mut" style="margin:0 0 6px">Showing: ${LFN[LF]} · <a href="#" data-lf="" style="color:var(--blue)">show all</a></div>`:''}`+items.reverse().join('');
  s.querySelectorAll('[data-lf]').forEach(b=>b.onclick=e=>{e.preventDefault();const v=b.dataset.lf;LF=(v&&LF===v)?'':v;renderSide()});
- s.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{if(!confirm('Delete this play?'))return;g.plays=g.plays.filter(p=>p.pid!==b.dataset.del);if(edit===b.dataset.del){edit=null;resume()}save();renderAll()});
+ s.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{if(!confirm('Delete this play?'))return;gone(g,{pid:b.dataset.del});g.plays=g.plays.filter(p=>p.pid!==b.dataset.del);if(edit===b.dataset.del){edit=null;resume()}save();renderAll()});
  s.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{const p=g.plays.find(x=>x.pid===b.dataset.edit);if(!p)return;edit=p.pid;d=drafted(p);ADD=null;FQ=FRQ=PQ=CQ='';renderAll();try{$('ent').scrollTop=0}catch(e){}})}
 function renderAll(){renderTop();renderEntry();renderSide()}
 
@@ -416,5 +420,8 @@ $('exp').onclick=()=>{const g=G();if(!g||!PL(g).length){toast('No plays to expor
 addEventListener('storage',e=>{if(e.key===ST.KEY){renderEntry()}if(e.key==='glossary_v1_'+PROGRAM){DV.reload();renderEntry()}});
 load();if(!D.games.length&&ST.active()){const n=ST.active();D.games.push({id:'d'+Date.now(),opp:n,date:new Date().toISOString(),scout:n,pkg:'',plays:[]});D.cur=D.games[0].id;save()}
 resume();renderAll();
+/* The suite shell's sync writes this device's copy; take it in (nothing unsaved is ever held here: every change saves at once). */
+function takeSync(){const cur=D.cur;load();if(D.games.find(g=>g.id===cur))D.cur=cur;if(edit&&!G().plays.find(x=>x.pid===edit)){edit=null;resume()}renderAll()}
+addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.dalmanac==='changed')takeSync()});
 </script>
 </body></html>
