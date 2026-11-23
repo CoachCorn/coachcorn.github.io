@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Offense Scout</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0f1720">
+<style>
+:root{--bg:#0f1720;--card:#18232f;--line:#2a3948;--tx:#e8eef4;--mut:#8ea0b2;--acc:#3b9cff;--ok:#2fbf71;--warn:#f2b632;--bad:#ef5b5b}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px -apple-system,system-ui,sans-serif}
+header{display:flex;gap:8px;align-items:center;padding:8px 12px;background:#0b1118;border-bottom:1px solid var(--line);flex-wrap:wrap;position:sticky;top:0;z-index:3}
+header h1{font-size:16px;margin:0 8px 0 0}
+select,button,input{font:inherit;color:var(--tx)}
+input[type=text],input[type=number],input[type=search],select{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px}
+.btn{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 12px;min-height:40px;text-transform:uppercase}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:700}.btn.bad{color:var(--bad)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:#223140;border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-height:40px;font-weight:600;text-transform:uppercase}
+.chip.on{background:var(--acc);border-color:var(--acc);color:#fff}
+main{padding:10px 12px;max-width:1100px;margin:0 auto}
+.card{background:#102030;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:0 0 6px}
+.mut,.note{color:var(--mut);font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{font-size:11px;text-transform:uppercase;color:var(--mut);text-align:left;padding:4px}
+td{padding:7px 4px;border-top:1px solid var(--line);vertical-align:top}
+td.n,th.n{text-align:right;white-space:nowrap}
+.d{font-size:11px;color:var(--mut);margin-left:3px}.d.hi{color:var(--acc);font-weight:700}
+.bar{display:flex;height:22px;border-radius:6px;overflow:hidden;background:#223140;font-size:12px;font-weight:700}
+.bar span{display:flex;align-items:center;justify-content:center;min-width:0;overflow:hidden}
+.r{background:#2f7d57}.p{background:#3b6fb0}.o{background:#a07a22}
+.tabs{display:flex;gap:6px;margin-bottom:10px}
+.tabs .chip{flex:1}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#000c;padding:10px 16px;border-radius:10px;z-index:20;display:none}
+.big{font-size:20px;font-weight:800}
+.good{color:var(--ok)}.warnc{color:var(--warn)}
+</style></head><body>
+<header><h1>Offense Scout</h1><select id="opp"></select><button class="btn" id="newopp">+ Opponent</button><span style="flex:1"></span><span class="mut" id="meta"></span></header>
+<main>
+ <div class="card" id="imp">
+  <div class="lab">Import opponent offense (Hudl export, "All O": .xlsx or .csv)</div>
+  <input type="file" id="file" accept=".xlsx,.csv">
+  <div id="impinfo"></div>
+ </div>
+ <div id="body"></div>
+</main>
+<div id="toast"></div>
+<script src="../shared/glossary.js"></script>
+<script src="../shared/scout.js"></script>
+<script src="../shared/scoutO.js"></script>
+<script src="../shared/filedrop.js"></script>
+<script>
+const SIGNED=(()=>{try{const s=JSON.parse(localStorage.getItem('suite_sync'));return !!(s&&s.token&&s.exp>Date.now())}catch(e){return false}})();
+const PROGRAM=SIGNED?'deer-creek':'demo';
+const ST=SCOUTO.store(PROGRAM);
+const $=id=>document.getElementById(id),esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let OPP=ST.active(),TAB='notes',PEND=null,LK={formation:'',down:1,dist:10,side:'Own',yd:25};
+const toast=m=>{const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',2400)};
+
+function renderTop(){const ns=ST.names();$('opp').innerHTML=ns.length?ns.map(n=>`<option ${n===OPP?'selected':''}>${esc(n)}</option>`).join(''):'<option>No opponent yet</option>';
+ const e=OPP&&ST.get(OPP);$('meta').textContent=e?e.games.length+' game'+(e.games.length===1?'':'s')+' · imported '+e.at.slice(0,10):''}
+
+/* ---------- import ---------- */
+$('file').addEventListener('change',async ev=>{const f=ev.target.files[0];if(!f)return;$('impinfo').innerHTML='<div class="note">Reading…</div>';PEND=null;
+ try{const P=await SCOUTO.readFile(f),tot=P.games.reduce((a,g)=>a+g.rows.length,0),sk=P.skipped;PEND={P,name:f.name,tot};
+  const ex=ST.get(OPP);
+  $('impinfo').innerHTML=`<div class="row"><span class="good"><b>${tot}</b> offensive plays in <b>${P.games.length}</b> game${P.games.length===1?'':'s'}</span><span class="note">skipped: ${sk.penalty} penalties, ${sk.timeout} timeouts, ${sk.other} not offense, ${sk.noSituation} no down/distance</span></div>
+   <div class="row"><input type="text" id="oname" placeholder="Opponent name" value="${esc(OPP||'')}" style="flex:1;min-width:160px">
+   <label class="note" id="modebox" style="${ex?'':'display:none'}"><input type="radio" name="mode" value="replace" checked> replace what is stored <input type="radio" name="mode" value="add"> add these games</label>
+   <button class="btn pri" id="save">Save</button></div>`;
+  $('oname').addEventListener('input',()=>{$('modebox').style.display=ST.get($('oname').value.trim())?'':'none'});
+  $('save').onclick=()=>{const n=$('oname').value.trim();if(!n){toast('Type the opponent name');return}
+   const mode=(document.querySelector('input[name=mode]:checked')||{}).value||'replace';
+   if(!ST.put(n,PEND.P,mode,PEND.name)){toast('Not enough room on this device to save that');return}
+   OPP=n;PEND=null;$('impinfo').innerHTML='';ev.target.value='';const fz=document.querySelector('.fdn');if(fz)fz.textContent='';renderAll();toast('Saved '+n)}}
+ catch(e){$('impinfo').innerHTML=`<div style="color:var(--bad)">${esc(e.message||e)}</div>`}});
+
+/* ---------- views ---------- */
+const pct=v=>v==null?'–':v+'%';
+const dl=(d,t)=>d==null?'':`<span class="d ${Math.abs(d)>=15?'hi':''}">${d>0?'▲':d<0?'▼':'='}${Math.abs(d)}</span>`;
+function bar(r){const a=r.run||0,b=r.pass||0,c=r.rpo||0;return`<div class="bar"><span class="r" style="width:${a}%">${a>=12?'Run '+a:''}</span><span class="p" style="width:${b}%">${b>=12?'Pass '+b:''}</span><span class="o" style="width:${c}%">${c>=12?'RPO '+c:''}</span></div>`}
+
+function notesView(rows){const T=SCOUTO.tendencies(rows),a=T.all;
+ let h=`<div class="card"><div class="lab">${esc(OPP)} · all plays</div>${bar(a)}<div class="row" style="margin-top:8px"><span><b>${a.n}</b> plays</span><span>Run <b>${pct(a.run)}</b></span><span>Pass <b>${pct(a.pass)}</b></span><span>RPO <b>${pct(a.rpo)}</b></span><span>Efficiency <b>${pct(a.eff)}</b></span></div>
+  <div class="note">▲ / ▼ = points above or below this opponent's own average. Bold blue = 15 or more points off. Groups need ${SCOUTO.MIN}+ plays. Efficiency here is the opponent's offense (Hudl EFF column), so higher is worse for us.</div></div>`;
+ for(const c of T.cuts){if(!c.groups.length)continue;
+  h+=`<div class="card"><div class="lab">${esc(c.label)}</div><table><tr><th>Group</th><th class="n">Plays</th><th class="n">Run</th><th class="n">Pass</th><th class="n">RPO</th><th class="n">Eff</th><th>Top calls</th></tr>`+
+   c.groups.map(g=>`<tr><td>${esc(g.name)}</td><td class="n">${g.n}</td><td class="n">${pct(g.run)}${dl(g.dRun)}</td><td class="n">${pct(g.pass)}${dl(g.dPass)}</td><td class="n">${pct(g.rpo)}${dl(g.dRpo)}</td><td class="n">${pct(g.eff)}${dl(g.dEff)}</td><td class="note">${g.top.map(t=>esc(t.name)+' '+t.p+'%').join(' · ')}</td></tr>`).join('')+`</table></div>`}
+ return h}
+
+function lookView(rows){const fams={};rows.forEach(r=>{if(r.fam)fams[r.fam]=(fams[r.fam]||0)+1});const fl=Object.entries(fams).sort((a,b)=>b[1]-a[1]);
+ const f=LK.side==='Own'?+LK.yd:100-LK.yd;
+ let h=`<div class="card"><div class="lab">Their look</div>
+  <div class="row"><select id="lkf"><option value="">Formation…</option>${fl.map(([k,n])=>`<option ${k===LK.formation?'selected':''} value="${esc(k)}">${esc(k)} (${n})</option>`).join('')}</select></div>
+  <div class="row"><span class="mut">Down</span><div class="chips">${[1,2,3,4].map(n=>`<button class="chip ${LK.down===n?'on':''}" data-dn="${n}">${n}</button>`).join('')}</div>
+  <span class="mut">To go</span><input type="number" id="lkd" value="${LK.dist}" style="width:70px">
+  <span class="mut">Ball on</span><select id="lks"><option ${LK.side==='Own'?'selected':''}>Own</option><option ${LK.side==='Opp'?'selected':''}>Opp</option></select><input type="number" id="lky" value="${LK.yd}" style="width:70px"></div></div>`;
+ const r=LK.formation?SCOUTO.lookup(rows,{formation:LK.formation,down:LK.down,dist:+LK.dist,f}):null;
+ if(!LK.formation)h+='<div class="note">Pick a formation to see their tendency.</div>';
+ else if(!r)h+='<div class="card"><div class="warnc">Fewer than '+SCOUTO.MIN+' plays at any level. Nothing to say.</div></div>';
+ else h+=`<div class="card"><div class="lab">${esc(LK.formation)} · ${LK.down}${['st','nd','rd','th'][LK.down-1]} &amp; ${LK.dist}</div>${bar(r)}<div class="row" style="margin-top:8px"><span><b>${r.n}</b> plays</span><span>Efficiency <b>${pct(r.eff)}</b></span></div>
+  <div>${r.top.map(t=>`<b>${esc(t.name)}</b> ${t.p}% (${t.n})`).join(' · ')}</div><div class="note">Answered at: ${esc(r.label)}${r.lvl?' (fell back: too few plays at the more specific levels)':''}</div></div>`;
+ return h}
+
+function gamesView(){const e=ST.get(OPP);
+ return`<div class="card"><div class="lab">Games (switch one off to leave it out of the tendencies)</div><table>`+e.games.map((g,i)=>`<tr><td>${esc(g.name)}</td><td class="n">${g.rows.length} plays</td><td class="n"><button class="chip ${g.off?'':'on'}" data-g="${i}">${g.off?'Off':'In use'}</button></td></tr>`).join('')+`</table>
+  <div class="row" style="margin-top:10px"><button class="btn bad" id="del">Delete ${esc(OPP)}</button></div></div>`}
+
+function renderAll(){renderTop();const b=$('body');
+ if(!OPP||!ST.get(OPP)){b.innerHTML='<div class="card mut">No opponent scout yet. Import the opponent offense file above.</div>';return}
+ const rows=ST.rows(OPP);
+ b.innerHTML=`<div class="tabs">${[['notes','Notes'],['look','Look-up'],['games','Games']].map(([k,l])=>`<button class="chip ${TAB===k?'on':''}" data-t="${k}">${l}</button>`).join('')}</div>`+
+  (!rows.length&&TAB!=='games'?'<div class="card warnc">Every game is switched off. Turn one on in Games.</div>':TAB==='notes'?notesView(rows):TAB==='look'?lookView(rows):gamesView());
+ b.querySelectorAll('[data-t]').forEach(x=>x.onclick=()=>{TAB=x.dataset.t;renderAll()});
+ b.querySelectorAll('[data-dn]').forEach(x=>x.onclick=()=>{LK.down=+x.dataset.dn;renderAll()});
+ b.querySelectorAll('[data-g]').forEach(x=>x.onclick=()=>{const i=+x.dataset.g,g=ST.get(OPP).games[i];ST.setGameOff(OPP,i,!g.off);renderAll()});
+ const g=id=>$(id);if(g('lkf'))g('lkf').onchange=e=>{LK.formation=e.target.value;renderAll()};
+ if(g('lkd'))g('lkd').onchange=e=>{LK.dist=Math.max(1,+e.target.value||1);renderAll()};
+ if(g('lks'))g('lks').onchange=e=>{LK.side=e.target.value;renderAll()};
+ if(g('lky'))g('lky').onchange=e=>{LK.yd=Math.min(50,Math.max(1,+e.target.value||1));renderAll()};
+ if(g('del'))g('del').onclick=()=>{if(confirm('Delete the scout for '+OPP+' from this device?')){ST.remove(OPP);OPP=ST.active();renderAll()}}}
+
+$('opp').onchange=e=>{OPP=e.target.value;ST.setActive(OPP);renderAll()};
+$('newopp').onclick=()=>{$('imp').scrollIntoView();toast('Choose a file below, then type the opponent name')};
+addEventListener('storage',e=>{if(e.key===ST.KEY){OPP=ST.active();renderAll()}});
+if(!SIGNED)$('meta').textContent='Demo space';
+renderAll();
+</script>
+</body></html>

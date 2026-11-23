@@ -98,9 +98,11 @@ const IC={
  stats:['#ef5b5b','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>'],
  mreps:['#ff8a4c','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="14" height="14" rx="2"/><path d="M7 3h12a2 2 0 0 1 2 2v12"/><path d="M7 12l2.5 2.5L13 10"/></svg>'],
  glossary:['#f2b632','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/><path d="M9 7h6M9 11h4"/></svg>']};
+const signedIn=()=>{try{const x=JSON.parse(localStorage.getItem('suite_sync'));return !!(x&&x.token&&x.exp>Date.now())}catch(e){return false}};
+/* Defense tools: real pages once a program is signed in; the demo and booth builds keep the "coming" placeholders. */
 const DTOOLS=[
- {id:'dalmanac',name:'Defensive Almanac',desc:'Sideline log of our calls',soon:'The defensive side is being built with the defensive staff. It will log our front, coverage and pressure each snap and predict the opponent offense.'},
- {id:'dscout',name:'Offense Scout',desc:'Predict their offense',soon:'Imports the opponent offense scout and predicts their call by formation, down and distance.'},
+ {id:'dalmanac',name:'Defensive Almanac',desc:'Sideline log, predicted call',get src(){return signedIn()?'dalmanac.html':undefined},get soon(){return signedIn()?undefined:'The defensive side is being built with the defensive staff. It will log our front, coverage and pressure each snap and predict the opponent offense.'}},
+ {id:'dscout',name:'Offense Scout',desc:'Their tendencies by formation, down and distance',get src(){return signedIn()?'dscout.html':undefined},get soon(){return signedIn()?undefined:'Imports the opponent offense scout and shows their tendencies by formation, down and distance.'}},
  {id:'glossary',name:'Glossary',desc:'Fronts, coverages, pressures',src:'glossary.html'},
  {id:'stats',name:'Stats',desc:'Schedule and defensive stats',src:'stats.html'}];
 let SIDE='O';try{SIDE=localStorage.getItem('suite_side')||'O'}catch(e){}

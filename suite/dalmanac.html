@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Defensive Almanac</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0f1720">
+<style>
+:root{--bg:#0f1720;--card:#18232f;--line:#2a3948;--tx:#e8eef4;--mut:#8ea0b2;--acc:#3b9cff;--ok:#2fbf71;--warn:#f2b632;--bad:#ef5b5b}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px -apple-system,system-ui,sans-serif;height:100vh;height:100dvh;display:flex;flex-direction:column}
+header{display:flex;gap:8px;align-items:center;padding:8px 12px;background:#0b1118;border-bottom:1px solid var(--line);flex-wrap:wrap}
+header h1{font-size:16px;margin:0 8px 0 0}
+select,button,input{font:inherit;color:var(--tx)}
+input[type=text],input[type=number],input[type=search],select{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px}
+.btn{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 12px;min-height:40px;text-transform:uppercase}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:700}.btn.bad{color:var(--bad)}
+main{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:10px;padding:8px;overflow:hidden;min-height:0}
+@media(max-width:820px){main{display:block;overflow:auto}.panel{margin-top:10px}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px;overflow:auto;min-height:0}
+#ent{overflow:auto;min-height:0;padding-bottom:70px}
+.card{background:#102030;border:1px solid var(--line);border-radius:10px;padding:6px 9px 8px;margin-bottom:8px}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin-bottom:5px;display:flex;justify-content:space-between;gap:8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:#223140;border:1px solid var(--line);border-radius:10px;padding:9px 12px;min-height:42px;font-weight:600;text-transform:uppercase}
+.chip small{display:block;font-size:10px;font-weight:500;opacity:.75;text-transform:none;margin-top:1px}
+.chip.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.chip.res.on{background:var(--ok);border-color:var(--ok)}.chip.hv.on{background:var(--bad);border-color:var(--bad)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.mut,.note{color:var(--mut);font-size:12px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:8px}@media(max-width:560px){.cols{grid-template-columns:1fr}}
+.bar{display:flex;height:22px;border-radius:6px;overflow:hidden;background:#223140;font-size:12px;font-weight:700}
+.bar span{display:flex;align-items:center;justify-content:center;min-width:0;overflow:hidden}
+.r{background:#2f7d57}.p{background:#3b6fb0}.o{background:#a07a22}
+.logrow{position:sticky;bottom:0;background:var(--bg);padding:6px 0 env(safe-area-inset-bottom);display:flex;gap:8px;z-index:2}
+.logrow .btn{flex:1;padding:13px}
+.pbox{border-left:3px solid var(--acc)}.pbox.sc{border-left-color:var(--warn)}
+.lg{display:flex;gap:6px;padding:7px 2px;border-top:1px solid var(--line);font-size:13px;align-items:flex-start}
+.lg b{white-space:nowrap}.lg .x{margin-left:auto;background:none;border:0;color:var(--mut);font-size:16px;padding:2px 6px}
+.stat{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}.stat div{background:#102030;border:1px solid var(--line);border-radius:8px;padding:6px 8px}.stat b{display:block;font-size:18px}
+#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#000c;padding:10px 16px;border-radius:10px;z-index:20;display:none}
+</style></head><body>
+<header><h1>Defensive Almanac</h1><select id="gsel"></select><button class="btn" id="ngame">+ Game</button>
+ <span class="mut">Scout</span><select id="ssel"></select><span style="flex:1"></span><button class="btn" id="undo">Undo last</button><button class="btn" id="exp">Export CSV</button></header>
+<main><div id="ent"></div><div class="panel" id="side"></div></main>
+<div id="toast"></div>
+<script src="../shared/glossary.js"></script>
+<script src="../shared/scout.js"></script>
+<script src="../shared/scoutO.js"></script>
+<script>
+const SIGNED=(()=>{try{const s=JSON.parse(localStorage.getItem('suite_sync'));return !!(s&&s.token&&s.exp>Date.now())}catch(e){return false}})();
+const PROGRAM=SIGNED?'deer-creek':'demo';
+const ST=SCOUTO.store(PROGRAM),KEY='dalmanac_v1_'+PROGRAM;
+const $=id=>document.getElementById(id),esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const toast=m=>{const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',2400)};
+
+/* ---------- vocabulary: glossary terms first, Deer Creek's confirmed calls as the built-in defaults (a program with its own glossary is not forced onto these) ---------- */
+const DEF_PKG=SIGNED?['BASE','CYCLONE','COBRA','NICKEL','DIME']:['BASE','NICKEL','DIME'];
+const DEF_FR=SIGNED?[['BASE','5-0-5','odd'],['TITE','4-0-4','odd'],['HEAVY','4i-0-4i','odd'],['BEAR','3-0-3','odd'],['MASS','2-0-2','odd'],['OVER','4i-1-5','odd'],['UNDER','5-1-4i','odd'],['WIDE','9-0-9','odd'],
+ ['INLAW','4-2i-2i-4','even'],['OUTLAW','5-3-3-5','even'],['VIPER','4-2-2-4','even'],['LOAD','9-3-1-5','even'],['CHOKE','4-0-4-9','even'],['BEAR','5-3-0-3-5','even'],['OVER','4-2-3-5','even'],['UNDER','5-3-2-4','even']]:[];
+const DEF_COV=SIGNED?['STAR','SCREW','RUTH','CLAMP','CLEO','BLACK','SINK','READ']:[];
+const DEF_PRESS=SIGNED?['SMOKE','FOG','WILD','CAT','OKIE','SOONER','STATE','COWBOY','FOX','MIKE','MOSS','MOW','TECH','RAIDER','SAW','SHARK','SWOOP','HOOP','IRONMAN','SPIDERMAN','SUPERMAN','THOR','WOLVERINE','BATMAN','KATANA','DOJO','JACK','SENSEI','ZEN','WARRIOR','OMEGA','BETA','CHARLIE','BOX','NICKEL','SPIKE','WILL','CHEAT']:[];
+let GLO=null;try{GLO=GL.load(PROGRAM)}catch(e){}
+const un=(a,b)=>{const seen=new Set(a.map(x=>String(x).toUpperCase()));return a.concat(b.filter(x=>!seen.has(String(x).toUpperCase())))};
+const gl=type=>GLO?GL.active(GLO,type).filter(t=>!t.side||t.side==='D'):[];
+function lists(){
+ const fr=gl('front').map(t=>[t.name,t.code||'',t.package||'']);const fk=new Set(fr.map(x=>x[0]+'|'+x[1]));
+ return{pkg:un(DEF_PKG,gl('package').map(t=>t.name)),
+  fr:fr.concat(DEF_FR.filter(x=>!fk.has(x[0]+'|'+x[1]))),
+  mods:un(['MUG','BOSS'],gl('frontmod').map(t=>t.name)),
+  cov:un(DEF_COV,gl('coverage').map(t=>t.name)),
+  press:un(DEF_PRESS,gl('pressure').map(t=>t.name))}}
+function addWord(type,name){name=String(name||'').trim().toUpperCase();if(!name)return;
+ if(GLO){try{if(!GL.find(GLO,type,name)){GL.add(GLO,{type,name,side:'D',source:'game',needsReview:true,meaning:{text:'Added during a game. Needs a definition.'}});GL.save(GLO)}}catch(e){}}
+ EXTRA[type]=EXTRA[type]||[];if(!EXTRA[type].includes(name))EXTRA[type].push(name);return name}
+const EXTRA={};
+
+/* ---------- data ---------- */
+let D;function load(){try{D=JSON.parse(localStorage.getItem(KEY))}catch(e){D=null}if(!D||!D.games)D={v:1,games:[],cur:null};if(!D.cur||!D.games.find(g=>g.id===D.cur))D.cur=D.games[0]?D.games[0].id:null}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(D))}catch(e){toast('Could not save: storage is full')}}
+const G=()=>D.games.find(g=>g.id===D.cur);
+let d=fresh(),FQ='',PQ='';
+function fresh(prev){return{dn:prev?prev.dn:1,di:prev?prev.di:10,side:prev?prev.side:'Own',yd:prev?prev.yd:25,hash:prev?prev.hash:'',form:'',call:'',pkg:prev?prev.pkg:'',front:'',fcode:'',mods:[],press:'',cov:'',rp:'',dir:'',result:'',td:false,gain:0,loss:false,havoc:[]}}
+const ballOn=x=>x.side==='Own'?+x.yd:100-x.yd;
+const signedYL=x=>x.side==='Own'?-(+x.yd):(+x.yd===50?50:+x.yd);
+const gainOf=x=>(x.loss?-1:1)*Math.abs(+x.gain||0);
+const effOf=(dn,di,g)=>dn===1?g>=4:dn===2?g>=Math.ceil(di/2):g>=di;
+const real=g=>(g.plays||[]).filter(p=>p.result!=='Penalty');
+
+/* A logged play, turned into the same row shape the scout reader makes, so both boxes use the same look-up. */
+function asRow(p){const dc=p.call?SCOUTO.decode(p.call):null;
+ return{dn:p.dn,di:p.di,h:p.hash,f:p.f,zone:SCOUT.zoneOf(p.f),fm:SCOUT.normFm(p.form),fam:SCOUTO.famOf(p.form),call:p.call||'',cn:p.call?(dc.known?dc.concept:p.call.toUpperCase()):'',kind:p.rp||null,dir:p.dir||'',ef:effOf(p.dn,p.di,p.gain)?1:0}}
+
+/* ---------- top bar ---------- */
+function renderTop(){$('gsel').innerHTML=D.games.length?D.games.map(g=>`<option value="${g.id}" ${g.id===D.cur?'selected':''}>${esc(g.opp||'Game')} · ${esc((g.date||'').slice(0,10))}</option>`).join(''):'<option>No game yet</option>';
+ const g=G(),ns=ST.names();$('ssel').innerHTML='<option value="">(none)</option>'+ns.map(n=>`<option ${g&&g.scout===n?'selected':''}>${esc(n)}</option>`).join('')}
+function newGame(){let name=prompt('Opponent name',ST.active()||'');if(name==null)return;name=name.trim();if(!name)return;
+ const sc=ST.names().find(n=>n.toUpperCase()===name.toUpperCase())||'';
+ const g={id:'d'+Date.now(),opp:name,date:new Date().toISOString(),scout:sc,plays:[]};D.games.push(g);D.cur=g.id;d=fresh();save();renderAll()}
+$('ngame').onclick=newGame;
+$('gsel').onchange=e=>{D.cur=e.target.value;d=fresh();save();renderAll()};
+$('ssel').onchange=e=>{const g=G();if(!g)return;g.scout=e.target.value;save();renderEntry()};
+$('undo').onclick=()=>{const g=G();if(!g||!g.plays.length)return;const p=g.plays.pop();save();renderAll();toast('Removed play '+(g.plays.length+1))};
+
+/* ---------- entry ---------- */
+const ch=(k,v,l,on,x)=>`<button class="chip ${x||''} ${on?'on':''}" data-k="${k}" data-v="${esc(v)}">${l}</button>`;
+function formList(){const g=G(),m={};const e=g&&g.scout&&ST.get(g.scout);
+ if(e)ST.rows(g.scout).forEach(r=>{const k=r.ff||r.fm;if(k)m[k]=(m[k]||0)+1});(g?g.plays:[]).forEach(p=>{const k=String(p.form||'').toUpperCase();if(k)m[k]=(m[k]||0)+1});
+ return Object.entries(m).sort((a,b)=>b[1]-a[1]).map(x=>x[0])}
+function formChips(){const q=FQ.trim().toUpperCase(),fl=formList().filter(x=>!q||x.includes(q)||x===d.form);const shown=q?fl:fl.slice(0,16);
+ return shown.map(x=>ch('form',x,esc(x),d.form===x)).join('')+`<button class="chip" data-a="oform">+ Other</button>`+(!q&&fl.length>16?`<span class="note" style="align-self:center">Type to search ${fl.length-16} more</span>`:'')}
+function pressChips(){const L=lists(),q=PQ.trim().toUpperCase(),all=un(L.press,EXTRA.pressure||[]);const shown=all.filter(x=>!q||x.includes(q)||x===d.press);
+ return ch('press','',"None",!d.press)+shown.map(x=>ch('press',x,esc(x),d.press===x)).join('')+`<button class="chip" data-a="opress">+ Other</button>`}
+function boxHtml(title,cls,r,fallback,pending){
+ if(!r)return`<div class="card pbox ${cls}"><div class="lab"><span>${title}</span></div><div class="note">${pending}</div>${fallback||''}</div>`;
+ const bar=`<div class="bar"><span class="r" style="width:${r.run}%">${r.run>=12?'Run '+r.run:''}</span><span class="p" style="width:${r.pass}%">${r.pass>=12?'Pass '+r.pass:''}</span><span class="o" style="width:${r.rpo}%">${r.rpo>=12?'RPO '+r.rpo:''}</span></div>`;
+ const dir=r.dirN>=3?` · direction L ${r.dirL}% / R ${r.dirR}% (${r.dirN})`:'';
+ const top=r.top.length?`<div style="margin-top:4px"><b>Calls:</b> ${r.top.map(t=>esc(t.name)+' '+t.p+'%').join(' · ')}</div>`:'';
+ return`<div class="card pbox ${cls}"><div class="lab"><span>${title}</span><span>n=${r.n}</span></div>${bar}<div class="note" style="margin-top:4px">${esc(r.label)}${r.lvl?' (fell back)':''}${dir}${r.eff!=null?' · eff '+r.eff+'%':''}</div>${top}</div>`}
+function predictBoxes(){const g=G();if(!g)return'';if(!d.form)return'<div class="note" style="margin:0 2px 8px">Pick their formation to see the predicted call.</div>';
+ const look={formation:d.form,down:+d.dn,dist:+d.di,f:ballOn(d)};
+ const gr=real(g).map(asRow),r1=SCOUTO.lookup(gr,look);
+ let fb='';if(!r1&&gr.length>=3){const s=SCOUTO.split(gr);fb=`<div class="note">This game so far: run ${s.run}% · pass ${s.pass}% · RPO ${s.rpo}% (${s.nTyped} plays)</div>`}
+ let r2=null,pend2='No opponent scout loaded for this game. Pick one in the header, or import it in Offense Scout.';
+ if(g.scout&&ST.get(g.scout)){const rows=ST.rows(g.scout);r2=SCOUTO.lookup(rows,look);if(!r2)pend2='Fewer than '+SCOUTO.MIN+' scout plays at any level.'}
+ return`<div class="cols">${boxHtml('Predicted call · this game','',r1,fb,'Fewer than '+SCOUTO.MIN+' plays like this in this game yet.')}${boxHtml('Predicted call · '+esc(g.scout||'scout'),'sc',r2,'',pend2)}</div>`}
+function renderEntry(){const e=$('ent'),g=G();
+ if(!g){e.innerHTML='<div class="card"><div class="lab">No game yet</div><button class="btn pri" id="first">+ New game</button></div>';const f=$('first');if(f)f.onclick=newGame;return}
+ const L=lists(),fr=L.fr.concat((EXTRA.front||[]).map(n=>[n,'','']));
+ const frChips=fr.map(x=>ch('front',x[0]+'|'+x[1],esc(x[0])+(x[1]?`<small>${esc(x[1])}${x[2]?' · '+esc(x[2]):''}</small>`:''),d.front===x[0]&&d.fcode===x[1])).join('')+`<button class="chip" data-a="ofront">+ Other</button>`;
+ const RES=['Rush','Complete','Incomplete','Sack','Scramble','Interception','Fumble','Penalty'];
+ e.innerHTML=`
+ <div class="card"><div class="lab">Situation (their offense)</div>
+  <div class="row"><span class="mut">Down</span><div class="chips">${[1,2,3,4].map(n=>ch('dn',n,n,+d.dn===n)).join('')}</div>
+  <span class="mut">To go</span><input type="number" inputmode="numeric" id="di" value="${d.di}" style="width:72px">
+  <span class="mut">Ball on</span><select id="bside"><option ${d.side==='Own'?'selected':''}>Own</option><option ${d.side==='Opp'?'selected':''}>Opp</option></select><input type="number" inputmode="numeric" id="yd" value="${d.yd}" style="width:72px"></div>
+  <div class="row"><span class="mut">Hash (their L / R)</span><div class="chips">${['L','M','R'].map(h=>ch('hash',h,h,d.hash===h)).join('')}</div></div></div>
+ <div class="card"><div class="lab"><span>Their formation</span><span class="note">${esc(d.form)}</span></div>
+  <input type="search" id="fq" placeholder="Search formations" autocomplete="off" autocapitalize="characters" value="${esc(FQ)}" style="width:100%;margin-bottom:6px"><div class="chips" id="fchips">${formChips()}</div></div>
+ ${predictBoxes()}
+ <div class="card"><div class="lab">Our package</div><div class="chips">${L.pkg.concat(EXTRA.package||[]).map(x=>ch('pkg',x,esc(x),d.pkg===x)).join('')}<button class="chip" data-a="opkg">+ Other</button></div></div>
+ <div class="card"><div class="lab">Our front</div><div class="chips">${frChips}</div>
+  <div class="row" style="margin-top:6px"><span class="mut">Modifier</span><div class="chips">${L.mods.map(x=>ch('mods',x,esc(x),d.mods.includes(x))).join('')}</div></div></div>
+ <div class="card"><div class="lab">Pressure / pop</div><input type="search" id="pq" placeholder="Search pressures" autocomplete="off" autocapitalize="characters" value="${esc(PQ)}" style="width:100%;margin-bottom:6px"><div class="chips" id="pchips">${pressChips()}</div></div>
+ <div class="card"><div class="lab">Our coverage</div><div class="chips">${un(L.cov,EXTRA.coverage||[]).map(x=>ch('cov',x,esc(x),d.cov===x)).join('')}<button class="chip" data-a="ocov">+ Other</button></div></div>
+ <div class="card"><div class="lab">What they ran</div>
+  <div class="row"><div class="chips">${[['R','Run'],['P','Pass'],['RPO','RPO']].map(([v,l])=>ch('rp',v,l,d.rp===v)).join('')}</div><span class="mut">Direction</span><div class="chips">${['L','R'].map(v=>ch('dir',v,v,d.dir===v)).join('')}</div></div>
+  <div class="row"><input type="text" id="call" placeholder="Their call, if known (e.g. DART CHARGER)" value="${esc(d.call)}" autocapitalize="characters" style="flex:1;min-width:200px"></div></div>
+ <div class="card"><div class="lab">Result</div>
+  <div class="chips">${RES.map(x=>ch('result',x,x,d.result===x,'res')).join('')}${ch('td','1','TD',d.td,'res')}</div>
+  <div class="row" style="margin-top:8px"><span class="mut">Yards</span><input type="number" inputmode="numeric" id="gain" value="${d.gain}" style="width:80px">${ch('loss','1','Loss',d.loss,'hv')}
+   <span class="mut">Havoc</span><div class="chips">${['TFL','SACK','PBU','FF'].map(x=>ch('havoc',x,x,d.havoc.includes(x),'hv')).join('')}</div></div></div>
+ <div class="logrow"><button class="btn pri" id="log">Log play ${g.plays.length+1}</button></div>`;
+ $('fq').oninput=ev=>{FQ=ev.target.value;$('fchips').innerHTML=formChips()};
+ $('pq').oninput=ev=>{PQ=ev.target.value;$('pchips').innerHTML=pressChips()};
+ $('di').onchange=ev=>{d.di=Math.max(1,+ev.target.value||1);renderEntry()};
+ $('yd').onchange=ev=>{d.yd=Math.min(50,Math.max(1,+ev.target.value||1));renderEntry()};
+ $("bside").onchange=ev=>{d.side=ev.target.value;renderEntry()};
+ $('call').onchange=ev=>{d.call=ev.target.value.trim().toUpperCase()};
+ $('gain').onchange=ev=>{d.gain=Math.abs(+ev.target.value||0)};
+ $('log').onclick=logPlay}
+$('ent').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;
+ if(b.dataset.a){const a=b.dataset.a,ask=(t,ty,set)=>{const v=addWord(ty,prompt(t,''));if(v){set(v);renderEntry()}};
+  if(a==='oform'){const v=String(prompt('Their formation (as it is named in the scout)','')||'').trim().toUpperCase();if(v){d.form=v;FQ='';renderEntry()}}
+  else if(a==='ofront')ask('Front name','front',v=>{d.front=v;d.fcode=''});
+  else if(a==='opress')ask('Pressure or pop name','pressure',v=>{d.press=v});
+  else if(a==='ocov')ask('Coverage name','coverage',v=>{d.cov=v});
+  else if(a==='opkg')ask('Package name','package',v=>{d.pkg=v});return}
+ const k=b.dataset.k;if(!k)return;let v=b.dataset.v;
+ if(k==='dn')d.dn=+v;
+ else if(k==='front'){const[n,c]=v.split('|');if(d.front===n&&d.fcode===c){d.front='';d.fcode=''}else{d.front=n;d.fcode=c}}
+ else if(k==='mods'||k==='havoc'){const a=d[k],i=a.indexOf(v);i<0?a.push(v):a.splice(i,1)}
+ else if(k==='td')d.td=!d.td;else if(k==='loss')d.loss=!d.loss;
+ else if(k==='press')d.press=v;
+ else d[k]=d[k]===v?'':v;
+ if(k==='result'&&d.result==='Sack'){d.rp='P';d.loss=true}
+ const keep=document.getElementById('ent').scrollTop;renderEntry();document.getElementById('ent').scrollTop=keep});
+
+/* ---------- log ---------- */
+function logPlay(){const g=G();if(!g)return;if(!d.result){toast('Pick a result');return}if(!d.form){toast('Pick their formation');return}
+ const gain=d.result==='Penalty'?gainOf(d):(['Incomplete','Interception'].includes(d.result)?0:gainOf(d));
+ const rp=d.rp||({Rush:'R',Complete:'P',Incomplete:'P',Sack:'P',Scramble:'P',Interception:'P'}[d.result]||'');
+ const hv=[...d.havoc];if(rp==='R'&&gain<0&&!hv.includes('TFL'))hv.push('TFL');if(d.result==='Sack'&&!hv.includes('SACK'))hv.push('SACK');if(d.result==='Interception'&&!hv.includes('PBU'))hv.push('PBU');
+ const p={pid:'p'+Date.now().toString(36),ts:Date.now(),dn:+d.dn,di:+d.di,side:d.side,yd:+d.yd,f:ballOn(d),hash:d.hash,form:d.form,call:d.call,pkg:d.pkg,front:d.front,fcode:d.fcode,mods:[...d.mods],press:d.press,cov:d.cov,rp,dir:d.dir,result:d.result,td:d.td,gain,havoc:hv};
+ g.plays.push(p);
+ /* next play: move the ball and the down (the coach can change anything before logging) */
+ const nxt=fresh(d);nxt.pkg=d.pkg;
+ if(d.result!=='Penalty'&&!d.td){let f=Math.min(99,Math.max(1,ballOn(d)+gain));nxt.side=f<=50?'Own':'Opp';nxt.yd=f<=50?f:100-f;
+  if(gain>=d.di){nxt.dn=1;nxt.di=Math.min(10,100-f)}else if(d.dn>=4){nxt.dn=1;nxt.di=10}else{nxt.dn=d.dn+1;nxt.di=Math.max(1,d.di-gain)}}
+ else if(d.td){nxt.dn=1;nxt.di=10;nxt.side='Own';nxt.yd=25}
+ d=nxt;save();renderAll();toast('Logged play '+g.plays.length)}
+
+/* ---------- right panel ---------- */
+function renderSide(){const g=G(),s=$('side');if(!g){s.innerHTML='';return}
+ const P=real(g),n=P.length,typed=P.filter(p=>p.rp),c={R:0,P:0,RPO:0};typed.forEach(p=>c[p.rp]++);
+ const yds=P.reduce((a,p)=>a+p.gain,0),eff=P.filter(p=>effOf(p.dn,p.di,p.gain)).length,ex=P.filter(p=>p.gain>=15).length,hv=P.filter(p=>p.havoc.length||['Sack','Interception'].includes(p.result)).length;
+ const pc=(a,b)=>b?Math.round(100*a/b)+'%':'–';
+ s.innerHTML=`<div class="lab"><span>${esc(g.opp)}</span><span>${g.plays.length} plays</span></div>
+ <div class="stat"><div><span class="mut">Run / pass / RPO</span><b>${pc(c.R,typed.length)} / ${pc(c.P,typed.length)} / ${pc(c.RPO,typed.length)}</b></div><div><span class="mut">Yds / play</span><b>${n?(yds/n).toFixed(1):'–'}</b></div><div><span class="mut">Eff allowed</span><b>${pc(eff,n)}</b></div><div><span class="mut">Explosive (15+)</span><b>${pc(ex,n)}</b></div><div><span class="mut">Havoc</span><b>${pc(hv,n)}</b></div><div><span class="mut">Plays</span><b>${n}</b></div></div>`+
+ g.plays.slice().reverse().map((p,i)=>{const idx=g.plays.length-i;return`<div class="lg"><b>${idx}</b><div><b>${p.dn}&amp;${p.di}</b> ${esc(p.form)} <span class="mut">${esc(p.hash)}</span><br><span class="mut">${esc([p.pkg,p.front,(p.mods||[]).join(' '),p.press,p.cov].filter(Boolean).join(' · ')||'no call logged')}</span><br>${esc(p.rp)}${p.dir?' '+esc(p.dir):''} ${esc(p.result)}${p.td?' TD':''} ${p.gain>0?'+':''}${p.gain}${p.havoc.length?' · '+esc(p.havoc.join(' ')):''}</div><button class="x" data-del="${p.pid}" title="Delete this play">✕</button></div>`}).join('');
+ s.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{if(!confirm('Delete this play?'))return;g.plays=g.plays.filter(p=>p.pid!==b.dataset.del);save();renderAll()})}
+function renderAll(){renderTop();renderEntry();renderSide()}
+
+/* ---------- export: the Hudl column layout (same headers as the opponent offense export), ODK = D because this is our defense on the field ---------- */
+const HEAD=['PERIOD','PLAY #','ODK','DN','DIST','GN/LS','YARD LN','EFF','EXPLOSIVE?','DEF FRONT','DC COVERAGE','BLITZ','NOTES','BANDIT','FREE SAFETY','NICKEL','HASH','PLAY TYPE','RESULT','PRE ALIGNMENT (D)','SHIFT','OFF FORM','OFF PLAY','F/B','ST/WK','MOTION','PLAY DETAIL','BACKFIELD','OFF TEAM','PLAY DIR','MOTION DIR','FORM TREE','FORMATION','FIB','PASS CONCEPT','RPO','PROTECTION'];
+function csv(g){const q=v=>{const s=v==null?'':String(v);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
+ const rows=[HEAD.join(',')];
+ g.plays.forEach((p,i)=>{const o={};o['PLAY #']=i+1;o['ODK']='D';o['DN']=p.dn;o['DIST']=p.di;o['GN/LS']=p.gain;o['YARD LN']=p.side==='Own'?-p.yd:p.yd;
+  o['EFF']=p.result==='Penalty'?'':(effOf(p.dn,p.di,p.gain)?'Y':'N');o['EXPLOSIVE?']=p.gain>=15?'Y':'';
+  o['DEF FRONT']=[p.front,...(p.mods||[])].filter(Boolean).join(' ');o['DC COVERAGE']=p.cov;o['BLITZ']=p.press;
+  o['NOTES']=[p.pkg?'PKG '+p.pkg:'',p.havoc.length?'HAVOC '+p.havoc.join('/'):''].filter(Boolean).join('; ');
+  o['HASH']=p.hash;o['PLAY TYPE']=p.rp==='R'?'Run':p.rp?'Pass':'';o['RESULT']=p.result+(p.td?', TD':'');o['OFF FORM']=p.form;o['OFF PLAY']=p.call;o['PLAY DIR']=p.dir;o['RPO']=p.rp==='RPO'?'Y':'';
+  rows.push(HEAD.map(h=>q(o[h])).join(','))});return rows.join('\n')}
+$('exp').onclick=()=>{const g=G();if(!g||!g.plays.length){toast('No plays to export');return}
+ const blob=new Blob([csv(g)],{type:'text/csv'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=(g.opp||'game').replace(/[^A-Za-z0-9]+/g,'_')+'_defense_'+(g.date||'').slice(0,10)+'.csv';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)};
+
+addEventListener('storage',e=>{if(e.key===ST.KEY){renderEntry()}if(e.key==='glossary_v1_'+PROGRAM){try{GLO=GL.load(PROGRAM)}catch(x){}renderEntry()}});
+load();if(!D.games.length&&ST.active()){const n=ST.active();D.games.push({id:'d'+Date.now(),opp:n,date:new Date().toISOString(),scout:n,plays:[]});D.cur=D.games[0].id;save()}
+renderAll();
+</script>
+</body></html>

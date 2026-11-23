@@ -44,7 +44,7 @@ function parseOffense(g){const hi=S.findHeader(g),H={};(g[hi]||[]).forEach((c,i)
   const res=get(r,'RESULT').toUpperCase();if(res==='PENALTY'){skipped.penalty++;continue}if(res==='TIMEOUT'){skipped.timeout++;continue}
   const dn=+get(r,'DN'),di=+get(r,'DIST');if(!(dn>=1&&dn<=4)||isNaN(di)){skipped.noSituation++;continue}
   const call=get(r,'OFF PLAY'),kind=kindOf(get(r,'PLAY TYPE'),get(r,'RPO'),call),d=decode(call),f=S.yardF(get(r,'YARD LN')),dir=get(r,'PLAY DIR').toUpperCase()[0];
-  const row={pn:pnum,gm:games.length-1,dn,di,h:get(r,'HASH').toUpperCase()[0]||'',f,zone:S.zoneOf(f),fm:S.normFm(get(r,'OFF FORM')),fam:famOf(get(r,'OFF FORM')),bf:get(r,'BACKFIELD'),
+  const row={pn:pnum,gm:games.length-1,dn,di,h:get(r,'HASH').toUpperCase()[0]||'',f,zone:S.zoneOf(f),fm:S.normFm(get(r,'OFF FORM')),ff:U(get(r,'OFF FORM')),fam:famOf(get(r,'OFF FORM')),bf:get(r,'BACKFIELD'),
    call,cn:d.known?d.concept:(call?U(call):''),kind,dir:dir==='L'||dir==='R'?dir:'',res:get(r,'RESULT'),ef:get(r,'EFF').toUpperCase()==='Y'?1:(get(r,'EFF')?0:null)};
   if(!row.kind)skipped.noKind++; // kept: still counts for formation / situation totals, but not for run/pass percentages
   if(cur.first==null)cur.first=pnum;cur.lastPn=pnum;cur.rows.push(row)}
@@ -82,8 +82,27 @@ function tendencies(rows){const all=split(rows),out={all,cuts:[]};
 function lookup(rows,look){const fam=famOf(look.formation),db=dnd({dn:look.down,di:look.dist}),zn=S.zoneOf(look.f);
  const lv=[['formation · down & distance · field zone',x=>x.fam===fam&&dnd(x)===db&&x.zone===zn],['formation · down & distance',x=>x.fam===fam&&dnd(x)===db],
   ['formation only',x=>x.fam===fam],['down & distance only',x=>dnd(x)===db]];
- for(let i=0;i<lv.length;i++){const s=rows.filter(lv[i][1]);if(s.length>=MIN){const sp=split(s);return{lvl:i,label:lv[i][0],n:s.length,run:sp.run,pass:sp.pass,rpo:sp.rpo,eff:sp.eff,top:topConcepts(s,3)}}}
+ for(let i=0;i<lv.length;i++){const s=rows.filter(lv[i][1]);if(s.length>=MIN){const sp=split(s),ds=s.filter(x=>x.dir),dL=ds.filter(x=>x.dir==='L').length;return{lvl:i,label:lv[i][0],n:s.length,run:sp.run,pass:sp.pass,rpo:sp.rpo,eff:sp.eff,top:topConcepts(s,3),dirN:ds.length,dirL:ds.length?Math.round(100*dL/ds.length):null,dirR:ds.length?100-Math.round(100*dL/ds.length):null}}}
  return null}
 
-root.SCOUTO={MIN,decode,parseOffense,readFile,tendencies,lookup,split,famOf,dnd};
+
+/* --- storage: one entry per opponent, kept on the device (key oscout_v1_<program>). Opponent offense scout only; the defensive scout lives in the Almanac / Gameplan.
+   Each opponent keeps its games; a game can be switched off so tendencies use only the games you want (for example the last three). --- */
+function store(program){const KEY='oscout_v1_'+program;
+ const read=()=>{try{const o=JSON.parse(localStorage.getItem(KEY));if(o&&o.opps)return o}catch(e){}return{opps:{},active:''}};
+ const write=o=>{try{localStorage.setItem(KEY,JSON.stringify(o));return true}catch(e){return false}};
+ return{KEY,
+  names:()=>Object.keys(read().opps).sort((a,b)=>a.localeCompare(b)),
+  get:n=>read().opps[n]||null,
+  active:()=>{const o=read();return o.opps[o.active]?o.active:Object.keys(o.opps)[0]||''},
+  setActive:n=>{const o=read();o.active=n;write(o)},
+  /* mode 'replace' swaps all games; 'add' appends the new games to the ones already stored */
+  put:(name,P,mode,src)=>{const o=read(),ex=o.opps[name];let games=P.games.map(g=>({name:g.name,rows:g.rows,off:false}));
+   if(ex&&mode==='add'){const k=ex.games.length;games=ex.games.concat(games.map((g,i)=>({...g,name:/^Game \d/.test(g.name)?'Game '+(k+i+1)+' (plays '+(g.rows[0]?g.rows[0].pn:'')+'–'+(g.rows.length?g.rows[g.rows.length-1].pn:'')+')':g.name})))}
+   o.opps[name]={name,at:new Date().toISOString(),src:src||'',games};o.active=name;return write(o)},
+  setGameOff:(name,i,off)=>{const o=read();if(o.opps[name]&&o.opps[name].games[i]){o.opps[name].games[i].off=!!off;write(o)}},
+  remove:n=>{const o=read();delete o.opps[n];if(o.active===n)o.active='';write(o)},
+  rows:n=>{const e=read().opps[n];return e?e.games.filter(g=>!g.off).flatMap(g=>g.rows):[]}}}
+
+root.SCOUTO={MIN,decode,parseOffense,readFile,tendencies,lookup,split,famOf,dnd,store};
 })(typeof window!=='undefined'?window:globalThis);
