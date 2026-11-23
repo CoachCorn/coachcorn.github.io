@@ -256,7 +256,7 @@ function applyQuick(txt,commit){const out={bits:[],unk:[],hadResult:false};let t
  toks=toks.filter((t,i)=>!drop.includes(i));
  /* situation */
  /* a glossary word with a number in it (Cover 3, Cover 2) must survive the situation parser, which strips every loose number */
- const L0=lists(),W0=[...L0.cov,...L0.pkg,...L0.press,...L0.mods,...formList(),...conceptList().map(c=>c.name)].map(x=>String(x)).filter(x=>/\s/.test(x)&&/\d/.test(x)).sort((a,b)=>b.length-a.length);
+ const L0=lists(),W0=[...L0.cov,...L0.pkg,...L0.press,...L0.mods,...formList(),...conceptList().map(c=>c.name),...DV.aliases().map(a=>a.alias)].map(x=>String(x)).filter(x=>/\s/.test(x)&&/\d/.test(x)).sort((a,b)=>b.length-a.length);
  let jt=toks.join(' ');W0.forEach(w=>{const re=new RegExp('(^|\\s)'+w.trim().replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/\s+/g,'\\s+')+'(?=\\s|$)','ig');jt=jt.replace(re,(m,a)=>a+w.trim().replace(/\s+/g,'_'))});
  const sr=parseSitR(jt,null),so=sr.o;sr.rest=sr.rest.flatMap(w=>w.split('_'));
  if(so.dn!=null){d.dn=so.dn;d.di=so.di;out.bits.push(so.dn+' & '+so.di)}if(so.yd!=null){d.yd=so.yd;d.side=so.side;out.bits.push(so.side+' '+so.yd)}if(so.hash){d.hash=so.hash;out.bits.push({L:'left',M:'middle',R:'right'}[so.hash]+' hash')}
@@ -268,6 +268,12 @@ function applyQuick(txt,commit){const out={bits:[],unk:[],hadResult:false};let t
  L.pkg.forEach(x=>T.push([U(x).split(' '),'pkg',x]));
  L.fr.forEach(x=>{T.push([U(x[0]).split(' '),'front',x]);if(x[1])T.push([[U(x[1])],'front',x])});
  L.mods.forEach(x=>T.push([U(x).split(' '),'mod',x]));L.cov.forEach(x=>T.push([U(x).split(' '),'cov',x]));L.press.forEach(x=>T.push([U(x).split(' '),'press',x]));
+ /* shorthand from the glossary's "Also called": it lands in the same slot as the full name and logs as the full name */
+ try{const U2=x=>String(x).toUpperCase(),fl=formList(),cl=conceptList();DV.aliases().forEach(a=>{let tgt=null;
+  if(a.kind==='cov')tgt=L.cov.find(x=>U2(x)===U2(a.name));else if(a.kind==='press')tgt=L.press.find(x=>U2(x)===U2(a.name));else if(a.kind==='pkg')tgt=L.pkg.find(x=>U2(x)===U2(a.name));
+  else if(a.kind==='mod')tgt=L.mods.find(x=>U2(x)===U2(a.name));else if(a.kind==='front')tgt=L.fr.find(x=>U2(x[0])===U2(a.name));
+  else if(a.kind==='form'){const f=U2(SCOUTO.famOf(a.name));tgt=fl.find(x=>U2(x)===f)}else if(a.kind==='concept')tgt=cl.find(c=>U2(c.name)===U2(a.name));
+  if(tgt!=null)T.push([U2(a.alias).split(/\s+/),a.kind,tgt])})}catch(e){}
  const offW=w=>SCOUTO.decode(w).known,frNames=new Set(L.fr.map(x=>U(x[0]))),pkOnly=new Set(L.pkg.map(U).filter(x=>!frNames.has(x)));
  let pkgSet=false,frSet=false,prSet=false,cvSet=false,fmSet=false;const rest=[];
  for(let i=0;i<left.length;){let best=0,c=[];

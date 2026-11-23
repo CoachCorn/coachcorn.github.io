@@ -85,7 +85,12 @@ function setStrength(v){const d=STR_DEF(),o={mode:STRENGTH_MODES.some(m=>m.id===
  try{localStorage.setItem(strKey(PROGRAM),JSON.stringify(o));return true}catch(e){return false}}
 function resetStrength(){return setStrength(STR_DEF())}
 
-return{strength,setStrength,resetStrength,STRENGTH_MODES,MID_MODES,lists,addWord,forms:glForms,glo:()=>GLO,positions,setPositions,resetPositions,posDefaults:()=>posDefaults(SIGNED),reload:()=>{try{GLO=GL.load(PROGRAM)}catch(e){}}}}
+/* Shorthand: every alias in the glossary ("Also called") for the typed-entry bars. kind matches the bar's own slots. */
+const ALIAS_KIND={coverage:'cov',pressure:'press',package:'pkg',frontmod:'mod',front:'front',formation:'form',run:'concept',pass:'concept'};
+function aliases(){const out=[];if(!GLO)return out;try{GLO.terms.forEach(t=>{if(t.status!=='active'||!t.aliases||!t.aliases.length)return;const k=ALIAS_KIND[t.type];if(!k)return;
+  t.aliases.forEach(a=>{a=String(a||'').trim();if(a&&a.toUpperCase()!==String(t.name).toUpperCase())out.push({kind:k,alias:a,name:t.name})})})}catch(e){}return out}
+
+return{aliases,strength,setStrength,resetStrength,STRENGTH_MODES,MID_MODES,lists,addWord,forms:glForms,glo:()=>GLO,positions,setPositions,resetPositions,posDefaults:()=>posDefaults(SIGNED),reload:()=>{try{GLO=GL.load(PROGRAM)}catch(e){}}}}
 root.DefVocab=DefVocab
 /* The demo glossary is first seeded by the offense Almanac with Deer Creek's defensive words. Swap those for generic ones, once, so the demo space has nothing of Deer Creek's.
    Words a coach added in the demo are kept. Does nothing when there is no glossary yet (the lists above already carry the generic words). */
@@ -96,5 +101,5 @@ DefVocab.demoGlossary=function(program){try{const g=GL.load(program);if(!g||g.de
  DEMO.press.forEach(c=>GL.add(g,{type:'pressure',name:c,side:'D',source:'seed',meaning:{text:DEMO_MEAN[c]||''}}));
  DEMO.pkg.forEach(c=>GL.add(g,{type:'package',name:c,side:'D',source:'seed',meaning:{text:''}}));
  POS.demo.forEach((x,i)=>GL.add(g,{id:x[0],type:'position',name:x[1],side:'D',source:'seed',letter:x[2],order:i,meaning:{text:x[3]}}));
- g.demoDef=1;GL.save(g);return true}catch(e){return false}};
+ g.demoDef=1;g.demoAl=0;GL.save(g);return true}catch(e){return false}};
 })(typeof window!=='undefined'?window:globalThis);

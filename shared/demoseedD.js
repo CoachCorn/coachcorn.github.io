@@ -81,13 +81,20 @@ function formations(){if(SIGNED()||typeof GL==='undefined')return;
    Wing:{side:'RT',pers:'11',fn:t=>{set(t,'M',350,LOS);set(t,'Y',330,174);t.H.on=0}},
    Slot:{side:'RT',pers:'10',fn:t=>{set(t,'H',560,174)}}};
   let n=0;Object.keys(F).forEach(name=>{const t=GL.find(g,'formation',name);if(!t||(t.draw&&t.draw.t))return;const d=base();F[name].fn(d);t.draw={t:d,side:F[name].side,pers:F[name].pers,at:Date.now()};GL.touch(t);n++});
-  if(n)GL.save(g);localStorage.setItem(FMFLAG,'1')}catch(e){}}
+  const na=aliasesInto(g);if(n||na)GL.save(g);localStorage.setItem(FMFLAG,'1')}catch(e){}}
+
+/* Made-up shorthand for the demo, written as glossary aliases ("Also called") so the type-it bars on both sides show it working. Runs on a glossary object; the caller saves. */
+const DEMO_ALIASES=[['formation','Trips',['tr']],['formation','Bunch',['bn']],['formation','Twins',['tw']],['run','Inside Zone',['iz']],['run','Outside Zone',['oz']],['pass','Four Verts',['verts']],['pass','Y-Cross',['yx']],
+ ['coverage','Cover 1',['c1']],['coverage','Cover 2',['c2']],['coverage','Cover 3',['c3']],['coverage','Cover 4',['c4']],['pressure','Fire Zone',['fz']],['pressure','Double A',['dbla']],['package','Nickel',['nk']]];
+function aliasesInto(g){if(SIGNED()||!g||typeof GL==='undefined'||g.demoAl)return 0;let n=0;
+ try{DEMO_ALIASES.forEach(([ty,nm,al])=>{const t=GL.find(g,ty,nm);if(!t)return;t.aliases=t.aliases||[];al.forEach(a=>{if(!t.aliases.some(x=>String(x).toUpperCase()===a.toUpperCase())){t.aliases.push(a);n++}});GL.touch(t)});g.demoAl=1}catch(e){}return n}
 
 /* The keys Reset demo must clear for this side. */
 const KEYS=['oscout_v1_demo','dalmanac_v1_demo','dgameplan_v1_demo','dpos_v1_demo','dstrength_v1_demo',FLAG,FMFLAG];
 
 function ensure(){if(SIGNED())return;
  try{if(localStorage.getItem(FLAG))return;seedScout();seedAlmanac();seedPlan();localStorage.setItem(FLAG,'1')}catch(e){}}
-function all(){ensure();formations()}
-root.DemoSeedD={ensure,formations,all,KEYS,OPP};
+function aliases(){if(SIGNED()||typeof GL==='undefined')return;try{const g=GL.load('demo');if(g&&aliasesInto(g))GL.save(g)}catch(e){}}
+function all(){ensure();formations();aliases()}
+root.DemoSeedD={ensure,formations,aliasesInto,all,KEYS,OPP};
 })(typeof window!=='undefined'?window:globalThis);
