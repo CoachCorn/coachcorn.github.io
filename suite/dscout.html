@@ -36,6 +36,10 @@ td.n,th.n{text-align:right;white-space:nowrap}
 .big{font-size:20px;font-weight:800}
 .good{color:var(--ok)}.warnc{color:var(--warn)}
 .favrow{display:flex;flex-wrap:wrap;gap:6px 18px;margin-bottom:2px}.fav{display:inline-flex;flex-direction:column;align-items:flex-start;line-height:1.15}.fav small{font-size:11px;color:var(--mut);text-transform:lowercase}.fav b{font-size:15px;text-transform:uppercase}.fav em{font-style:normal;font-size:12px;color:var(--mut)}.fav.first b{color:var(--acc)}
+.tt{width:100%;border-collapse:collapse;font-size:14px}.tt th{font-size:11px;text-transform:uppercase;color:var(--mut);text-align:left;padding:4px 3px;white-space:nowrap}
+.tt td{padding:2px 2px;border-top:1px solid var(--line)}.tt input,.tt select{width:100%;min-width:0;background:#0e1822;border:1px solid var(--line);border-radius:6px;padding:7px 5px;color:var(--tx);font:inherit;text-transform:uppercase}
+.tt input.n{width:54px;text-align:center}.tt select.s{width:74px}.tt td.x button{background:none;border:0;color:var(--mut);font-size:18px;padding:4px 8px}.tt td.i{color:var(--mut);font-size:12px;text-align:center;width:26px}
+.tt tr.bad input,.tt tr.bad select{border-color:#7a5a1a}
 </style></head><body>
 <header><h1>Offense Scout</h1><select id="opp"></select><button class="btn" id="newopp">+ Opponent</button><span style="flex:1"></span><span class="mut" id="meta"></span></header>
 <main>
@@ -60,7 +64,7 @@ let OPP=ST.active(),TAB='notes',PEND=null,LK={formation:'',down:1,dist:10,side:'
 const toast=m=>{const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',2400)};
 
 function renderTop(){const ns=ST.names();$('opp').innerHTML=ns.length?ns.map(n=>`<option ${n===OPP?'selected':''}>${esc(n)}</option>`).join(''):'<option>No opponent yet</option>';
- const e=OPP&&ST.get(OPP);$('meta').textContent=e?e.games.length+' game'+(e.games.length===1?'':'s')+' · imported '+e.at.slice(0,10):''}
+ const e=OPP&&ST.get(OPP);$('meta').textContent=e?e.games.length+' game'+(e.games.length===1?'':'s')+(e.src==='typed'?' · typed in ':' · imported ')+e.at.slice(0,10):''}
 
 /* ---------- import ---------- */
 $('file').addEventListener('change',async ev=>{const f=ev.target.files[0];if(!f)return;$('impinfo').innerHTML='<div class="note">Reading…</div>';PEND=null;
@@ -120,10 +124,10 @@ function gamesView(){const e=ST.get(OPP);
   <div class="row" style="margin-top:10px"><button class="btn bad" id="del">Delete ${esc(OPP)}</button></div></div>`}
 
 function renderAll(){renderTop();const b=$('body');
- if(!OPP||!ST.get(OPP)){b.innerHTML='<div class="card mut">No opponent scout yet. Import the opponent offense file above.</div>';return}
+ if(!OPP||!ST.get(OPP)){b.innerHTML='<div class="card"><div class="mut">No opponent scout yet. Import the opponent offense file above, or no Hudl?</div><div class="row" style="margin-top:8px"><button class="btn pri" id="starttype">Type the plays in</button></div></div>';$('starttype').onclick=startTyped;return}
  const rows=ST.rows(OPP);
- b.innerHTML=`<div class="tabs">${[['notes','Notes'],['look','Look-up'],['games','Games']].map(([k,l])=>`<button class="chip ${TAB===k?'on':''}" data-t="${k}">${l}</button>`).join('')}</div>`+
-  (!rows.length&&TAB!=='games'?'<div class="card warnc">Every game is switched off. Turn one on in Games.</div>':TAB==='notes'?notesView(rows):TAB==='look'?lookView(rows):gamesView());
+ b.innerHTML=`<div class="tabs">${[['notes','Notes'],['look','Look-up'],['type','Type it in'],['games','Games']].map(([k,l])=>`<button class="chip ${TAB===k?'on':''}" data-t="${k}">${l}</button>`).join('')}</div>`+
+  (TAB==='type'?typeView():!rows.length&&TAB!=='games'?'<div class="card warnc">Every game is switched off. Turn one on in Games.</div>':TAB==='notes'?notesView(rows):TAB==='look'?lookView(rows):gamesView());
  b.querySelectorAll('[data-t]').forEach(x=>x.onclick=()=>{TAB=x.dataset.t;renderAll()});
  b.querySelectorAll('[data-dn]').forEach(x=>x.onclick=()=>{LK.down=+x.dataset.dn;renderAll()});
  b.querySelectorAll('[data-g]').forEach(x=>x.onclick=()=>{const i=+x.dataset.g,g=ST.get(OPP).games[i];ST.setGameOff(OPP,i,!g.off);renderAll()});
@@ -131,10 +135,43 @@ function renderAll(){renderTop();const b=$('body');
  if(g('lkd'))g('lkd').onchange=e=>{LK.dist=Math.max(1,+e.target.value||1);renderAll()};
  if(g('lks'))g('lks').onchange=e=>{LK.side=e.target.value;renderAll()};
  if(g('lky'))g('lky').onchange=e=>{LK.yd=Math.min(50,Math.max(1,+e.target.value||1));renderAll()};
+ if(TAB==='type')wireType();
  if(g('del'))g('del').onclick=()=>{if(confirm('Delete the scout for '+OPP+' from this device?')){ST.remove(OPP);OPP=ST.active();renderAll()}}}
 
 $('opp').onchange=e=>{OPP=e.target.value;ST.setActive(OPP);renderAll()};
-$('newopp').onclick=()=>{$('imp').scrollIntoView();toast('Choose a file below, then type the opponent name')};
+$('newopp').onclick=()=>{$('imp').scrollIntoView();toast('Choose a file below, then type the opponent name (no Hudl: use Type it in)')};
+/* ---------- type it in (no Hudl): a table, one line per play ---------- */
+function startTyped(){const n=prompt('Opponent name',OPP||'');if(n==null||!n.trim())return;OPP=n.trim();ST.typed(OPP);TAB='type';renderAll()}
+const TG=()=>{const e=ST.get(OPP);if(!e)return null;let i=e.games.findIndex(g=>g.typed);return i<0?null:{i,g:e.games[i]}};
+const rid=()=>'t'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+function fmOptions(){const s=new Set();try{const g=GL.load(PROGRAM);if(g)GL.active(g,'formation').forEach(t=>s.add(t.name.toUpperCase()))}catch(e){}
+ const e=OPP&&ST.get(OPP);if(e)e.games.forEach(g=>g.rows.forEach(r=>{if(r.fam)s.add(r.fam)}));return[...s].sort()}
+function typeView(){let t=TG();if(!t){ST.typed(OPP);t=TG()}const dr=t.g.draft||[],ok=t.g.rows.length;
+ const sel=(k,v,opts)=>`<select class="s" data-k="${k}">${opts.map(o=>`<option value="${o[0]}" ${String(v)===String(o[0])?'selected':''}>${o[1]}</option>`).join('')}</select>`;
+ const row=(x,i)=>{const bad=!(+x.dn>=1&&+x.dn<=4&&+x.di>=1);
+  return`<tr data-id="${x.id}" class="${bad&&(x.form||x.call||x.gain!=='')?'bad':''}"><td class="i">${i+1}</td>
+  <td>${sel('dn',x.dn,[['','–'],[1,1],[2,2],[3,3],[4,4]])}</td><td><input class="n" type="number" inputmode="numeric" data-k="di" value="${esc(x.di)}"></td>
+  <td>${sel('h',x.h,[['','–'],['L','L'],['M','M'],['R','R']])}</td>
+  <td><input list="fmlist" data-k="form" value="${esc(x.form)}" placeholder="Kong" autocapitalize="characters"></td>
+  <td><input list="calllist" data-k="call" value="${esc(x.call)}" placeholder="Dart Charger" autocapitalize="characters"></td>
+  <td>${sel('kind',x.kind,[['','auto'],['R','Run'],['P','Pass'],['RPO','RPO']])}</td><td>${sel('dir',x.dir,[['','–'],['L','L'],['R','R']])}</td>
+  <td><select data-k="res" style="width:100px">${['','Rush','Complete','Incomplete','Sack','Scramble','Interception','Fumble'].map(o=>`<option ${x.res===o?'selected':''}>${o}</option>`).join('')}</select></td>
+  <td><input class="n" type="number" inputmode="numeric" data-k="gain" value="${esc(x.gain)}"></td><td class="x"><button data-del="${x.id}" title="Delete this play">✕</button></td></tr>`};
+ return`<div class="card"><div class="lab" style="gap:12px"><span>Type it in · ${esc(OPP)}</span><span class="note" id="tcount">${ok} of ${dr.length} lines count</span></div>
+  <div class="note" style="margin-bottom:8px">One line per play. A line counts once it has a down and a distance. Run or pass comes from the call word (Dart Charger = Power, a run), or pick it. Leave direction empty and a call word that fixes a side fills it in. Yards are optional; with yards the line also counts toward their efficiency. The Notes and Look-up tabs use these plays right away, together with anything imported.</div>
+  <div style="overflow-x:auto"><table class="tt"><tr><th></th><th>Dn</th><th>To go</th><th>Hash</th><th>Formation</th><th>Call</th><th>Run/pass</th><th>Dir</th><th>Result</th><th>Yds</th><th></th></tr>${dr.map(row).join('')}</table></div>
+  <datalist id="fmlist">${fmOptions().map(x=>`<option value="${esc(x)}">`).join('')}</datalist><datalist id="calllist">${SCOUTO.callWords().map(x=>`<option value="${esc(x)}">`).join('')}</datalist>
+  <div class="row" style="margin-top:8px"><button class="btn pri" id="addrow">+ Add play</button><button class="btn" id="add5">+ 5 lines</button></div></div>`}
+function wireType(){const t=TG();if(!t)return;const b=$('body');
+ const commit=()=>{if(!ST.setDraft(OPP,t.i,t.g.draft)){toast('Not enough room on this device to save');return}const n=TG().g.rows.length;const c=$('tcount');if(c)c.textContent=n+' of '+t.g.draft.length+' lines count'};
+ const blank=()=>{const p=t.g.draft[t.g.draft.length-1];return{id:rid(),dn:'',di:'',h:p?p.h:'',form:'',call:'',kind:'',dir:'',res:'',gain:''}};
+ const add=n=>{for(let k=0;k<n;k++)t.g.draft.push(blank());commit();renderAll();const r=document.querySelectorAll('.tt tr[data-id]');const l=r[r.length-n];if(l){const f=l.querySelector('select');f&&f.focus()}};
+ $('addrow').onclick=()=>add(1);$('add5').onclick=()=>add(5);
+ b.querySelectorAll('.tt [data-k]').forEach(el=>el.onchange=()=>{const id=el.closest('tr').dataset.id,x=t.g.draft.find(y=>y.id===id);if(!x)return;let v=el.value;
+  if(el.dataset.k==='dn')v=v===''?'':+v;if(el.dataset.k==='form'||el.dataset.k==='call')v=v.trim();x[el.dataset.k]=v;
+  commit();el.closest('tr').classList.toggle('bad',!(+x.dn>=1&&+x.di>=1)&&!!(x.form||x.call||x.gain!==''));
+  const last=t.g.draft[t.g.draft.length-1];if(last&&last.id===id&&el.dataset.k==='gain'&&v!=='')add(1)});
+ b.querySelectorAll('.tt [data-del]').forEach(el=>el.onclick=()=>{t.g.draft=t.g.draft.filter(y=>y.id!==el.dataset.del);commit();renderAll()})}
 addEventListener('storage',e=>{if(e.key===ST.KEY){OPP=ST.active();renderAll()}});
 if(!SIGNED)$('meta').textContent='Demo space';
 renderAll();

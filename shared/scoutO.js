@@ -58,6 +58,19 @@ async function readFile(f){let rows,sheet='';
  else{const x=await S.readXlsx(await f.arrayBuffer());rows=x.rows;sheet=x.sheet}
  const P=parseOffense(rows);if(!P.games.length)throw new Error('No offensive plays found. This reader wants the opponent offense export (ODK = O).');P.sheet=sheet;return P}
 
+/* --- typed in (no Hudl): the coach types one line per play; each line becomes the same row the Hudl reader makes ---
+   draft line: {id,dn,di,h:'L'|'M'|'R'|'',form,call,kind:'R'|'P'|'RPO'|'',dir:'L'|'R'|'',res,gain} (gain '' = not entered).
+   A line counts once it has a down (1-4) and a distance. Run or pass comes from the choice, else from the call word, else from the result;
+   a pass result on a run call counts as an RPO (same rule as the import). Direction left empty is read from a call word that fixes a side. */
+const effOf=(dn,di,g)=>dn===1?g>=4:dn===2?g>=Math.ceil(di/2):g>=di;
+const PASSRES=['COMPLETE','INCOMPLETE','SACK','INTERCEPTION','INT','SCRAMBLE'],RUNRES=['RUSH','FUMBLE'];
+function typedRows(draft,gm){const out=[];(draft||[]).forEach((x,i)=>{const dn=+x.dn,di=+x.di;if(!(dn>=1&&dn<=4)||!(di>=1))return;
+  const call=String(x.call||'').trim(),d=decode(call),res=U(x.res);let kind=x.kind||null;
+  if(!kind){if(d.type==='run')kind='R';else if(d.type==='pass')kind='P';else if(RUNRES.includes(res))kind='R';else if(PASSRES.includes(res))kind='P'}
+  if(!x.kind&&kind==='R'&&PASSRES.includes(res)&&d.type==='run')kind='RPO';
+  const gain=x.gain===''||x.gain==null||isNaN(+x.gain)?null:+x.gain,dir=x.dir==='L'||x.dir==='R'?x.dir:(kind==='R'&&d.dir?d.dir:'');
+  out.push({pn:i+1,gm:gm==null?0:gm,dn,di,h:x.h||'',f:null,zone:null,fm:S.normFm(x.form),ff:U(x.form),fam:famOf(x.form),bf:'',call,cn:d.known?d.concept:(call?U(call):''),kind,dir,res:x.res||'',ef:gain==null?null:(effOf(dn,di,gain)?1:0)})});return out}
+const callWords=()=>Object.keys(WORDS).sort();
 /* --- tendencies --- */
 const dnd=x=>x.dn===1||x.dn>=4?'D'+Math.min(x.dn,4):'D'+x.dn+(x.di<=3?' · 1-3':x.di<=6?' · 4-6':' · 7+');
 const DND_LABEL=k=>k.replace('D1','1st down').replace('D2','2nd').replace('D3','3rd').replace('D4','4th');
@@ -117,8 +130,13 @@ function store(program){const KEY='oscout_v1_'+program;
    if(ex&&mode==='add'){const k=ex.games.length;games=ex.games.concat(games.map((g,i)=>({...g,name:/^Game \d/.test(g.name)?'Game '+(k+i+1)+' (plays '+(g.rows[0]?g.rows[0].pn:'')+'–'+(g.rows.length?g.rows[g.rows.length-1].pn:'')+')':g.name})))}
    o.opps[name]={name,at:new Date().toISOString(),upd:Date.now(),src:src||'',games};if(o.del)delete o.del[name];o.active=name;return write(o)},
   setGameOff:(name,i,off)=>{const o=read();if(o.opps[name]&&o.opps[name].games[i]){o.opps[name].games[i].off=!!off;o.opps[name].upd=Date.now();write(o)}},
+  /* the game that holds typed plays (made on first use; the opponent too if it is new) */
+  typed:name=>{const o=read();let e=o.opps[name];if(!e)e=o.opps[name]={name,at:new Date().toISOString(),upd:Date.now(),src:'typed',games:[]};
+   let i=e.games.findIndex(g=>g.typed);if(i<0){e.games.push({name:'Typed plays',rows:[],off:false,typed:true,draft:[]});i=e.games.length-1}
+   e.upd=Date.now();if(o.del)delete o.del[name];o.active=name;write(o);return i},
+  setDraft:(name,i,draft)=>{const o=read(),e=o.opps[name];if(!e||!e.games[i])return false;e.games[i].draft=draft;e.games[i].rows=typedRows(draft,i);e.upd=Date.now();return write(o)},
   remove:n=>{const o=read();delete o.opps[n];(o.del=o.del||{})[n]=Date.now();if(o.active===n)o.active='';write(o)},
   rows:n=>{const e=read().opps[n];return e?e.games.filter(g=>!g.off).flatMap(g=>g.rows):[]}}}
 
-root.SCOUTO={MIN,concepts,decode,parseOffense,readFile,tendencies,favRuns,favPass,favRunsByForm,lookup,split,famOf,dnd,store};
+root.SCOUTO={MIN,typedRows,callWords,effOf,concepts,decode,parseOffense,readFile,tendencies,favRuns,favPass,favRunsByForm,lookup,split,famOf,dnd,store};
 })(typeof window!=='undefined'?window:globalThis);
