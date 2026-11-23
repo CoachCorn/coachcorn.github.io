@@ -915,7 +915,7 @@ function wireReport(){const b=document.getElementById('mbox');b.querySelectorAll
 document.getElementById('rep').onclick=()=>openReport('report');document.getElementById('stats').onclick=()=>openReport('stats');
 function modal_close(){document.getElementById('modal').classList.remove('show')}
 try{new MutationObserver(()=>{if(document.documentElement.classList.contains('ovl')&&!document.getElementById('modal').classList.contains('show')){document.documentElement.classList.remove('ovl');try{parent.postMessage({settingsClosed:1},location.origin)}catch(e){}}}).observe(document.getElementById('modal'),{attributes:true,attributeFilter:['class']})}catch(e){}
-load();d=freshDraft(lastNext());renderAll();
+load();d=freshDraft(lastNext());FOCID="qbar";renderAll();
 
 /* Tab from a text box goes to the next text box (Shift+Tab: the previous one), skipping the buttons in between */
 document.addEventListener('keydown',ev=>{if(ev.key!=='Tab'||ev.altKey||ev.ctrlKey||ev.metaKey)return;const TX='input:not([type]),input[type=text],input[type=number],input[type=search],input[type=tel],input[type=email],textarea';
