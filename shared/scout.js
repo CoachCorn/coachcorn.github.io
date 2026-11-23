@@ -78,5 +78,5 @@ function scoutBuild(i,label,s){const tally=(fn)=>{const m={};for(const x of s){c
 
  async function readFile(f){let rows,sheet='';if(/\.csv$/i.test(f.name)){rows=parseCsv(await f.text());if(findHeader(rows)<0)throw new Error('Could not find a PLAY # column in that CSV');sheet='CSV'}else{const x=await readXlsx(await f.arrayBuffer());rows=x.rows;sheet=x.sheet}
   const P=parseScout(rows);if(!P.blocks.length)throw new Error('No defensive plays found');P.sheet=sheet;return P}
- root.SCOUT={SC_MIN,readFile,normFm,frontCode,scoutBuild,dbk,zoneOf};
+ root.SCOUT={SC_MIN,readFile,normFm,frontCode,scoutBuild,dbk,zoneOf,readXlsx,parseCsv,findHeader,cellS,yardF};
 })(window);
