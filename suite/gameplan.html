@@ -383,11 +383,11 @@ function parseDef(text){const ok=[],bad=[],steps=[];let subj=null;
  const players=str=>(str.match(new RegExp('\\b'+PTOK+'\\b','g'))||[]);
  for(let cl of clauses){let m,P;
   if(/\b(snaps?|snapped)\b|^tackle over$|^the mirror/i.test(cl)){ok.push(cl);continue}
-  if((m=cl.match(new RegExp('^'+PTOK+'\\s+(?:aligns?|lines? up|moves?|goes|sets?|splits?)\\s+(?:(\\d+)\\s+yards?\\s+(inside|outside)\\s+(?:of\\s+)?(?:the\\s+)?|(?:on|at|to)\\s+(?:the\\s+)?)?(?:(left|right|field|boundary)\\s+)?'+LMRX+'(?:\\s+(?:to|on)\\s+the\\s+(left|right|field|boundary)(?:\\s+side)?)?(.*)$','i')))){
-   const A=m[1],n=m[2]?+m[2]:0,io=(m[3]||'').toLowerCase(),lm=m[5],rest=m[7]||'';let sd=m[4]||m[6];subj=A;
+  if((m=cl.match(new RegExp('^'+PTOK+'\\s+(?:aligns?|lines? up|moves?|goes|sets?|splits?|shifts?)\\s+(?:(?:(\\d+)\\s+yards?\\s+)?(inside|outside)\\s+(?:of\\s+)?(?:the\\s+)?|(?:on|at|to)\\s+(?:the\\s+)?)?(?:(left|right|field|boundary)\\s+)?'+LMRX+'(?:\\s+(?:to|on)\\s+the\\s+(left|right|field|boundary)(?:\\s+side)?)?(.*)$','i')))){
+   const A=m[1],io=(m[3]||'').toLowerCase(),n=m[2]?+m[2]:(io?1:0),lm=m[5],rest=m[7]||'';let sd=m[4]||m[6];subj=A;
    steps.push(t=>{const p=on(t,A,235,LOS);const s2=sd||(p.x>=(t.Q?t.Q.x:235)?'right':'left');p.x=lmX(t,lm,s2,A,n,io);if(/on the (?:line|ball)/i.test(rest))p.y=LOS;else if(/off the (?:line|ball)/i.test(rest))p.y=LOS+YD});ok.push(cl);continue}
   if((m=cl.match(new RegExp('^((?:'+PTOK+'(?:/|\\s*and\\s*)?)+)\\s+(?:moves?|goes|slides?|lines? up|shifts?|aligns?|sets?)\\s+(?:over\\s+)?(?:to|on|at)\\s+(?:the\\s+)?(left|right|field|boundary)(?:\\s+(?:side|hash))?(.*)$')))){
-   P=players(m[1]);const sd=m[2],ball=/on the (?:ball|line)/i.test(m[3]||'');subj=P[P.length-1];
+   P=players(m[1]);const sd=m[3],ball=/on the (?:ball|line)/i.test(m[4]||'');subj=P[P.length-1];
    steps.push((t)=>{P.forEach((k,i)=>{const p=on(t,k,235,LOS);
     if(/^(LT|LG|RG|RT|C)$/.test(k)){const xs=OLK.filter(o=>o!==k).map(o=>t[o].x);p.x=/^(left|boundary)$/i.test(sd)?Math.min(...xs)-OLSP:Math.max(...xs)+OLSP;p.y=LOS}
     else{const out=/^(left|boundary)$/i.test(sd)?-1:1,n=P.length-1-i;p.x=SIDEX(sd)+out*(n*32)+(out>0?8:-8)+(P.length>1?0:0);if(ball)p.y=LOS}})});ok.push(cl);continue}
@@ -397,6 +397,18 @@ function parseDef(text){const ok=[],bad=[],steps=[];let subj=null;
    steps.push(t=>{const q=t[B],p=on(t,A,q.x,q.y),side=q.x>=t.Q.x?1:-1;p.x=how==='behind'?q.x:how==='inside'?q.x-side*28:how==='outside'?q.x+side*28:q.x+side*28;p.y=how==='behind'?q.y+24:q.y});ok.push(cl);continue}
   if((m=cl.match(new RegExp('^'+PTOK+'\\s+(?:starts?|begins?|lines? up)\\s+(?:on the other side|opposite)')))){subj=m[1];const A=m[1];steps.push(t=>{const p=on(t,A,235,150+OFF);p.x=2*t.Q.x-p.x});ok.push(cl);continue}
   if((m=cl.match(new RegExp('^'+PTOK+'\\s+on\\s+the\\s+(?:line|ball)')))){subj=m[1];const A=m[1];steps.push(t=>{on(t,A,235,LOS).y=LOS});ok.push(cl);continue}
+  if((m=cl.match(new RegExp('^'+PTOK+'\\s+(?:runs\\s+|goes\\s+in\\s+|has\\s+)?(jet|short|in and out|in|out|orbit|return|yo-?yo|fast|quick)\\s+motions?(?:\\s+(?:to|toward|across)\\s+(?:the\\s+)?(left|right|field|boundary))?(.*)$','i')))){
+   const A=m[1],ty=m[2].toLowerCase(),sd=m[3];subj=A;
+   steps.push((t,L)=>{const p=on(t,A,385,128),Q=t.Q||{x:235,y:LOS+18},x0=p.x,y0=p.y,mine=x0>=Q.x?1:-1,toSide=sd?(/^(left|boundary)$/i.test(sd)?-1:1):null,yb=Math.max(y0,LOS+YD);let pts;
+    const tk=OLK.map(k=>t[k]).filter(Boolean).map(o=>o.x),edge=d=>d>0?Math.max(...tk):Math.min(...tk);
+    if(ty==='jet'||ty==='fast'||ty==='quick'){const d=toSide||-mine;pts=[[x0,y0],[edge(d)+d*3*YD,yb]]}
+    else if(ty==='orbit'){const d=toSide||-mine;pts=[[x0,y0],[Q.x+mine*2*YD,Q.y+2*YD],[Q.x,Q.y+3.5*YD],[Q.x+d*2*YD,Q.y+2*YD],[edge(d)+d*2*YD,yb]]}
+    else if(ty==='short'){pts=[[x0,y0],[x0-mine*2.5*YD,y0]]}
+    else if(ty==='in'){pts=[[x0,y0],[x0-mine*5*YD,y0]]}
+    else if(ty==='out'){pts=[[x0,y0],[Math.max(8,Math.min(VW-8,x0+mine*5*YD)),y0]]}
+    else if(/in and out|yo/.test(ty)){pts=[[x0,y0],[x0-mine*4*YD,y0+YD*0.6],[x0-mine*0.5*YD,y0+YD*1.2]]}
+    else{const d=toSide||-mine;pts=[[x0,y0],[Q.x+d*2*YD,yb],[Q.x-d*0.5*YD,yb+YD*0.6]]}
+    pts=pts.map(q=>[Math.round(Math.max(8,Math.min(VW-8,q[0]))),Math.round(q[1])]);L.push({pts,dot:1,arrow:1,col:'#3b9cff',mo:ty})});ok.push(cl);continue}
   if((m=cl.match(new RegExp('^(?:'+PTOK+'\\s+)?(?:fast\\s+|quick\\s+)?(?:motions?|runs|goes)\\s+(?:in motion\\s+)?(?:to|across|toward)\\s+(?:the\\s+)?(left|right|field|boundary|landing spot|spot|call)?')))){const A=m[1]||subj;if(!A){bad.push(cl);continue}const sd=m[2];
    steps.push((t,L)=>{const p=on(t,A,385,128);let x1;if(!sd||/landing|spot|call/i.test(sd))x1=HASHR+5*YD;else x1=SIDEX(sd)+(/^(left|boundary)$/i.test(sd)?-45:5*YD);L.push({pts:[[p.x,p.y],[x1,Math.max(p.y,LOS+20)]],dot:1,arrow:1,col:'#3b9cff'})});ok.push(cl);continue}
   bad.push(cl)}
