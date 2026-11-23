@@ -41,7 +41,10 @@ Headless tests: Playwright (Python) against that server. Run test scripts with `
 - **Sync server** (`kdnce.coachnoahcornell.workers.dev`): holds Deer Creek's real glossary, games and plans behind a passcode. Work in demo mode, or deploy your own Worker and D1 database from `server/` and change `wrangler.toml` and the server address.
 - **Apps Script URLs:** `suite/gameplan.html` ("Send to Mental Reps") and `mental-reps/index.html` post to Noah's Google Sheet endpoints. Testing those writes into his sheet.
 - **Secrets** (`SIGNING_KEY`, `ADMIN_KEY`) live only in the Cloudflare dashboard. Never commit them.
-- **The repo is public.** No team film, rosters or player data in it.
+- **The repo is public.** The Deer Creek film and game files already in `film-room/` stay (Noah's decision). Do not add rosters or player data.
+
+## Scope
+Noah's rule: Louis can do whatever the defensive side needs, as long as it does not break the offensive side. Before merging, open the suite signed out (demo mode), check the Gameplan, Almanac, Glossary and Film Room tabs still load, and confirm any shared file you touched (`shared/*.js`, `suite/index.html`, `suite/sync.js`) behaves the same for offense. Defensive vocabulary decisions are in the project doc `defense-vocabulary-decisions-2026-11-23.md` (Over/Under are fixed to the defense's left and right; positions, packages and strength are program settings).
 
 ## Branch and merge workflow (suggested, not yet agreed)
 1. Work on a branch (start from `louis-defense`), not on `main`.
