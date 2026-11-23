@@ -329,7 +329,7 @@ $('ent').addEventListener('keydown',ev=>{if(ev.key!=='Enter')return;const id=ev.
  if(id==='gain'){ev.preventDefault();readNum('gain');logPlay();return}
  if(id==='addn'||id==='addc'){ev.preventDefault();if(id==='addn'&&ADD==='front'&&$('addc')&&!$('addc').value.trim()){$('addc').focus();return}doAdd();return}
  if(id==='yd'||id==='dx'){ev.preventDefault();ev.target.blur()}});
-$('ent').addEventListener('keydown',ev=>{if(ev.key==='Escape'&&ADD){ADD=null;renderEntry()}});
+$('ent').addEventListener('keydown',ev=>{if(ev.key==='Escape'&&ADD){ev.preventDefault();ADD=null;renderEntry()}});
 $('ent').addEventListener('input',ev=>{const id=ev.target.id,v=ev.target.value;
  if(id==='sit'){if(!QT&&v)QPKG0=d.pkg;QT=v;const o=applyQuick(v);updAll();showQ(o)}
  else if(id==='fq'){FQ=v;$('fchips').innerHTML=formChips()}

@@ -127,11 +127,20 @@ const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;',
 const mrSrc=()=>SUITESYNC.status().signedIn?'../mental-reps/':'../mental-reps/?demo=1';
 function frame(t){if(made[t.id])return made[t.id];let el;
  if(t.soon){el=document.createElement('div');el.className='soonv';el.innerHTML='<h2>'+t.name+'</h2><p>'+t.soon+'</p>'}
- else{el=document.createElement('iframe');el.src=t.id==='mreps'?mrSrc():t.src;el.title=t.name;el.setAttribute('allow','clipboard-write')}
+ else{el=document.createElement('iframe');el.src=t.id==='mreps'?mrSrc():t.src;el.title=t.name;el.setAttribute('allow','clipboard-write');el.addEventListener('load',()=>hookEsc(el))}
  $('views').appendChild(el);return made[t.id]=el}
 function open(id){const t=TOOLS.find(x=>x.id===id)||DTOOLS.find(x=>x.id===id);if(!t)return goHome();
  for(const k in made)made[k].classList.toggle('on',k===t.id);frame(t).classList.add('on');
  $('ttl').textContent=t.name;document.body.classList.add('tool');CURT=t.id;homeLabel();try{localStorage.setItem('suite_tab',t.id)}catch(e){}}
+/* Escape = the Home / Back button. A dialog that is open keeps Escape for itself; the Defensive Setup panel closes first. */
+function escHome(e){if(e.key!=='Escape'||e.defaultPrevented)return;
+ const so=$('dsetov');if(so){so.remove();return}
+ if(!document.body.classList.contains('tool')||document.body.classList.contains('setov'))return;
+ if(document.querySelector('.modal.show'))return;
+ try{const d=made[CURT]&&made[CURT].contentWindow.document;if(d&&(d.querySelector('.modal.show')||[...d.querySelectorAll('#modal')].some(m=>getComputedStyle(m).display!=='none')))return}catch(x){}
+ e.preventDefault();$('homebtn').click()}
+function hookEsc(f){try{f.contentWindow.document.addEventListener('keydown',escHome)}catch(x){}}
+document.addEventListener('keydown',escHome);
 function goHome(){document.body.classList.remove('tool');CURT='';homeLabel();try{localStorage.setItem('suite_tab','')}catch(e){}renderHome()}
 function reviewCount(){if(!window.GL)return 0;const g=GL.load(PROGRAM);return g?GL.reviewList(g).length:0}
 const ALMK=()=>{try{const s=JSON.parse(localStorage.getItem('suite_sync'));return(s&&s.token&&s.exp>Date.now())?'almanac_v1':'almanac_demo'}catch(e){return'almanac_demo'}};
@@ -173,7 +182,7 @@ $('homebtn').onclick=()=>{if(document.body.classList.contains('tool')&&BACK[CURT
 /* A tool can ask the shell to open another tool, e.g. the Almanac's Glossary button. */
 /* Settings opens over the current screen (no tab switch): the Almanac frame becomes a transparent overlay that shows only its Setup dialog. */
 function setClose(){const o=$('dsetov');if(o)o.remove();const f=made.almanac;if(f){f.classList.remove('ovl');try{f.contentWindow.document.documentElement.classList.remove('ovl')}catch(e){}}document.body.classList.remove('setov')}
-function toSettings(){if(SIDE==='D'){if($('dsetov'))return;const f=document.createElement('iframe');f.id='dsetov';f.src='dsettings.html';f.title='Defensive Setup';f.style.cssText='position:fixed;inset:0;width:100%;height:100%;border:0;z-index:40;background:#0f1720';document.body.appendChild(f);return}
+function toSettings(){if(SIDE==='D'){if($('dsetov'))return;const f=document.createElement('iframe');f.id='dsetov';f.src='dsettings.html';f.title='Defensive Setup';f.addEventListener('load',()=>hookEsc(f));f.style.cssText='position:fixed;inset:0;width:100%;height:100%;border:0;z-index:40;background:#0f1720';document.body.appendChild(f);return}
 const f0=0;const f=frame(TOOLS[0]);let tries=0;const go=()=>{let w=null;try{w=f.contentWindow;if(!w||!w.openSetup||!w.document.documentElement)throw 0}catch(e){if(++tries<40)return setTimeout(go,250);return}
   w.document.documentElement.classList.add('ovl');document.body.classList.add('setov');f.classList.add('ovl');w.openSetup()};go()}
 function toAlm(id){open('almanac');const f=made.almanac;let tries=0;const go=()=>{let w=null;try{w=f.contentWindow;if(!w||!w.takeGrid)throw 0}catch(e){if(++tries<40)return setTimeout(go,250);return}w.takeGrid(id)};go()}

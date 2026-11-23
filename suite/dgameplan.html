@@ -189,7 +189,7 @@ $('main').addEventListener('change',ev=>{const id=ev.target.dataset&&ev.target.d
 function modal(html,after){$('mbox').innerHTML=html;$('modal').style.display='flex';if(after)after()}
 function closeModal(){$('modal').style.display='none';$('mbox').innerHTML=''}
 $('modal').addEventListener('click',ev=>{if(ev.target.id==='modal'||ev.target.closest('[data-m=close]'))closeModal()});
-addEventListener('keydown',ev=>{if(ev.key==='Escape'&&$('modal').style.display==='flex')closeModal()});
+addEventListener('keydown',ev=>{if(ev.key==='Escape'&&$('modal').style.display==='flex'){ev.preventDefault();closeModal()}});
 function cellModal(bid,row,colId){const p=P(),b=p.blocks.find(x=>x.id===bid),col=COLS.find(c=>c.id===colId),rw=ROWS.find(r=>r.id===row),k=row+'|'+colId;b.cells=b.cells||{};
  const L=()=>{const l=DV.lists();return col.type==='front'?l.fr.map(x=>x[0]+'|'+x[1]):col.type==='pressure'?l.press:l.cov};
  const lab=v=>col.type==='front'?v.split('|')[0]+(v.split('|')[1]?' '+v.split('|')[1]:''):v;
