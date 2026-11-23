@@ -90,7 +90,23 @@ const ALIAS_KIND={coverage:'cov',pressure:'press',package:'pkg',frontmod:'mod',f
 function aliases(){const out=[];if(!GLO)return out;try{GLO.terms.forEach(t=>{if(t.status!=='active'||!t.aliases||!t.aliases.length)return;const k=ALIAS_KIND[t.type];if(!k)return;
   t.aliases.forEach(a=>{a=String(a||'').trim();if(a&&a.toUpperCase()!==String(t.name).toUpperCase())out.push({kind:k,alias:a,name:t.name})})})}catch(e){}return out}
 
-return{aliases,strength,setStrength,resetStrength,STRENGTH_MODES,MID_MODES,lists,addWord,forms:glForms,glo:()=>GLO,positions,setPositions,resetPositions,posDefaults:()=>posDefaults(SIGNED),reload:()=>{try{GLO=GL.load(PROGRAM)}catch(e){}}}}
+/* Letters on the drawing: each defender dot (preset key, without D_) stands for one of the program's positions. The dot shows the program's letter. The stored dot label is left alone (blocking and pressure drawing read it). */
+const DOTMAP={
+ dc:{DE1:'pos.end',DE2:'pos.end',WL:'pos.will',OL1:'pos.will',IL1:'pos.hawk',ML:'pos.mike',IL2:'pos.mike',SL:'pos.spur',OL2:'pos.spur',CB1:'pos.corner',CB2:'pos.corner',FS:'pos.bandit',SS:'pos.free'},
+ demo:{DE1:'pos.end',DE2:'pos.end',DT1:'pos.tackle',DT2:'pos.tackle',WL:'pos.will',OL1:'pos.will',IL1:'pos.mike',IL2:'pos.mike',ML:'pos.mike',SL:'pos.sam',OL2:'pos.sam',CB1:'pos.corner',CB2:'pos.corner',FS:'pos.fs',SS:'pos.ss'}};
+function dotLabel(key){const id=(SIGNED?DOTMAP.dc:DOTMAP.demo)[String(key||'').replace(/^D_/,'')];if(!id)return null;const p=positions().find(x=>x.id===id);return p&&p.letter?p.letter:null}
+
+/* Strength for one snap, from the program's setting. Returns {side:'L'|'R'|null, why}. L and R are the same left and right the hash chips use (as the offense faces it). */
+function strengthSide(play){const S=strength(),h=play&&play.hash;
+ if(S.mode==='fb'){if(h==='L')return{side:'R',why:'Field side (hash is left)'};if(h==='R')return{side:'L',why:'Field side (hash is right)'};
+  if(S.mid==='left')return{side:'L',why:'Middle hash: always left'};if(S.mid==='right')return{side:'R',why:'Middle hash: always right'};
+  return{side:null,why:h==='M'?(S.mid==='arm'?'Middle hash: the QB\'s throwing arm side. Pick it.':'Middle hash: side with more WRs, then QB arm. Pick it.'):'Pick the hash or the side.'}}
+ if(S.mode==='lr')return{side:null,why:'Pick the strength side each play.'};
+ if(S.mode==='pass')return{side:null,why:'Strength goes to the side with more eligible receivers. Pick it.'};
+ if(S.mode==='te')return{side:null,why:'Strength goes to the tight end side. Pick it.'};
+ return{side:null,why:S.custom||'Custom rule. Pick it.'}}
+
+return{dotLabel,strengthSide,aliases,strength,setStrength,resetStrength,STRENGTH_MODES,MID_MODES,lists,addWord,forms:glForms,glo:()=>GLO,positions,setPositions,resetPositions,posDefaults:()=>posDefaults(SIGNED),reload:()=>{try{GLO=GL.load(PROGRAM)}catch(e){}}}}
 root.DefVocab=DefVocab
 /* The demo glossary is first seeded by the offense Almanac with Deer Creek's defensive words. Swap those for generic ones, once, so the demo space has nothing of Deer Creek's.
    Words a coach added in the demo are kept. Does nothing when there is no glossary yet (the lists above already carry the generic words). */
