@@ -75,6 +75,8 @@ const DEF_PRESS=SIGNED?['SMOKE','FOG','WILD','CAT','OKIE','SOONER','STATE','COWB
 let GLO=null;try{GLO=GL.load(PROGRAM)}catch(e){}
 const un=(a,b)=>{const seen=new Set(a.map(x=>String(x).toUpperCase()));return a.concat(b.filter(x=>!seen.has(String(x).toUpperCase())))};
 const gl=type=>GLO?GL.active(GLO,type).filter(t=>!t.side||t.side==='D'):[];
+/* Their formations are tagged in our own formation names, so they live in the glossary as offense (O) formations. */
+const glForms=()=>{try{return GLO?GL.active(GLO,'formation').map(t=>SCOUTO.famOf(t.name)).filter(Boolean):[]}catch(e){return[]}};
 /* Their plays: the CONCEPT is the play (Power, GY Counter); the call word (Charger, Panther) is only the tag that says it. */
 /* TODO: read concepts from the glossary once it has a concept type (its run / pass terms are call words like CHARGER, not concepts). */
 function conceptList(){const m={};SCOUTO.concepts().forEach(c=>m[c.name.toUpperCase()]=c);
@@ -89,8 +91,8 @@ function lists(){
   cov:un(un(DEF_COV,gl('coverage').map(t=>t.name)),EXTRA.coverage||[]),
   press:un(un(DEF_PRESS,gl('pressure').map(t=>t.name)),EXTRA.pressure||[])}}
 /* New words go into the program glossary (marked "needs review", same as the offense Almanac). Only if the glossary could not take it does the page keep it on its own. */
-function addWord(type,name,x){name=String(name||'').trim().toUpperCase();if(!name)return'';x=x||{};let ok=false;
- if(GLO){try{if(GL.find(GLO,type,name)){ok=true}else{const t={type,name,side:'D',source:'game',needsReview:true,meaning:{text:'Added during a game. Needs a definition.'}};if(type==='front'){if(x.code)t.code=x.code;if(x.package)t.package=x.package}GL.add(GLO,t);GL.save(GLO);ok=true}}catch(e){ok=false}}
+function addWord(type,name,x){name=String(name||'').trim().toUpperCase();if(!name)return'';x=x||{};let ok=false;if(type==='formation')name=SCOUTO.famOf(name);
+ if(GLO){try{if(GL.find(GLO,type,name)){ok=true}else{const t={type,name:type==='formation'?name.charAt(0)+name.slice(1).toLowerCase():name,side:x.side||'D',source:'game',needsReview:true,meaning:{text:'Added during a game. Needs a definition.'}};if(type==='front'){if(x.code)t.code=x.code;if(x.package)t.package=x.package}GL.add(GLO,t);GL.save(GLO);ok=true}}catch(e){ok=false}}
  if(!ok){EXTRA[type]=EXTRA[type]||[];const dup=EXTRA[type].some(y=>(Array.isArray(y)?y[0]:y)===name);if(!dup)EXTRA[type].push(type==='front'?[name,x.code||'',x.package||'']:name)}
  return name}
 const EXTRA={};
@@ -173,7 +175,7 @@ $('undo').onclick=()=>{const g=G();if(!g||!g.plays.length)return;let x=g.plays.p
 const ch=(k,v,l,on,x)=>`<button class="chip ${x||''} ${on?'on':''}" data-k="${k}" data-v="${esc(v)}">${l}</button>`;
 function formList(){const g=G(),m={};const e=g&&g.scout&&ST.get(g.scout);
  if(e)ST.rows(g.scout).forEach(r=>{const k=r.fam||SCOUTO.famOf(r.ff||r.fm);if(k)m[k]=(m[k]||0)+1});(g?PL(g):[]).forEach(p=>{const k=SCOUTO.famOf(p.form);if(k)m[k]=(m[k]||0)+1});
- return Object.entries(m).sort((a,b)=>b[1]-a[1]).map(x=>x[0])}
+ const seen=Object.entries(m).sort((a,b)=>b[1]-a[1]).map(x=>x[0]);glForms().forEach(f=>{if(!seen.includes(f))seen.push(f)});return seen}
 const sbox=(id,ph,v)=>`<input type="search" id="${id}" placeholder="${ph}" autocomplete="off" autocapitalize="characters" enterkeyhint="next" value="${esc(v)}" style="width:100%;margin-bottom:6px">`;
 function addRow(type,ph){if(ADD!==type)return`<button class="chip" data-a="add" data-t="${type}">+ Other</button>`;
  return`<div class="addrow"><input type="text" id="addn" placeholder="${ph}" autocomplete="off" autocapitalize="characters">${type==='front'?`<input type="text" id="addc" placeholder="Code (e.g. 5-0-5)" autocomplete="off" style="width:130px"><select id="addp"><option value="">Odd / even?</option><option>odd</option><option>even</option></select>`:''}<button class="btn pri" data-a="addok">Add</button><button class="btn" data-a="addno">Cancel</button></div>`}
@@ -348,12 +350,12 @@ $('ent').addEventListener('change',ev=>{if(RENDERING)return;const id=ev.target.i
 
 /* ---------- adding vocabulary ---------- */
 function doAdd(){const v=String(($('addn')||{}).value||'').trim().toUpperCase(),t=ADD;if(!v){ADD=null;renderEntry();return}
- if(t==='form')d.form=SCOUTO.famOf(v);
+ if(t==='form'){d.form=addWord('formation',v,{side:'O'})}
  else if(t==='pkg'){d.pkg=addWord('package',v);const g=G();if(g)g.pkg=d.pkg}
  else if(t==='front'){const code=String(($('addc')||{}).value||'').trim(),pk=($('addp')||{}).value||'';d.front=addWord('front',v,{code,package:pk});d.fcode=code}
  else if(t==='press')d.press=addWord('pressure',v);
  else if(t==='cov')d.cov=addWord('coverage',v);
- ADD=null;save();renderEntry();toast('Added '+v+(t==='form'?'':' (in the glossary, needs a definition)'))}
+ ADD=null;save();renderEntry();toast('Added '+v+' (in the glossary, needs a definition)')}
 
 $('ent').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;
  if(b.dataset.a){const a=b.dataset.a;
@@ -386,6 +388,7 @@ function logPlay(){const g=G();if(!g)return;readNum('gain');
  const hv=[...d.havoc];if(rp==='R'&&gain<0&&!hv.includes('TFL'))hv.push('TFL');if(d.result==='Sack'&&!hv.includes('SACK'))hv.push('SACK');if(d.result==='Interception'&&!hv.includes('PBU'))hv.push('PBU');
  const p={pid:edit||'p'+Date.now().toString(36),ts:Date.now(),dn:+d.dn,di:+d.di,side:d.side,yd:+d.yd,f:ballOn(d),hash:d.hash,form:d.form,call:d.call,concept:d.concept||(d.call&&SCOUTO.decode(d.call).known?SCOUTO.decode(d.call).concept:''),pkg:d.pkg,front:d.front,fcode:d.fcode,mods:[...d.mods],press:d.press,cov:d.cov,rp,dir:d.dir,result:d.result,td:d.td,gain,havoc:hv};
  if(d.pkg)g.pkg=d.pkg;
+ if(d.form&&GLO&&!glForms().includes(SCOUTO.famOf(d.form)))addWord('formation',d.form,{side:'O'});
  if(edit){const i=g.plays.findIndex(x=>x.pid===edit);if(i>=0){p.ts=g.plays[i].ts;g.plays[i]=p}edit=null;resume();save();renderAll();toast('Saved changes');return}
  g.plays.push(p);
  if(endsDrive(p))g.plays.push({k:'d',auto:true});
