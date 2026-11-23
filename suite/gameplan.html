@@ -440,13 +440,14 @@ function recConcept(d,side,skip){const ord=rcvOrder(d,side),cand=Object.keys(d.t
   const p=standAt(d,k),r=Object.assign({},l);delete r.pts;delete r.mv;r.pts=l.pts.map(q=>[Math.round(q[0]-p.x),Math.round(q[1]-p.y)]);const n=ord.indexOf(k);if(n>=0)r.n=n+1;else r.k=k;out.push(r)});return out}
 /* OL rules from a run concept's meaning ("BSG pulls and traps the 1st man in the C gap", "PSG combos with the C to the M").
    PS / BS = playside / backside of the run; drawn against the defense on the drawing if there is one, else to a spot. */
-const OLRX=new RegExp('^(PS TE|BS TE|PST|PSG|C|BSG|BST|'+PTOK.slice(1,-1)+')\\s+(base blocks|down blocks|reach blocks|zone steps(?:\\s+to)?|combos|double teams|pulls and traps|pulls and kicks out|pulls and wraps(?:\\s+for)?|pulls and leads(?:\\s+up)?(?:\\s+on|\\s+for)?|pulls and logs|arc releases(?:\\s+to)?|hinges|cuts off|scoops|climbs(?:\\s+to)?|blocks)(?:\\s+with\\s+the\\s+(\\w+))?(?:\\s+(?:to|for|on)(?=\\s))?(?:\\s+(.+?))?\\.?$','i');
+const OLRX=new RegExp('^(PS TE|BS TE|[A-Z]{1,3})\\s+((?:pulls?(?:\\s+and)?\\s+)?(?:traps?|kicks?\\s+out|wraps?(?:\\s+(?:for|to))?|leads?(?:\\s+up)?(?:\\s+(?:on|for))?|logs?)|base(?:\\s+blocks?)?|down(?:\\s+blocks?)?|reach(?:\\s+blocks?)?|zone\\s+steps?(?:\\s+to)?|combos?|double(?:\\s+teams?)?|arc(?:\\s+releases?)?(?:\\s+to)?|hinges?|cuts?\\s+off|scoops?|climbs?(?:\\s+to)?|blocks?)(?:\\s+with\\s+the\\s+(\\w+))?(?:\\s+(?:to|for|on)(?=\\s))?(?:\\s+(.+?))?\\.?$','i');
+const unlab=k=>{if(/^(PST|PSG|BSG|BST|C|LT|LG|RG|RT|PS TE|BS TE)$/.test(k))return k;for(const sl of [...PSW,...PST,...PSR])if(lab(sl)===k)return sl;return k};
 function olRules(text){return String(text||'').split(/\.\s+|\.$|;\s*|\n/).map(x=>x.trim()).filter(Boolean).map(x=>{const m=x.match(OLRX);return m?{p:m[1].toUpperCase(),a:m[2].toLowerCase(),w:(m[3]||'').toUpperCase(),tg:(m[4]||'').toLowerCase()}:null}).filter(Boolean)}
 function runSide(text,b){const m=String(text||'').match(/to the (left|right|field|boundary|call side)/i),w=m?m[1].toLowerCase():'';if(w==='left')return-1;if(w==='right')return 1;const sd=b?fmParse(b.name).side:'';return sd==='LT'?-1:1}
 function olDraw(d,text,s){const t=d.t,L=d.l=(d.l||[]),R=olRules(text);if(!R.length)return 0;
  const ol=OLK.filter(k=>t[k]&&t[k].on).sort((a,b)=>t[a].x-t[b].x);if(ol.length<5)return 0;const C=t.C,ps=s>0?ol.slice(3):ol.slice(0,2).reverse(),bs=s>0?ol.slice(0,2).reverse():ol.slice(3);
  const teK=sd=>['Y','M','A','F','H'].filter(k=>{const q=t[k],tk=t[sd>0?ps[1]:bs[1]],o=sd>0?s:-s;return q&&q.on&&!q.df&&Math.abs(q.y-LOS)<1.6*YD&&(q.x-tk.x)*o>0&&Math.abs(q.x-tk.x)<OLSP*2.2}).sort((a,b)=>Math.abs(t[a].x-t[ps[1]].x)-Math.abs(t[b].x-t[ps[1]].x))[0];
- const KEY={PSG:ps[0],PST:ps[1],BSG:bs[0],BST:bs[1],C:'C','PS TE':teK(1),'BS TE':teK(-1)},key=k=>k in KEY?KEY[k]:k,P=k=>key(k)&&t[key(k)]&&t[key(k)].on?t[key(k)]:null;
+ const KEY={PSG:ps[0],PST:ps[1],BSG:bs[0],BST:bs[1],C:'C','PS TE':teK(1),'BS TE':teK(-1)},key=k=>k in KEY?KEY[k]:unlab(k),P=k=>key(k)&&t[key(k)]&&t[key(k)].on?t[key(k)]:null;
  const te=KEY['PS TE']?t[KEY['PS TE']]:null;
  const gx={a:(C.x+t[ps[0]].x)/2,b:(t[ps[0]].x+t[ps[1]].x)/2,c:te?(t[ps[1]].x+te.x)/2:t[ps[1]].x+s*OLSP*.55,d:(te?te.x:t[ps[1]].x+s*OLSP)+s*OLSP*.55};
  const D=Object.keys(t).filter(k=>t[k].df&&t[k].on).map(k=>t[k]),dl=D.filter(q=>q.y>LOS-3*YD),lb=D.filter(q=>q.y<=LOS-3*YD&&q.y>LOS-7*YD);
@@ -454,8 +455,10 @@ function olDraw(d,text,s){const t=d.t,L=d.l=(d.l||[]),R=olRules(text);if(!R.leng
  const lab=(l,x)=>near(D.filter(q=>String(q.lab||'').toUpperCase()===l),x,LOS-2*YD);
  const spot=(x,y)=>({x:Math.round(x),y:Math.round(y),sp:1}),bl=(p,q)=>q.sp?{pts:[[Math.round(p.x+(q.x-p.x)/(Math.hypot(q.x-p.x,q.y-p.y)||1)*12),Math.round(p.y+(q.y-p.y)/(Math.hypot(q.x-p.x,q.y-p.y)||1)*12)],[q.x,q.y]],blk:1,col:'#ffffff'}:blkLine(p,q,'#ffffff');
  const target=(tg,p)=>{if(!tg)return null;let m;
-  if((m=tg.match(/(?:1st|first) man in the ([abcd]) gap/))){const x=gx[m[1]];return near(dl,x,LOS-2*YD,OLSP*.8)||near(lb,x,LOS-5*YD,OLSP*.9)||spot(x,LOS-1.6*YD)}
-  if(/outside the tackle/.test(tg))return near(dl,gx.c,LOS-2*YD,OLSP)||spot(gx.c,LOS-1.6*YD);
+  if((m=tg.match(/(?:2nd|second) level\s+(?:the\s+)?([abcd])\s+gap/))){const x=gx[m[1]];return near(lb,x,LOS-5*YD,OLSP*1.3)||spot(x,LOS-5*YD)}
+  if(/(?:2nd|second) level.*outside (?:of )?the (tackle|te)/.test(tg)){const x=/te$/.test(tg)?gx.d:gx.c;return near(lb.filter(q=>(q.x-t[ps[1]].x)*s>-6),x,LOS-5*YD,OLSP*1.6)||spot(x,LOS-5*YD)}
+  if((m=tg.match(/(?:(?:1st|first) man in\s+)?(?:the\s+)?([abcd])\s+gap/))){const x=gx[m[1]];return near(dl,x,LOS-2*YD,OLSP*.8)||near(lb,x,LOS-5*YD,OLSP*.9)||spot(x,LOS-1.6*YD)}
+  if(/outside (?:of )?the tackle/.test(tg))return near(dl,gx.c,LOS-2*YD,OLSP)||spot(gx.c,LOS-1.6*YD);
   if(/\bde\b|defensive end/.test(tg))return near(D.filter(q=>/^DE$/i.test(q.lab||'')),p.x+s*OLSP*2,LOS-2*YD)||near(dl,gx.c,LOS-2*YD,OLSP*1.5)||spot(gx.c,LOS-1.6*YD);
   if(/3 ?tech/.test(tg))return near(dl,(Math.abs(p.x-t[ps[0]].x)<Math.abs(p.x-t[bs[0]].x)?t[ps[0]]:t[bs[0]]).x+(p.x>=C.x?1:-1)*OLSP*.5,LOS-2*YD,OLSP)||spot(p.x,LOS-1.6*YD);
   if(/shade|nose/.test(tg))return near(dl,C.x,LOS-2*YD,OLSP)||spot(C.x+s*OLSP*.3,LOS-1.6*YD);
@@ -465,14 +468,14 @@ function olDraw(d,text,s){const t=d.t,L=d.l=(d.l||[]),R=olRules(text);if(!R.leng
   if((m=tg.match(/next man (inside|outside)/))){const dir=(p.x>=C.x?1:-1)*(m[1]==='inside'?-1:1);return near(dl.filter(q=>(q.x-p.x)*dir>4),p.x+dir*OLSP,LOS-2*YD,OLSP*1.6)||spot(p.x+dir*OLSP*.8,LOS-1.6*YD)}
   return null};
  const end=(a,b,r)=>{const dx=b.x-a.x,dy=b.y-a.y,m=Math.hypot(dx,dy)||1;return[Math.round(b.x-dx/m*r),Math.round(b.y-dy/m*r)]};
- let n=0;const climbed=[];R.forEach(r=>{const p=P(r.p);if(!p)return;const T=target(r.tg,p),toC=p===C?-s:(C.x>p.x?1:-1),a=r.a;n++;
-  if(/^pulls/.test(a)){const PL=LOS+1.7*YD,back=[Math.round(p.x+s*.5*YD),Math.round(PL)],pts=[[p.x,p.y],back];
+ let n=0,pulls=0;const climbed=[];R.forEach(r=>{const p=P(r.p);if(!p)return;const T=target(r.tg,p),toC=p===C?-s:(C.x>p.x?1:-1),a=r.a;n++;
+  if(/trap|kick|wrap|lead|log/.test(a)){const PL=Math.max(LOS+1.7*YD,p.y+.6*YD)+(pulls++)*.8*YD,back=[Math.round(p.x+s*.5*YD),Math.round(PL)],pts=[[p.x,p.y],back];
    const tg=T||(/trap|kick/.test(a)?target('the 1st man in the c gap',p):/log/.test(a)?target('the de',p):spot(gx.b,LOS-5*YD));
    if(/trap|kick/.test(a))pts.push([Math.round(tg.x-s*1.4*YD),Math.round(PL)]);
    else if(/log/.test(a))pts.push([Math.round(tg.x+s*.3*YD),Math.round(PL)],[Math.round(tg.x+s*1.3*YD),Math.round(LOS-.2*YD)]);
    else pts.push([Math.round((te?gx.c:gx.b)-s*.3*YD),Math.round(PL)],[Math.round(te?gx.c:gx.b),Math.round(LOS+.2*YD)]);
    pts.push(tg.sp?[tg.x,tg.y]:end({x:pts[pts.length-1][0],y:pts[pts.length-1][1]},tg,14));L.push({pts,blk:1,col:'#ffffff'});return}
-  if(/combos|double/.test(a)){const w=P(r.w);const mid=w?{x:(p.x+w.x)/2,y:LOS}:p,D1=near(dl,mid.x,LOS-2*YD,OLSP)||spot(mid.x,LOS-1.4*YD);
+  if(/combo|double/.test(a)){const w=P(r.w);const mid=w?{x:(p.x+w.x)/2,y:LOS}:p,D1=near(dl,mid.x,LOS-2*YD,OLSP)||spot(mid.x,LOS-1.4*YD);
    L.push(bl(p,D1));if(T&&T.y<LOS-3*YD&&!climbed.includes(T)){climbed.push(T);L.push(climbLine(D1,T,C.x,'#ffffff'))}return}
   if(T){L.push(bl(p,T));return}
   const dq=/down/.test(a)?near(dl.filter(q=>(q.x-p.x)*toC>2),p.x+toC*OLSP*.7,LOS-2*YD,OLSP*1.3):/reach|zone|scoop|cut/.test(a)?near(dl.filter(q=>(q.x-p.x)*s>-4),p.x+s*OLSP*.6,LOS-2*YD,OLSP*1.2):/arc/.test(a)?near(lb.filter(q=>(q.x-p.x)*s>-4),p.x+s*OLSP,LOS-5*YD,OLSP*2):/climb/.test(a)?near(lb,p.x+s*OLSP*.5,LOS-5*YD,OLSP*1.5):/hinge/.test(a)?null:near(dl,p.x,LOS-2*YD,OLSP*.6);
