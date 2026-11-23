@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Defensive Gameplan</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0f1720">
+<style>
+:root{--bg:#0f1720;--card:#18232f;--line:#2a3948;--tx:#e8eef4;--mut:#8ea0b2;--acc:#9b7bff;--blue:#3b9cff;--ok:#2fbf71;--warn:#f2b632;--bad:#ef5b5b}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px -apple-system,system-ui,sans-serif;min-height:100vh}
+header{position:sticky;top:0;z-index:5;display:flex;gap:8px;align-items:center;padding:8px 12px;background:#0b1118;border-bottom:1px solid var(--line);flex-wrap:wrap}
+header h1{font-size:16px;margin:0 8px 0 0}
+select,button,input,textarea{font:inherit;color:var(--tx)}
+select,input[type=text],input[type=search],textarea{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px}
+.btn{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 12px;min-height:40px;text-transform:uppercase;font-weight:600}
+.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}.btn.bad{color:var(--bad)}.btn.sm{padding:4px 9px;min-height:30px}
+main{padding:12px;max-width:1500px;margin:0 auto}
+.mut,.note{color:var(--mut);font-size:12px}
+.empty{background:#102030;border:1px dashed var(--line);border-radius:12px;padding:22px;text-align:center}
+.block{background:#101c28;border:1px solid var(--line);border-left:4px solid var(--acc);border-radius:14px;margin-bottom:16px;overflow:hidden}
+.bhead{display:flex;gap:8px;align-items:center;padding:10px 12px;flex-wrap:wrap}
+.bname{font:800 26px "Barlow Condensed","Arial Narrow",system-ui,sans-serif;letter-spacing:.02em;text-transform:uppercase;flex:1;min-width:140px}
+.tag{display:inline-block;background:#223140;border:1px solid var(--line);border-radius:8px;padding:3px 8px;font-size:12px;font-weight:700;text-transform:uppercase;margin-right:6px}
+.top{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;padding:0 12px 12px}
+@media(max-width:820px){.top{grid-template-columns:1fr}}
+.draw{background:#101c14;border:1px solid var(--line);border-radius:8px;min-height:120px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.pred{background:#0f1a24;border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--mut);margin-bottom:6px;display:flex;justify-content:space-between;gap:8px}
+.bar{display:flex;height:20px;border-radius:6px;overflow:hidden;background:#223140;font-size:12px;font-weight:700;margin:4px 0}
+.bar span{display:flex;align-items:center;justify-content:center;min-width:0;overflow:hidden}.r{background:#2f7d57}.p{background:#3b6fb0}.o{background:#a07a22}
+.pred textarea{width:100%;min-height:54px;margin-top:8px;font-size:14px}
+.grid{display:grid;grid-template-columns:96px repeat(5,minmax(150px,1fr));border-top:1px solid var(--line);overflow-x:auto}
+.grid>div{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px;min-height:62px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}
+.grid>div:nth-child(6n){border-right:0}
+.gh{background:#0e1822;min-height:52px!important}.gh b{font:800 15px "Barlow Condensed","Arial Narrow",system-ui,sans-serif;text-transform:uppercase;letter-spacing:.03em}.gh span{font-size:11px;color:var(--mut)}
+.rl{background:#0e1822;font-size:12px;font-weight:800;color:var(--mut);text-transform:uppercase;letter-spacing:.05em}
+.cell{cursor:pointer}.cell:active{background:#16283a}
+.plus{color:#4a5d70;font-size:20px}
+.auto{display:flex;flex-direction:column;align-items:center;line-height:1.15;gap:1px}
+.auto small{font-size:11px;color:var(--mut);text-transform:lowercase;min-height:13px}.auto b{font-size:17px;text-transform:uppercase}.auto em{font-style:normal;font-size:11px;color:var(--mut)}
+.auto .fb{font-size:10px;color:var(--warn);text-transform:uppercase;letter-spacing:.04em}
+.items{display:flex;flex-direction:column;gap:2px;align-items:flex-start;width:100%}.items div{font-size:14px;font-weight:700;text-transform:uppercase}.items i{font-style:normal;color:var(--mut);font-size:11px;font-weight:600;margin-left:4px}.items s{text-decoration:none;color:var(--acc);margin-right:5px}
+.chip{background:#223140;border:1px solid var(--line);border-radius:10px;padding:9px 12px;min-height:42px;font-weight:600;text-transform:uppercase}
+.chip small{display:block;font-size:10px;font-weight:500;opacity:.75;text-transform:none}
+.chip.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+#modal{position:fixed;inset:0;background:#000b;z-index:30;display:none;align-items:flex-start;justify-content:center;padding:30px 12px;overflow:auto}
+#mbox{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;width:min(720px,100%)}
+#mbox h3{margin:0 0 6px;font-size:17px}
+#toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#000c;padding:10px 16px;border-radius:10px;z-index:40;display:none}
+</style></head><body>
+<header><h1>Defensive Gameplan</h1><select id="psel"></select><button class="btn" id="newplan">+ Plan</button>
+ <span class="mut">Their scout</span><select id="ssel"></select><span style="flex:1"></span>
+ <button class="btn" id="top3" title="Replace the formations with their three most-played">Auto-fill top 3</button><button class="btn pri" id="addf">+ Formation</button><button class="btn bad" id="delplan">Delete plan</button></header>
+<main id="main"></main>
+<div id="modal"><div id="mbox"></div></div><div id="toast"></div>
+<script src="../shared/glossary.js"></script>
+<script src="../shared/scout.js"></script>
+<script src="../shared/scoutO.js"></script>
+<script src="../shared/defvocab.js"></script>
+<script src="../shared/fielddraw.js"></script>
+<script>
+/* Defensive gameplan grid. One plan per opponent (their offense scout). One block per formation of theirs; the grid fills the favorites from the scout:
+   field run #1 / #2, boundary run #1 / #2, pass #1 / #2 (concept first, call word small above). Fronts, pops and pressures, coverages are filled by the coach from the glossary.
+   Their formations are our own formation names, so the standard drawing comes from the glossary formation term (term.draw), the same drawing the offense grid uses.
+   Stored on this device under dgameplan_v1_<program>. Not synced between devices yet. */
+const SIGNED=(()=>{try{const s=JSON.parse(localStorage.getItem('suite_sync'));return !!(s&&s.token&&s.exp>Date.now())}catch(e){return false}})();
+const PROGRAM=SIGNED?'deer-creek':'demo';
+const KEY='dgameplan_v1_'+PROGRAM,SO=SCOUTO.store(PROGRAM),DV=DefVocab(PROGRAM,SIGNED);
+const $=id=>document.getElementById(id),esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const toast=m=>{const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',2400)};
+const uid=p=>p+Math.random().toString(36).slice(2,8);
+
+/* ---------- storage ---------- */
+let S;function load(){try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){S=null}if(!S||!Array.isArray(S.plans))S={v:1,plans:[],cur:''};if(!S.plans.find(p=>p.id===S.cur))S.cur=S.plans[0]?S.plans[0].id:''}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('Could not save: storage is full')}}
+const P=()=>S.plans.find(p=>p.id===S.cur)||null;
+
+/* ---------- their formations -> our glossary formations (a stray tag like OTSD, or LT / RT glued on, is a tag, not a new formation) ---------- */
+const FC={};
+function resolveForm(fam){const U=String(fam||'').toUpperCase().trim();if(FC[U])return FC[U];
+ const names=DV.forms().map(x=>x.toUpperCase()).sort((a,b)=>b.length-a.length);let r={base:U,tags:[]};
+ if(names.includes(U))r={base:U,tags:[]};
+ else{const g=U.match(/^(.*?)(LT|RT)$/);
+  if(g&&names.includes(g[1].trim()))r={base:g[1].trim(),tags:[]};
+  else{const tk=U.split(' ');for(const n of names){const nt=n.split(' ');for(let i=0;i+nt.length<=tk.length;i++){if(tk.slice(i,i+nt.length).join(' ')===n){r={base:n,tags:tk.filter((x,j)=>j<i||j>=i+nt.length)};break}}if(r.base!==U)break}}}
+ return FC[U]=r}
+function scoutRows(p){return p&&p.scout&&SO.get(p.scout)?SO.rows(p.scout):[]}
+function formCounts(rows){const m={};rows.forEach(x=>{if(!x.fam)return;const r=resolveForm(x.fam);if(r.base)m[r.base]=(m[r.base]||0)+1});return Object.entries(m).sort((a,b)=>b[1]-a[1])}
+const rowsOf=(rows,base)=>rows.filter(x=>x.fam&&resolveForm(x.fam).base===base);
+function tagsOf(rows,base){const m={};rowsOf(rows,base).forEach(x=>resolveForm(x.fam).tags.forEach(t=>m[t]=(m[t]||0)+1));return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,4)}
+const nice=n=>String(n||'').toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());
+
+/* ---------- plans ---------- */
+function topBlocks(rows,k){return formCounts(rows).slice(0,k||3).map(x=>({id:uid('b'),form:x[0],note:'',cells:{}}))}
+function newPlan(){const sc=SO.names();if(!sc.length){toast('Import the opponent offense scout first (Offense Scout)');return}
+ const name=prompt('Plan name (opponent and week)',SO.active()||sc[0]);if(name==null||!name.trim())return;
+ const scout=sc.find(n=>n.toUpperCase()===name.trim().toUpperCase())||SO.active()||sc[0];
+ const p={id:uid('p'),name:name.trim(),scout,upd:Date.now(),blocks:[]};p.blocks=topBlocks(SO.rows(scout),3);S.plans.push(p);S.cur=p.id;save();render()}
+$('newplan').onclick=newPlan;
+$('psel').onchange=e=>{S.cur=e.target.value;save();render()};
+$('ssel').onchange=e=>{const p=P();if(!p)return;p.scout=e.target.value;p.upd=Date.now();save();render()};
+$('top3').onclick=()=>{const p=P();if(!p)return;const rows=scoutRows(p);if(!rows.length){toast('This plan has no scout loaded');return}
+ if(p.blocks.some(b=>Object.keys(b.cells||{}).length||b.note)&&!confirm('Replace the formations with their top 3? Your fronts, pressures, coverages and notes on the current ones are removed.'))return;
+ p.blocks=topBlocks(rows,3);p.upd=Date.now();save();render()};
+$('delplan').onclick=()=>{const p=P();if(!p||!confirm('Delete the plan "'+p.name+'"?'))return;S.plans=S.plans.filter(x=>x.id!==p.id);S.cur='';load();save();render()};
+$('addf').onclick=()=>{const p=P();if(!p){toast('Make a plan first');return}
+ const rows=scoutRows(p),cnt=Object.fromEntries(formCounts(rows)),have=new Set(p.blocks.map(b=>b.form)),all=[...Object.keys(cnt)];DV.forms().forEach(f=>{const u=f.toUpperCase();if(!all.includes(u))all.push(u)});
+ modal(`<h3>Add a formation</h3><div class="note" style="margin-bottom:8px">Their formations first, most-played on top. Everything in your glossary is here too. Type a new one to add it to the glossary.</div>
+  <input type="search" id="fq" placeholder="Search formations, Enter picks" autocomplete="off" autocapitalize="characters" style="width:100%;margin-bottom:8px"><div class="chips" id="fc"></div><div style="margin-top:10px;text-align:right"><button class="btn" data-m="close">Close</button></div>`,()=>{
+   const draw=()=>{const q=$('fq').value.trim().toUpperCase(),l=all.filter(x=>!q||x.includes(q));$('fc').innerHTML=l.map(x=>`<button class="chip ${have.has(x)?'on':''}" data-fm="${esc(x)}">${esc(nice(x))}${cnt[x]?`<small>${cnt[x]} plays</small>`:''}</button>`).join('')+(q&&!all.includes(q)?`<button class="chip" data-fm="${esc(q)}">+ Add "${esc(nice(q))}"</button>`:'')};
+   draw();$('fq').oninput=draw;$('fq').focus();
+   const pick=x=>{x=x.toUpperCase();if(!all.includes(x))DV.addWord('formation',x,{side:'O'});if(have.has(x)){toast(nice(x)+' is already in the plan');return}p.blocks.push({id:uid('b'),form:x,note:'',cells:{}});p.upd=Date.now();save();closeModal();render();toast('Added '+nice(x))};
+   $('fc').onclick=e=>{const b=e.target.closest('[data-fm]');if(b)pick(b.dataset.fm)};
+   $('fq').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const q=$('fq').value.trim().toUpperCase();if(!q)return;const l=all.filter(x=>x.includes(q));pick(l.find(x=>x===q)||l[0]||q)}}})};
+
+/* ---------- the grid ---------- */
+const ROWS=[{id:'fr',label:'Field run'},{id:'br',label:'Bdy run'},{id:'p1',label:'Pass 1'},{id:'p2',label:'Pass 2'}];
+const COLS=[{id:'fav',label:'Offensive favorites',sub:'Top F/B/P',auto:1},{id:'fav2',label:'2nd favorite',auto:1},{id:'fronts',label:'Defensive fronts',sub:'1-4',type:'front'},{id:'pops',label:'Pops & pressures',sub:'1-4',type:'pressure'},{id:'cov',label:'Coverages',sub:'1-4',type:'coverage'}];
+/* favorites for one block: the formation's own plays when it has enough, else all their plays (and the cell says so) */
+function favs(rows,base){const mine=rowsOf(rows,base),M=SCOUTO.MIN,own=SCOUTO.favRuns(mine),all=SCOUTO.favRuns(rows),op=SCOUTO.favPass(mine),ap=SCOUTO.favPass(rows);
+ const pick=(a,b,k)=>a.n>=M?{...a,fb:0}:{...b,fb:1};
+ return{field:pick(own.field,all.field),bdy:pick(own.bdy,all.bdy),pass:op.n>=M?{...op,fb:0}:{...ap,fb:1},n:mine.length}}
+function autoCell(F,row,col){let side,idx;
+ if(row==='fr'){side=F.field;idx=col==='fav'?0:1}else if(row==='br'){side=F.bdy;idx=col==='fav'?0:1}else if(row==='p1'&&col==='fav'){side=F.pass;idx=0}else if(row==='p2'&&col==='fav'){side=F.pass;idx=1}else return'<span class="plus">–</span>';
+ const t=side.top.filter(x=>x.name!=='(no call logged)')[idx];if(!t)return'<span class="plus">–</span>';
+ return`<div class="auto"><small>${t.calls&&t.calls.length?esc(t.calls.map(c=>c.w).join(' / ').toLowerCase()):'&nbsp;'}</small><b>${esc(t.name)}</b><em>${t.n} of ${side.n} · ${t.p}%</em>${side.fb?'<span class="fb">all formations</span>':''}${side.n<SCOUTO.MIN?'<span class="fb">small sample</span>':''}</div>`}
+function itemHtml(type,v){if(type==='front'){const[n,c]=String(v).split('|');return`${esc(n)}${c?`<i>${esc(c)}</i>`:''}`}return esc(v)}
+function cellHtml(b,row,col){const k=row+'|'+col.id;if(col.auto)return autoCell(b._F,row,col.id);
+ const a=(b.cells&&b.cells[k])||[];if(!a.length)return'<span class="plus">+</span>';return`<div class="items">`+a.map((v,i)=>`<div><s>${i+1}</s>${itemHtml(col.type,v)}</div>`).join('')+'</div>'}
+function predHtml(b,rows){const mine=rowsOf(rows,b.form);if(!mine.length)return`<div class="note">No plays from this formation in the scout.</div>`;
+ const s=SCOUTO.split(mine);
+ const top=(()=>{const m={};mine.forEach(x=>{if(x.cn)m[x.cn]=(m[x.cn]||0)+1});return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([n,c])=>esc(n)+' '+Math.round(100*c/mine.filter(x=>x.cn).length)+'%').join(' · ')})();
+ return`<div class="lab"><span>What they do from this formation</span><span>${mine.length} plays</span></div>
+  <div class="bar"><span class="r" style="width:${s.run||0}%">${s.run>=12?'Run '+s.run:''}</span><span class="p" style="width:${s.pass||0}%">${s.pass>=12?'Pass '+s.pass:''}</span><span class="o" style="width:${s.rpo||0}%">${s.rpo>=12?'RPO '+s.rpo:''}</span></div>
+  <div class="note">${s.eff!=null?'Their efficiency '+s.eff+'% · ':''}${top?'Calls: '+top:''}</div>`}
+function drawHtml(base){const g=DV.glo();let t=null;try{t=g&&GL.find(g,'formation',nice(base))||g&&GL.find(g,'formation',base)}catch(e){}
+ const d=t&&t.draw&&t.draw.t?stdDraw(t,''):null;
+ if(!d)return`<div class="note" style="padding:16px;text-align:center">No standard drawing for ${esc(nice(base))} yet.<br>Draw it once in the Gameplan (offense) with Save as standard, and it shows here.</div>`;
+ return svgOf(d).replace('<svg viewBox','<svg style="width:100%;height:auto;display:block" viewBox')}
+function render(){
+ $('psel').innerHTML=S.plans.length?S.plans.map(p=>`<option value="${p.id}" ${p.id===S.cur?'selected':''}>${esc(p.name)}</option>`).join(''):'<option>No plan yet</option>';
+ const p=P(),ns=SO.names();$('ssel').innerHTML='<option value="">(none)</option>'+ns.map(n=>`<option ${p&&p.scout===n?'selected':''}>${esc(n)}</option>`).join('');
+ const m=$('main');
+ if(!p){m.innerHTML=`<div class="empty"><h3 style="margin:0 0 8px">No defensive plan yet</h3><div class="note" style="margin-bottom:12px">${ns.length?'A plan is one opponent for one week. It starts with their three most-played formations and fills in their favorite runs and passes from the scout.':'Import the opponent offense scout in Offense Scout first, then come back and make a plan.'}</div>${ns.length?'<button class="btn pri" id="first">+ New plan</button>':''}</div>`;const f=$('first');if(f)f.onclick=newPlan;return}
+ const rows=scoutRows(p);
+ if(!rows.length)m.innerHTML=`<div class="empty" style="margin-bottom:12px"><div class="note">${p.scout?'The scout "'+esc(p.scout)+'" has no plays (all games switched off?).':'This plan has no scout. Pick one at the top.'} Favorites fill in once it has one.</div></div>`;else m.innerHTML='';
+ if(!p.blocks.length&&rows.length)m.innerHTML+=`<div class="empty"><button class="btn pri" id="t3">Fill in their top 3 formations</button></div>`;
+ p.blocks.forEach((b,bi)=>{b._F=favs(rows,b.form);const tg=tagsOf(rows,b.form);
+  m.innerHTML+=`<section class="block" data-b="${b.id}">
+   <div class="bhead"><div class="bname">${esc(nice(b.form))}${tg.length?` <span style="font-size:13px">${tg.map(t=>`<span class="tag" title="tag seen on ${t[1]} play(s)">${esc(t[0])}</span>`).join('')}</span>`:''}</div>
+    <span class="mut">${b._F.n} plays</span><button class="btn sm" data-a="up">↑</button><button class="btn sm" data-a="dn">↓</button><button class="btn sm bad" data-a="del">Delete</button></div>
+   <div class="top"><div class="draw">${drawHtml(b.form)}</div><div class="pred">${predHtml(b,rows)}<textarea data-note="${b.id}" placeholder="Anything you want to remember (box count, a tell)">${esc(b.note||'')}</textarea></div></div>
+   <div class="grid"><div class="gh"></div>${COLS.map(c=>`<div class="gh"><b>${c.label}</b>${c.sub?`<span>${c.sub}</span>`:''}</div>`).join('')}
+   ${ROWS.map(r=>`<div class="rl">${r.label}</div>`+COLS.map(c=>`<div class="${c.auto?'':'cell'}" ${c.auto?'':`data-cell="${b.id}|${r.id}|${c.id}"`}>${cellHtml(b,r.id,c)}</div>`).join('')).join('')}</div></section>`});
+ const t3=$('t3');if(t3)t3.onclick=()=>{p.blocks=topBlocks(rows,3);p.upd=Date.now();save();render()}}
+
+/* ---------- edits ---------- */
+$('main').addEventListener('click',ev=>{const p=P();if(!p)return;
+ const a=ev.target.closest('[data-a]'),bk=ev.target.closest('[data-b]');
+ if(a&&bk){const i=p.blocks.findIndex(x=>x.id===bk.dataset.b);if(i<0)return;
+  if(a.dataset.a==='del'){if(!confirm('Remove '+nice(p.blocks[i].form)+' from the plan?'))return;p.blocks.splice(i,1)}
+  else if(a.dataset.a==='up'&&i>0)[p.blocks[i-1],p.blocks[i]]=[p.blocks[i],p.blocks[i-1]];
+  else if(a.dataset.a==='dn'&&i<p.blocks.length-1)[p.blocks[i+1],p.blocks[i]]=[p.blocks[i],p.blocks[i+1]];
+  p.upd=Date.now();save();render();return}
+ const c=ev.target.closest('[data-cell]');if(c){const[bid,row,col]=c.dataset.cell.split('|');cellModal(bid,row,col)}});
+$('main').addEventListener('change',ev=>{const id=ev.target.dataset&&ev.target.dataset.note;if(!id)return;const p=P(),b=p&&p.blocks.find(x=>x.id===id);if(b){b.note=ev.target.value;p.upd=Date.now();save()}});
+
+/* ---------- modal: pick fronts / pressures / coverages for one cell (tap to add in order, tap again to remove, Enter picks the match or adds the word) ---------- */
+function modal(html,after){$('mbox').innerHTML=html;$('modal').style.display='flex';if(after)after()}
+function closeModal(){$('modal').style.display='none';$('mbox').innerHTML=''}
+$('modal').addEventListener('click',ev=>{if(ev.target.id==='modal'||ev.target.closest('[data-m=close]'))closeModal()});
+addEventListener('keydown',ev=>{if(ev.key==='Escape'&&$('modal').style.display==='flex')closeModal()});
+function cellModal(bid,row,colId){const p=P(),b=p.blocks.find(x=>x.id===bid),col=COLS.find(c=>c.id===colId),rw=ROWS.find(r=>r.id===row),k=row+'|'+colId;b.cells=b.cells||{};
+ const L=()=>{const l=DV.lists();return col.type==='front'?l.fr.map(x=>x[0]+'|'+x[1]):col.type==='pressure'?l.press:l.cov};
+ const lab=v=>col.type==='front'?v.split('|')[0]+(v.split('|')[1]?' '+v.split('|')[1]:''):v;
+ const sel=()=>b.cells[k]||(b.cells[k]=[]);
+ modal(`<h3>${esc(nice(b.form))} · ${esc(rw.label)} · ${esc(col.label)}</h3><div class="note" style="margin-bottom:8px">Tap to add in order (1 is your first choice, up to 4). Tap one you picked to remove it. Type to search; Enter picks the match, or adds a new word to the glossary.</div>
+  <div class="lab">Picked</div><div class="chips" id="mp" style="margin-bottom:10px"></div>
+  <input type="search" id="mq" placeholder="Search" autocomplete="off" autocapitalize="characters" style="width:100%;margin-bottom:8px"><div class="chips" id="mc"></div>
+  <div style="margin-top:12px;text-align:right"><button class="btn pri" data-m="close">Done</button></div>`,()=>{
+  const draw=()=>{const q=$('mq').value.trim().toUpperCase(),s=sel();
+   $('mp').innerHTML=s.length?s.map((v,i)=>`<button class="chip on" data-rm="${i}">${i+1}. ${esc(lab(v))} ✕</button>`).join(''):'<span class="note">Nothing yet</span>';
+   $('mc').innerHTML=L().filter(v=>!q||lab(v).toUpperCase().includes(q)).map(v=>{const[n,c]=col.type==='front'?v.split('|'):[v,''];return`<button class="chip ${s.includes(v)?'on':''}" data-pk="${esc(v)}">${esc(n)}${c?`<small>${esc(c)}</small>`:''}</button>`}).join('')};
+  const done=()=>{p.upd=Date.now();save();render()};
+  const add=v=>{const s=sel(),i=s.indexOf(v);if(i>=0)s.splice(i,1);else if(s.length>=4){toast('Four is the most');return}else s.push(v);save();draw()};
+  draw();$('mq').oninput=draw;$('mq').focus();
+  $('mp').onclick=e=>{const r=e.target.closest('[data-rm]');if(r){sel().splice(+r.dataset.rm,1);save();draw()}};
+  $('mc').onclick=e=>{const c=e.target.closest('[data-pk]');if(c)add(c.dataset.pk)};
+  $('mq').onkeydown=e=>{if(e.key!=='Enter')return;e.preventDefault();const q=$('mq').value.trim().toUpperCase();if(!q){closeModal();done();return}
+   const m=L().filter(v=>lab(v).toUpperCase().includes(q)),ex=m.find(v=>v.split('|')[0].toUpperCase()===q||v.toUpperCase()===q)||m[0];
+   if(ex){if(!sel().includes(ex))add(ex)}else{const nm=DV.addWord(col.type,q,{});if(nm){add(col.type==='front'?nm+'|':nm)}}
+   $('mq').value='';draw()};
+  $('modal').addEventListener('click',function h(e){if(e.target.id==='modal'||e.target.closest('[data-m=close]')){$('modal').removeEventListener('click',h);done()}})})}
+
+addEventListener('storage',e=>{if(e.key===SO.KEY||e.key==='glossary_v1_'+PROGRAM){DV.reload();Object.keys(FC).forEach(k=>delete FC[k]);if($('modal').style.display!=='flex')render()}});
+load();if(!S.plans.length&&SO.names().length&&SIGNED){/* first visit: nothing is made for you; the empty screen offers a new plan */}
+render();
+</script>
+</body></html>

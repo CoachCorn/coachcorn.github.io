@@ -59,6 +59,7 @@ input[type=search]{background:var(--card);border:1px solid var(--line);border-ra
 <script src="../shared/glossary.js"></script>
 <script src="../shared/scout.js"></script>
 <script src="../shared/scoutO.js"></script>
+<script src="../shared/defvocab.js"></script>
 <script>
 const SIGNED=(()=>{try{const s=JSON.parse(localStorage.getItem('suite_sync'));return !!(s&&s.token&&s.exp>Date.now())}catch(e){return false}})();
 const PROGRAM=SIGNED?'deer-creek':'demo';
@@ -67,35 +68,13 @@ const $=id=>document.getElementById(id),esc=t=>String(t==null?'':t).replace(/[&<
 const toast=m=>{const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',2400)};
 
 /* ---------- vocabulary: glossary terms first, Deer Creek's confirmed calls as the built-in defaults (a program with its own glossary is not forced onto these) ---------- */
-const DEF_PKG=SIGNED?['BASE','CYCLONE','COBRA','NICKEL','DIME']:['BASE','NICKEL','DIME'];
-const DEF_FR=SIGNED?[['BASE','5-0-5','odd'],['TITE','4-0-4','odd'],['HEAVY','4i-0-4i','odd'],['BEAR','3-0-3','odd'],['MASS','2-0-2','odd'],['OVER','4i-1-5','odd'],['UNDER','5-1-4i','odd'],['WIDE','9-0-9','odd'],
- ['INLAW','4-2i-2i-4','even'],['OUTLAW','5-3-3-5','even'],['VIPER','4-2-2-4','even'],['LOAD','9-3-1-5','even'],['CHOKE','4-0-4-9','even'],['BEAR','5-3-0-3-5','even'],['OVER','4-2-3-5','even'],['UNDER','5-3-2-4','even']]:[];
-const DEF_COV=SIGNED?['STAR','SCREW','RUTH','CLAMP','CLEO','BLACK','SINK','READ']:[];
-const DEF_PRESS=SIGNED?['SMOKE','FOG','WILD','CAT','OKIE','SOONER','STATE','COWBOY','FOX','MIKE','MOSS','MOW','TECH','RAIDER','SAW','SHARK','SWOOP','HOOP','IRONMAN','SPIDERMAN','SUPERMAN','THOR','WOLVERINE','BATMAN','KATANA','DOJO','JACK','SENSEI','ZEN','WARRIOR','OMEGA','BETA','CHARLIE','BOX','NICKEL','SPIKE','WILL','CHEAT']:[];
-let GLO=null;try{GLO=GL.load(PROGRAM)}catch(e){}
-const un=(a,b)=>{const seen=new Set(a.map(x=>String(x).toUpperCase()));return a.concat(b.filter(x=>!seen.has(String(x).toUpperCase())))};
-const gl=type=>GLO?GL.active(GLO,type).filter(t=>!t.side||t.side==='D'):[];
-/* Their formations are tagged in our own formation names, so they live in the glossary as offense (O) formations. */
-const glForms=()=>{try{return GLO?GL.active(GLO,'formation').map(t=>SCOUTO.famOf(t.name)).filter(Boolean):[]}catch(e){return[]}};
+const DV=DefVocab(PROGRAM,SIGNED),un=(a,b)=>{const seen=new Set(a.map(x=>String(x).toUpperCase()));return a.concat(b.filter(x=>!seen.has(String(x).toUpperCase())))};
+const lists=()=>DV.lists(),addWord=(t,n,x)=>DV.addWord(t,n,x),glForms=()=>DV.forms();
 /* Their plays: the CONCEPT is the play (Power, GY Counter); the call word (Charger, Panther) is only the tag that says it. */
 /* TODO: read concepts from the glossary once it has a concept type (its run / pass terms are call words like CHARGER, not concepts). */
 function conceptList(){const m={};SCOUTO.concepts().forEach(c=>m[c.name.toUpperCase()]=c);
  return Object.values(m).sort((a,b)=>(a.type===b.type?0:a.type==='run'?-1:1)||a.name.localeCompare(b.name))}
-function lists(){
- const fr=gl('front').map(t=>[t.name,t.code||'',t.package||'']),seen=new Set(fr.map(x=>x[0].toUpperCase()+'|'+x[1]));
- DEF_FR.forEach(x=>{const k=x[0].toUpperCase()+'|'+x[1];if(!seen.has(k)){seen.add(k);fr.push(x)}});
- (EXTRA.front||[]).forEach(x=>{const k=x[0].toUpperCase()+'|'+x[1];if(!seen.has(k)){seen.add(k);fr.push(x)}});
- return{pkg:un(un(DEF_PKG,gl('package').map(t=>t.name)),EXTRA.package||[]),
-  fr,
-  mods:un(['MUG','BOSS'],gl('frontmod').map(t=>t.name)),
-  cov:un(un(DEF_COV,gl('coverage').map(t=>t.name)),EXTRA.coverage||[]),
-  press:un(un(DEF_PRESS,gl('pressure').map(t=>t.name)),EXTRA.pressure||[])}}
-/* New words go into the program glossary (marked "needs review", same as the offense Almanac). Only if the glossary could not take it does the page keep it on its own. */
-function addWord(type,name,x){name=String(name||'').trim().toUpperCase();if(!name)return'';x=x||{};let ok=false;if(type==='formation')name=SCOUTO.famOf(name);
- if(GLO){try{if(GL.find(GLO,type,name)){ok=true}else{const t={type,name:type==='formation'?name.charAt(0)+name.slice(1).toLowerCase():name,side:x.side||'D',source:'game',needsReview:true,meaning:{text:'Added during a game. Needs a definition.'}};if(type==='front'){if(x.code)t.code=x.code;if(x.package)t.package=x.package}GL.add(GLO,t);GL.save(GLO);ok=true}}catch(e){ok=false}}
- if(!ok){EXTRA[type]=EXTRA[type]||[];const dup=EXTRA[type].some(y=>(Array.isArray(y)?y[0]:y)===name);if(!dup)EXTRA[type].push(type==='front'?[name,x.code||'',x.package||'']:name)}
- return name}
-const EXTRA={};
+
 
 /* ---------- data ---------- */
 let D;function load(){try{D=JSON.parse(localStorage.getItem(KEY))}catch(e){D=null}if(!D||!D.games)D={v:1,games:[],cur:null};if(!D.cur||!D.games.find(g=>g.id===D.cur))D.cur=D.games[0]?D.games[0].id:null}
@@ -388,7 +367,7 @@ function logPlay(){const g=G();if(!g)return;readNum('gain');
  const hv=[...d.havoc];if(rp==='R'&&gain<0&&!hv.includes('TFL'))hv.push('TFL');if(d.result==='Sack'&&!hv.includes('SACK'))hv.push('SACK');if(d.result==='Interception'&&!hv.includes('PBU'))hv.push('PBU');
  const p={pid:edit||'p'+Date.now().toString(36),ts:Date.now(),dn:+d.dn,di:+d.di,side:d.side,yd:+d.yd,f:ballOn(d),hash:d.hash,form:d.form,call:d.call,concept:d.concept||(d.call&&SCOUTO.decode(d.call).known?SCOUTO.decode(d.call).concept:''),pkg:d.pkg,front:d.front,fcode:d.fcode,mods:[...d.mods],press:d.press,cov:d.cov,rp,dir:d.dir,result:d.result,td:d.td,gain,havoc:hv};
  if(d.pkg)g.pkg=d.pkg;
- if(d.form&&GLO&&!glForms().includes(SCOUTO.famOf(d.form)))addWord('formation',d.form,{side:'O'});
+ if(d.form&&DV.glo()&&!glForms().includes(SCOUTO.famOf(d.form)))addWord('formation',d.form,{side:'O'});
  if(edit){const i=g.plays.findIndex(x=>x.pid===edit);if(i>=0){p.ts=g.plays[i].ts;g.plays[i]=p}edit=null;resume();save();renderAll();toast('Saved changes');return}
  g.plays.push(p);
  if(endsDrive(p))g.plays.push({k:'d',auto:true});
@@ -426,7 +405,7 @@ function csv(g){const q=v=>{const s=v==null?'':String(v);return /[",\n]/.test(s)
 $('exp').onclick=()=>{const g=G();if(!g||!PL(g).length){toast('No plays to export');return}
  const blob=new Blob([csv(g)],{type:'text/csv'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=(g.opp||'game').replace(/[^A-Za-z0-9]+/g,'_')+'_defense_'+(g.date||'').slice(0,10)+'.csv';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)};
 
-addEventListener('storage',e=>{if(e.key===ST.KEY){renderEntry()}if(e.key==='glossary_v1_'+PROGRAM){try{GLO=GL.load(PROGRAM)}catch(x){}renderEntry()}});
+addEventListener('storage',e=>{if(e.key===ST.KEY){renderEntry()}if(e.key==='glossary_v1_'+PROGRAM){DV.reload();renderEntry()}});
 load();if(!D.games.length&&ST.active()){const n=ST.active();D.games.push({id:'d'+Date.now(),opp:n,date:new Date().toISOString(),scout:n,pkg:'',plays:[]});D.cur=D.games[0].id;save()}
 resume();renderAll();
 </script>

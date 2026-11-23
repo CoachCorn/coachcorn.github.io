@@ -82,11 +82,13 @@ function tendencies(rows){const all=split(rows),out={all,cuts:[]};
 /* Favorite runs by side of the field. Field = the wide side (opposite the hash the ball is on); boundary = the short side. Run plays only (RPOs left out).
    The play direction (L/R) and the hash are read from the same side of the ball, so a run to the left from the right hash is a field run. Middle hash has no field or boundary, so those plays are counted apart.
    Returns top run concepts for each side with the play count behind them. Used by the Offense Scout and, later, the defensive gameplan grid. */
+const topCalls=(a,k)=>{const m={},cw={};a.forEach(x=>{const n=x.cn||'(no call logged)';m[n]=(m[n]||0)+1;if(x.call){const w=U(x.call);(cw[n]=cw[n]||{})[w]=(cw[n][w]||0)+1}});
+  return Object.entries(m).sort((p,q)=>q[1]-p[1]).slice(0,k||4).map(([name,n])=>({name,n,p:Math.round(100*n/a.length),calls:Object.entries(cw[name]||{}).sort((p,q)=>q[1]-p[1]).slice(0,2).map(([w,c])=>({w,n:c}))}))};
 function favRuns(rows){const run=rows.filter(x=>x.kind==='R'),out={field:[],bdy:[],mid:0,nodir:0,n:run.length};
  run.forEach(x=>{if(x.dir!=='L'&&x.dir!=='R'){out.nodir++;return}if(x.h!=='L'&&x.h!=='R'){out.mid++;return}(x.dir===x.h?out.bdy:out.field).push(x)});
- const top=a=>{const m={},cw={};a.forEach(x=>{const k=x.cn||'(no call logged)';m[k]=(m[k]||0)+1;if(x.call){const w=U(x.call);(cw[k]=cw[k]||{})[w]=(cw[k][w]||0)+1}});
-  return Object.entries(m).sort((p,q)=>q[1]-p[1]).slice(0,4).map(([name,n])=>({name,n,p:Math.round(100*n/a.length),calls:Object.entries(cw[name]||{}).sort((p,q)=>q[1]-p[1]).slice(0,2).map(([w,c])=>({w,n:c}))}))};
- return{n:out.n,mid:out.mid,nodir:out.nodir,field:{n:out.field.length,top:top(out.field)},bdy:{n:out.bdy.length,top:top(out.bdy)}}}
+ return{n:out.n,mid:out.mid,nodir:out.nodir,field:{n:out.field.length,top:topCalls(out.field)},bdy:{n:out.bdy.length,top:topCalls(out.bdy)}}}
+/* favorite pass concepts (pass plays only, RPOs left out) */
+function favPass(rows){const ps=rows.filter(x=>x.kind==='P');return{n:ps.length,top:topCalls(ps)}}
 /* the same, one row per formation family that has at least MIN runs to each side combined */
 function favRunsByForm(rows){const m={};rows.forEach(x=>{if(x.fam)(m[x.fam]=m[x.fam]||[]).push(x)});
  return Object.entries(m).map(([f,v])=>({form:f,fr:favRuns(v)})).filter(x=>x.fr.field.n+x.fr.bdy.n>=MIN).sort((a,b)=>(b.fr.field.n+b.fr.bdy.n)-(a.fr.field.n+a.fr.bdy.n))}
@@ -118,5 +120,5 @@ function store(program){const KEY='oscout_v1_'+program;
   remove:n=>{const o=read();delete o.opps[n];if(o.active===n)o.active='';write(o)},
   rows:n=>{const e=read().opps[n];return e?e.games.filter(g=>!g.off).flatMap(g=>g.rows):[]}}}
 
-root.SCOUTO={MIN,concepts,decode,parseOffense,readFile,tendencies,favRuns,favRunsByForm,lookup,split,famOf,dnd,store};
+root.SCOUTO={MIN,concepts,decode,parseOffense,readFile,tendencies,favRuns,favPass,favRunsByForm,lookup,split,famOf,dnd,store};
 })(typeof window!=='undefined'?window:globalThis);

@@ -1,5 +1,5 @@
-const V='suite-v148';
-const FILES=['./','index.html','glossary.html','manifest.webmanifest','icon-192.png','icon-512.png','icon-180.png','turf.jpg','stats.html','film.html','gameplan.html','mux.min.js','../shared/glossary.js','../shared/filedrop.js','../shared/scout.js','../shared/scoutO.js','dscout.html','dalmanac.html','sync.js','../shared/demoseed.js','../shared/importer.js'];
+const V='suite-v149';
+const FILES=['./','index.html','glossary.html','manifest.webmanifest','icon-192.png','icon-512.png','icon-180.png','turf.jpg','stats.html','film.html','gameplan.html','mux.min.js','../shared/glossary.js','../shared/filedrop.js','../shared/scout.js','../shared/scoutO.js','dscout.html','dalmanac.html','dgameplan.html','../shared/defvocab.js','../shared/fielddraw.js','sync.js','../shared/demoseed.js','../shared/importer.js'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(V).then(c=>c.addAll(FILES)));self.skipWaiting()});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x.indexOf('suite-')===0&&x!==V).map(x=>caches.delete(x)))).then(()=>self.clients.claim()))});
 // network first so updates show up when online; cached copy when there is no signal
