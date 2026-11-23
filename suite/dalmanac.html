@@ -338,6 +338,7 @@ function doAdd(){const v=String(($('addn')||{}).value||'').trim().toUpperCase(),
  ADD=null;save();renderEntry();toast('Added '+v+' (in the glossary, needs a definition)')}
 
 $('ent').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;
+ if(b.id==='log'){logPlay();return}
  if(b.dataset.a){const a=b.dataset.a;
   if(a==='add'){ADD=b.dataset.t;renderEntry();return}
   if(a==='addok'){doAdd();return}if(a==='addno'){ADD=null;renderEntry();return}
