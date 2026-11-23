@@ -138,8 +138,14 @@ const MAD={
   f:v=>`${v.pers} personnel. ${v.surf}${v.desc?', '+v.desc:''}.`},
  pass:{h:'Routes by receiver number (counted from the side the concept goes to)',b:()=>`Count from the ${mSel('side',['left','right'])}.<br>${[1,2,3,4,5].map(n=>`#${n} ${mIn('r'+n,n<=4?'route':'(if 5 wide)',120)}`).join(' ')}<br>QB reads ${mIn('read','e.g. #3 to #2',140)}`,
   f:v=>`From the ${v.side}: `+[1,2,3,4,5].filter(n=>v['r'+n]).map(n=>`#${n} ${v['r'+n]}`).join(', ')+'.'+(v.read?` QB reads ${v.read}.`:'')},
- run:{h:'Scheme, point of attack, aiming point, read',b:()=>`${mSel('sch',['Zone scheme','Gap scheme'])} to the ${mSel('poa',['call side','left','right','field','boundary'])}. ${mSel('rb',['T','B','Q'])} aims at ${mIn('aim','e.g. playside guard\'s outside hip',220)}. Read ${mIn('read','(optional) e.g. backside end',160)}`,
-  f:v=>`${v.sch} to the ${v.poa}. ${v.rb} aims at ${v.aim||'the hole'}.${v.read?' Read '+v.read+'.':''}`},
+ run:{h:'Scheme, point of attack, aiming point, read',b:()=>`${mSel('sch',['Zone scheme','Gap scheme'])} to the ${mSel('poa',['call side','left','right','field','boundary'])}. ${mSel('rb',['T','B','Q'])} aims at ${mIn('aim','e.g. playside guard\'s outside hip',220)}. Read ${mIn('read','(optional) e.g. backside end',160)}
+  <br><b>OL blocking</b> Playside ${mSel('ps',['zone step (covered / uncovered)','reach','down (gap, down, backer)','base','double to the backer'],'(rule)')} Backside ${mSel('bs',['zone step and cut off','hinge','scoop','down','cut off'],'(rule)')}
+  <br>Puller ${mSel('pl',['none','backside guard','backside tackle','backside guard and tackle','center','playside guard'])} ${mSel('pj',['kicks out the end man','wraps for the backer','leads up the hole','logs the end man'],'(job)')}
+  <br>Doubles and notes ${mIn('ol','(optional) e.g. C and PSG combo to the Mike',260)}`,
+  f:v=>{let o=`${v.sch} to the ${v.poa}. ${v.rb} aims at ${v.aim||'the hole'}.${v.read?' Read '+v.read+'.':''}`;
+   const r=[v.ps&&'playside '+v.ps,v.bs&&'backside '+v.bs].filter(Boolean);if(r.length)o+=` OL: ${r.join(', ')}.`;
+   if(v.pl&&v.pl!=='none'){const pl=v.pl[0].toUpperCase()+v.pl.slice(1);o+=` ${pl} ${/and/.test(v.pl)?'pull':'pulls'}${v.pj?' and '+(/and/.test(v.pl)?v.pj.replace(/^(\w+)s\b/,'$1'):v.pj):''}.`}
+   if(v.ol)o+=' '+v.ol.replace(/\.?$/,'.');return o}},
  tag:{h:'What it changes and on which plays',b:()=>`${mIn('who','who, e.g. #2 or Y',90)} ${mIn('chg','what changes, e.g. runs a seam instead',240)} on ${mSel('on',['pass plays','run plays','run and pass plays'])}.`,
   f:v=>`${v.who?v.who+' ':''}${v.chg}${v.chg?' ':''}on ${v.on}.`},
  oneword:{h:'What it calls',b:()=>`Formation ${mIn('fm','e.g. Trips',110)} Left hash ${mIn('L','call',120)} Right hash ${mIn('R','call',120)} ${mIn('x','anything else (optional)',200)}`,
