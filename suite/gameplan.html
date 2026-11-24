@@ -5,6 +5,8 @@
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#0f1720">
 <style>
+/* dark drop-downs */:root{color-scheme:dark}select{background-color:#18232f;color:#e8eef4}select option,select optgroup{background-color:#18232f;color:#e8eef4}select:disabled{opacity:.7}
+
 :root{--bg:#0f1720;--card:#18232f;--line:#2a3948;--tx:#e8eef4;--mut:#8ea0b2;--acc:#9b7bff;--acc2:#3b9cff;--ok:#2fbf71;--warn:#f2b632;--bad:#ef5b5b}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--tx);font:15px -apple-system,system-ui,sans-serif}
@@ -449,9 +451,9 @@ function recConcept(d,side,skip){const ord=rcvOrder(d,side),cand=Object.keys(d.t
   const p=standAt(d,k),r=Object.assign({},l);delete r.pts;delete r.mv;r.pts=l.pts.map(q=>[Math.round(q[0]-p.x),Math.round(q[1]-p.y)]);const n=ord.indexOf(k);if(n>=0)r.n=n+1;else r.k=k;out.push(r)});return out}
 /* OL rules from a run concept's meaning ("BSG pulls and traps the 1st man in the C gap", "PSG combos with the C to the M").
    PS / BS = playside / backside of the run; drawn against the defense on the drawing if there is one, else to a spot. */
-const OLRX=new RegExp('^(PS TE|BS TE|[A-Z]{1,3})\\s+((?:pulls?(?:\\s+and)?\\s+)?(?:traps?|kicks?\\s+out|wraps?(?:\\s+(?:for|to))?|leads?(?:\\s+up)?(?:\\s+(?:on|for))?|logs?)|base(?:\\s+blocks?)?|down(?:\\s+blocks?)?|reach(?:\\s+blocks?)?|zone\\s+steps?(?:\\s+to)?|combos?|double(?:\\s+teams?)?|arc(?:\\s+releases?)?(?:\\s+to)?|hinges?|cuts?\\s+off|scoops?|climbs?(?:\\s+to)?|blocks?)(?:\\s+with\\s+the\\s+(\\w+))?(?:\\s+(?:to|for|on)(?=\\s))?(?:\\s+(.+?))?\\.?$','i');
+const OLRX=new RegExp('^(PS TE|BS TE|[A-Z]{1,3})\\s+((?:pulls?(?:\\s+and)?\\s+)?(?:traps?|kicks?\\s+out|wraps?(?:\\s+(?:for|to))?|leads?(?:\\s+up)?(?:\\s+(?:on|for))?|logs?)|base(?:\\s+blocks?)?|down(?:\\s+blocks?)?|reach(?:\\s+blocks?)?|zone\\s+steps?(?:\\s+to)?|combos?|double(?:\\s+teams?)?|arc(?:\\s+releases?)?(?:\\s+to)?|hinges?|cuts?\\s+off|scoops?|climbs?(?:\\s+to)?|blocks?)(?:\\s+with\\s+the\\s+(\\w+))?(?:\\s+from\\s+(?:the\\s+)?([abcd]\\s+gap|man on him))?(?:\\s+(?:to|for|on)(?=\\s))?(?:\\s+(.+?))?\\.?$','i');
 const unlab=k=>{if(/^(PST|PSG|BSG|BST|C|LT|LG|RG|RT|PS TE|BS TE)$/.test(k))return k;for(const sl of [...PSW,...PST,...PSR])if(lab(sl)===k)return sl;return k};
-function olRules(text){return String(text||'').split(/\.\s+|\.$|;\s*|\n/).map(x=>x.trim()).filter(Boolean).map(x=>{const m=x.match(OLRX);return m?{p:m[1].toUpperCase(),a:m[2].toLowerCase(),w:(m[3]||'').toUpperCase(),tg:(m[4]||'').toLowerCase()}:null}).filter(Boolean)}
+function olRules(text){return String(text||'').split(/\.\s+|\.$|;\s*|\n/).map(x=>x.trim()).filter(Boolean).map(x=>{const m=x.match(OLRX);return m?{p:m[1].toUpperCase(),a:m[2].toLowerCase(),w:(m[3]||'').toUpperCase(),fr:(m[4]||'').toLowerCase(),tg:(m[5]||'').toLowerCase()}:null}).filter(Boolean)}
 function runSide(text,b){const m=String(text||'').match(/to the (left|right|field|boundary|call side)/i),w=m?m[1].toLowerCase():'';if(w==='left')return-1;if(w==='right')return 1;const sd=b?fmParse(b.name).side:'';return sd==='LT'?-1:1}
 function olDraw(d,text,s){const t=d.t,L=d.l=(d.l||[]),R=olRules(text);if(!R.length)return 0;
  const ol=OLK.filter(k=>t[k]&&t[k].on).sort((a,b)=>t[a].x-t[b].x);if(ol.length<5)return 0;const C=t.C,ps=s>0?ol.slice(3):ol.slice(0,2).reverse(),bs=s>0?ol.slice(0,2).reverse():ol.slice(3);
@@ -486,7 +488,7 @@ function olDraw(d,text,s){const t=d.t,L=d.l=(d.l||[]),R=olRules(text);if(!R.leng
    else if(/log/.test(a))pts.push([Math.round(tg.x+s*.3*YD),Math.round(PL)],[Math.round(tg.x+s*1.3*YD),Math.round(LOS-.2*YD)]);
    else pts.push([Math.round((te?gx.c:gx.b)-s*.3*YD),Math.round(PL)],[Math.round(te?gx.c:gx.b),Math.round(LOS+.2*YD)]);
    pts.push(tg.sp?[tg.x,tg.y]:end({x:pts[pts.length-1][0],y:pts[pts.length-1][1]},tg,14));L.push({pts,blk:1,col:'#ffffff'});return}
-  if(/combo|double/.test(a)){const w=P(r.w);const mid=w?{x:(p.x+w.x)/2,y:LOS}:p,D1=near(dl,mid.x,LOS-2*YD,OLSP)||spot(mid.x,LOS-1.4*YD);
+  if(/combo|double/.test(a)){const w=P(r.w);const mid=w?{x:(p.x+w.x)/2,y:LOS}:p,D1=r.fr?(/man on him/.test(r.fr)?(near(dl,p.x,LOS-2*YD,OLSP*.6)||spot(p.x,LOS-1.6*YD)):target('the '+r.fr,p,1)):(near(dl,mid.x,LOS-2*YD,OLSP)||spot(mid.x,LOS-1.4*YD));
    L.push(bl(p,D1));if(T&&T.y<LOS-3*YD&&!climbed.includes(T)){climbed.push(T);L.push(climbLine(D1,T,C.x,'#ffffff'))}return}
   if(T){L.push(bl(p,T));return}
   const dq=/down/.test(a)?near(dl.filter(q=>(q.x-p.x)*toC>2),p.x+toC*OLSP*.7,LOS-2*YD,OLSP*1.3):/reach|zone|scoop|cut/.test(a)?near(dl.filter(q=>(q.x-p.x)*s>-4),p.x+s*OLSP*.6,LOS-2*YD,OLSP*1.2):/arc/.test(a)?near(lb.filter(q=>(q.x-p.x)*s>-4),p.x+s*OLSP,LOS-5*YD,OLSP*2):/climb/.test(a)?near(lb,p.x+s*OLSP*.5,LOS-5*YD,OLSP*1.5):/hinge/.test(a)?null:near(dl,p.x,LOS-2*YD,OLSP*.6);
