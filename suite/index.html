@@ -65,7 +65,7 @@ button,input{font:inherit;color:var(--tx)}
 .dbar{display:none;position:sticky;top:0;z-index:5;background:#f2b632;color:#1a1300;text-align:center;font-weight:900;letter-spacing:.14em;font-size:12px;padding:6px 10px;padding-top:max(6px,env(safe-area-inset-top))}
 .dbar small{font-weight:700;letter-spacing:.02em;margin-left:8px}
 body.isdemo .dbar{display:block}
-.ph{display:none}#home.th .ph{display:grid;width:min(1180px,100%);margin:0 auto;padding:max(18px,calc(env(safe-area-inset-top) + 10px)) 20px 30px;gap:18px 26px;grid-template-columns:minmax(0,1fr);grid-template-areas:"hd" "col" "tools" "stats"}
+.ph{display:none}#home.th .ph{display:grid;width:min(1180px,100%);margin:0 auto;padding:max(18px,calc(env(safe-area-inset-top) + 10px)) 20px 30px;gap:18px 26px;grid-template-columns:minmax(0,1fr);grid-template-areas:"hd" "col" "stats" "tools"}
 body.isdemo #home.th .ph{padding-top:18px}
 .ph .hd{grid-area:hd;display:flex;align-items:center;gap:14px}
 .ph .hd img{width:46px;height:46px;border-radius:12px;box-shadow:0 6px 16px rgba(0,0,0,.45)}
@@ -235,8 +235,8 @@ const ART={
   <rect x="0" y="74" width="400" height="16" fill="#1d5a2c"/><path d="M0 79 H400" stroke="#fff" stroke-opacity=".3"/>
   ${[16,96,176,256,336].map(x=>`<rect x="${x}" y="6" width="28" height="14" rx="2" fill="#2a3440"/>${[0,1,2].map(k=>`<circle cx="${x+6+k*8}" cy="13" r="3" fill="#fffbe0"/>`).join('')}<path d="M${x+14} 20 V74" stroke="#9aa7b4" stroke-width="3"/>`).join('')}</svg>`};
 const FST=f=>f?`object-position:${+f[0]}% ${+f[1]}%;transform:scale(${+(f[2]||1)});transform-origin:${+f[0]}% ${+f[1]}%`:'';
-const FOC=k=>{const f=(HP.focus||{})[k];return f?`style="${FST(f)}"`:''};
-function collage(T,P){P=Object.assign({},P||T.pics||{});Object.entries(HP.focus||{}).forEach(([k,f])=>{if(f&&f[3])delete P[k]});const spot=(cls,lab,key,art)=>`<div class="cc ${cls}${P[key]?'':' art'}" data-slot="${key}">${P[key]?`<img src="${esc(P[key])}" alt="" draggable="false" ${FOC(key)} onerror="this.remove()">`:art+`<span class="spot">${lab}</span>`}</div>`;
+const FOC=k=>{const f=(FGET()||{})[k];return f?`style="${FST(f)}"`:''};
+function collage(T,P){P=Object.assign({},P||T.pics||{});Object.entries(FGET()||{}).forEach(([k,f])=>{if(f&&f[3])delete P[k]});const spot=(cls,lab,key,art)=>`<div class="cc ${cls}${P[key]?'':' art'}" data-slot="${key}">${P[key]?`<img src="${esc(P[key])}" alt="" draggable="false" ${FOC(key)} onerror="this.remove()">`:art+`<span class="spot">${lab}</span>`}</div>`;
  return `<div class="beams"></div>`+spot('helm2','Photo','helm2',ART.pennant(T))+spot('pic1','Photo','pic1',ART.tower(T))+spot('pic2','Photo','pic2',ART.goalpost(T))+spot('hero2','Hero player','hero',ART.jersey(T))+spot('stad','Stadium photo','stadium',ART.towers(T))
   +`<div class="cc helm" data-slot="helmet">${P.helmet?`<img src="${esc(P.helmet)}" alt="" draggable="false" ${FOC('helmet')} onerror="this.remove()">`:helmetSVG(T)}</div>`+spot('pic3','Photo','pic3',ART.trophy(T))}
 /* Home photos: each program's pictures live in its own server storage as _home/<spot>.jpg (never in this public repo).
@@ -244,7 +244,14 @@ function collage(T,P){P=Object.assign({},P||T.pics||{});Object.entries(HP.focus|
 const HPK='home_pics_v1';let HP=(()=>{try{return JSON.parse(localStorage.getItem(HPK))||{}}catch(e){return{}}})(),HPEDIT=false,HPBUSY=false;
 const SYX=()=>{try{const s=JSON.parse(localStorage.getItem('suite_sync'));return s&&s.token&&s.exp>Date.now()?s:null}catch(e){return null}};
 const hpSave=()=>{try{localStorage.setItem(HPK,JSON.stringify(HP))}catch(e){}};
-function picsFor(tk){const s=SYX();if(!s||tk!==s.program||HP.prog!==s.program||!HP.list||!HP.ct||HP.exp<Date.now())return null;const o={};
+/* Demo-mode photos: saved on this device only (IndexedDB), framing in localStorage. Never sent to any server. */
+let DEMOP=false;const DFK='demo_pics_focus_v1',DMAP={};let DF=(()=>{try{return JSON.parse(localStorage.getItem(DFK))||{}}catch(e){return{}}})();
+const FGET=()=>DEMOP?DF:HP.focus,FSET=(k,v)=>{if(DEMOP)DF=Object.assign({},DF,{[k]:v});else HP.focus=Object.assign({},HP.focus,{[k]:v})};
+const idb=()=>new Promise((ok,no)=>{try{const r=indexedDB.open('kdnce_demo_pics',1);r.onupgradeneeded=()=>r.result.createObjectStore('p');r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)}catch(e){no(e)}});
+async function idbPut(k,blob){const d=await idb();await new Promise((ok,no)=>{const t=d.transaction('p','readwrite');t.objectStore('p').put(blob,k);t.oncomplete=ok;t.onerror=()=>no(t.error)})}
+(async()=>{try{const d=await idb(),t=d.transaction('p'),st=t.objectStore('p'),ks=await new Promise(ok=>{const r=st.getAllKeys();r.onsuccess=()=>ok(r.result)}),vs=await new Promise(ok=>{const r=st.getAll();r.onsuccess=()=>ok(r.result)});
+ ks.forEach((k,i)=>DMAP[k]=URL.createObjectURL(vs[i]));if(ks.length)renderHome()}catch(e){}})();
+function picsFor(tk){if(tk==='demo'&&DEMOP)return Object.assign({},DMAP);const s=SYX();if(!s||tk!==s.program||HP.prog!==s.program||!HP.list||!HP.ct||HP.exp<Date.now())return null;const o={};
  Object.entries(HP.list).forEach(([k,sz])=>o[k]=`${HP.url}/clip?key=${encodeURIComponent('_home/'+k+'.jpg')}&ct=${encodeURIComponent(HP.ct)}&v=${sz}-${(HP.bump||{})[k]||0}`);return o}
 async function homePics(force){const s=SYX();if(!s||HPBUSY)return;const url=(s.url||DEFAULT_SERVER).replace(/\/$/,''),H={Authorization:'Bearer '+s.token};let ch=false;
  try{if(!HP.ct||HP.exp<Date.now()+3600000||HP.prog!==s.program){const r=await fetch(url+'/cliptoken',{headers:H}),j=await r.json();if(!r.ok||!j.ready)return;HP={ct:j.ct,exp:j.exp,prog:s.program,url,bump:HP.prog===s.program?HP.bump:{},focus:HP.prog===s.program?HP.focus:{}};ch=true}
@@ -252,19 +259,20 @@ async function homePics(force){const s=SYX();if(!s||HPBUSY)return;const url=(s.u
    if(fz){try{const f=await (await fetch(`${url}/clip?key=_home%2Ffocus.json&ct=${encodeURIComponent(HP.ct)}&t=${Date.now()}`,{cache:'no-store'})).json();if(JSON.stringify(f)!==JSON.stringify(HP.focus)){HP.focus=f;ch=true}}catch(e){}}
    ch=ch||JSON.stringify(L)!==JSON.stringify(HP.list);HP.list=L}
   hpSave();if(ch)renderHome()}catch(e){}}
-async function upPic(slot,file,el,quiet){const s=SYX();if(!s||!file)return;const url=(s.url||DEFAULT_SERVER).replace(/\/$/,'');HPBUSY=true;el.classList.add('busy');
+async function upPic(slot,file,el,quiet){const s=SYX(),demo=DEMOP;if((!s&&!demo)||!file)return;const url=s?(s.url||DEFAULT_SERVER).replace(/\/$/,''):'';HPBUSY=true;el.classList.add('busy');
  try{const img=await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>no(new Error("Couldn't read that picture"));i.src=URL.createObjectURL(file)});
   const k=Math.min(1,1600/Math.max(img.naturalWidth,img.naturalHeight)),c=document.createElement('canvas');c.width=Math.round(img.naturalWidth*k);c.height=Math.round(img.naturalHeight*k);c.getContext('2d').drawImage(img,0,0,c.width,c.height);
   const blob=await new Promise(ok=>c.toBlob(ok,'image/jpeg',.82));
+  if(demo){await idbPut(slot,blob);if(DMAP[slot])URL.revokeObjectURL(DMAP[slot]);DMAP[slot]=URL.createObjectURL(blob)}else{
   const r=await fetch(url+'/clip?key='+encodeURIComponent('_home/'+slot+'.jpg'),{method:'PUT',headers:{Authorization:'Bearer '+s.token,'Content-Type':'image/jpeg'},body:blob});
-  const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Upload failed');HP.bump=HP.bump||{};HP.bump[slot]=Date.now()}
- catch(e){alert(e.message||'Upload failed')}finally{HPBUSY=false;el.classList.remove('busy')}await homePics(true);if(!quiet)renderHome()}
+  const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Upload failed');HP.bump=HP.bump||{};HP.bump[slot]=Date.now()}}
+ catch(e){alert(e.message||'Upload failed')}finally{HPBUSY=false;el.classList.remove('busy')}if(!demo)await homePics(true);if(!quiet)renderHome()}
 /* In Photos mode, tapping a spot opens its editor: choose a picture, drag to move it, zoom to crop, or remove it */
 const SPOTN={helmet:'Center',helm2:'Top left',pic1:'Left',pic2:'Right',hero:'Bottom right',stadium:'Bottom',pic3:'Top right'};
-async function saveFocus(){hpSave();const s=SYX();if(!s)return;try{await fetch((s.url||DEFAULT_SERVER).replace(/\/$/,'')+'/clip?key=_home%2Ffocus.json',{method:'PUT',headers:{Authorization:'Bearer '+s.token,'Content-Type':'application/json'},body:JSON.stringify(HP.focus||{})})}catch(e){}}
+async function saveFocus(){if(DEMOP){try{localStorage.setItem(DFK,JSON.stringify(DF))}catch(e){}return}hpSave();const s=SYX();if(!s)return;try{await fetch((s.url||DEFAULT_SERVER).replace(/\/$/,'')+'/clip?key=_home%2Ffocus.json',{method:'PUT',headers:{Authorization:'Bearer '+s.token,'Content-Type':'application/json'},body:JSON.stringify(HP.focus||{})})}catch(e){}}
 function picEditor(el){const slot=el.dataset.slot,tk=themeKey(),T=THEMES[tk];if($('pedov'))return;
  const ar=el.offsetWidth/el.offsetHeight,W=Math.min(innerWidth*.9,560),H=Math.min(W/ar,innerHeight*.5),FW=H*ar;
- let f=((HP.focus||{})[slot]||[50,50,1,0]).slice();f[2]=f[2]||1;
+ let f=((FGET()||{})[slot]||[50,50,1,0]).slice();f[2]=f[2]||1;
  const ov=document.createElement('div');ov.id='pedov';ov.style.cssText='position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.78);display:grid;place-items:center;padding:16px';
  ov.innerHTML=`<div style="background:#16202b;border:1px solid #2c3a48;border-radius:16px;padding:16px;max-width:600px;width:100%;color:#e6edf3">
   <div style="font-weight:900;letter-spacing:.06em;text-transform:uppercase;font-size:13px;margin-bottom:10px">${SPOTN[slot]||'Photo'} spot</div>
@@ -282,11 +290,11 @@ function picEditor(el){const slot=el.dataset.slot,tk=themeKey(),T=THEMES[tk];if(
  fr.onpointerup=fr.onpointercancel=()=>{d=null};
  pz.oninput=()=>{f[2]=+pz.value;upd()};
  const close=()=>ov.remove();ov.querySelector('#pcx').onclick=close;ov.onclick=e=>{if(e.target===ov)close()};
- ov.querySelector('#psv').onclick=async()=>{HP.focus=Object.assign({},HP.focus,{[slot]:[f[0],f[1],f[2],0]});close();renderHome();await saveFocus()};
- ov.querySelector('#prm').onclick=async()=>{HP.focus=Object.assign({},HP.focus,{[slot]:[50,50,1,1]});close();renderHome();await saveFocus()};
+ ov.querySelector('#psv').onclick=async()=>{FSET(slot,[f[0],f[1],f[2],0]);close();renderHome();await saveFocus()};
+ ov.querySelector('#prm').onclick=async()=>{FSET(slot,[50,50,1,1]);close();renderHome();await saveFocus()};
  ov.querySelector('#pch').onclick=()=>{const fi=document.createElement('input');fi.type='file';fi.accept='image/*';
   fi.onchange=async()=>{if(!fi.files[0])return;fr.innerHTML='<div style="display:grid;place-items:center;height:100%;color:#9fb0c0">Uploading…</div>';f=[50,50,1,0];
-   await upPic(slot,fi.files[0],el,true);HP.focus=Object.assign({},HP.focus,{[slot]:f.slice()});draw()};fi.click()}}
+   await upPic(slot,fi.files[0],el,true);FSET(slot,f.slice());draw()};fi.click()}}
 $('col').addEventListener('click',e=>{if(!HPEDIT)return;const el=e.target.closest('[data-slot]');if(el)picEditor(el)});
 function renderHome(){const s=SUITESYNC.status(),n=reviewCount(),ai=almInfo(),ng=nextGame();
  document.body.classList.toggle('isdemo',!s.signedIn);$('pname').innerHTML=s.signedIn&&s.name?esc(s.name)+' Football':'<button class="demob" id="demob2">Demo mode</button>';if($('demob2'))$('demob2').onclick=signInModal;
@@ -306,8 +314,8 @@ function renderHome(){const s=SUITESYNC.status(),n=reviewCount(),ai=almInfo(),ng
  $('syncbtn').onclick=signInModal;$('setbtn').onclick=toSettings;
  document.querySelectorAll('[data-side]').forEach(b=>{b.classList.toggle('on',b.dataset.side===SIDE);b.setAttribute('aria-selected',b.dataset.side===SIDE);b.onclick=()=>setSide(b.dataset.side)});$('swit').classList.toggle('d',SIDE==='D');
  const tk=themeKey(),T=tk&&THEMES[tk],H=$('home');H.classList.toggle('th',!!T);
- if(T){['t1','t1a','t2','t2ink'].forEach(k=>H.style.setProperty('--'+k,T[k]));$('pn2').innerHTML=esc(T.school)+' <span>'+esc(T.sub)+'</span>';$('facts').innerHTML=(T.facts||[]).map(f=>`<span>${esc(f)}</span>`).join('');$('dt2').textContent=$('psub').textContent;const own=s.signedIn&&tk===s.program,P=own?picsFor(tk):null;$('col').innerHTML=collage(T,P||{})+(HPEDIT&&own?'<div class="phnote">Tap a spot to choose, move, zoom or remove its picture · Done when finished</div>':'');$('col').classList.toggle('edit',HPEDIT&&own);
-  if(own){const b=document.createElement('button');b.id='phbtn';b.textContent=HPEDIT?'Done':'Photos';b.onclick=()=>{HPEDIT=!HPEDIT;renderHome()};$('syncline').insertBefore(b,$('setbtn'));if(!P)homePics()}
+ if(T){['t1','t1a','t2','t2ink'].forEach(k=>H.style.setProperty('--'+k,T[k]));$('pn2').innerHTML=esc(T.school)+' <span>'+esc(T.sub)+'</span>';$('facts').innerHTML=(T.facts||[]).map(f=>`<span>${esc(f)}</span>`).join('');$('dt2').textContent=$('psub').textContent;DEMOP=!s.signedIn&&tk==='demo';const own=(s.signedIn&&tk===s.program)||DEMOP,P=own?picsFor(tk):null;$('col').innerHTML=collage(T,P||{})+(HPEDIT&&own?'<div class="phnote">Tap a spot to choose, move, zoom or remove its picture · Done when finished</div>':'');$('col').classList.toggle('edit',HPEDIT&&own);
+  if(own){const b=document.createElement('button');b.id='phbtn';b.textContent=HPEDIT?'Done':'Photos';b.onclick=()=>{HPEDIT=!HPEDIT;renderHome()};$('syncline').insertBefore(b,$('setbtn'));if(!P&&!DEMOP)homePics()}
   $('stats2').appendChild($('week'));const L=$('left2');L.appendChild($('swit'));L.appendChild($('tiles'));L.appendChild($('syncline'))}
  else{const w=document.querySelector('.wrap');w.prepend($('tiles'));w.prepend($('week'));w.appendChild($('syncline'));document.querySelector('.hero').appendChild($('swit'))}}
 function setSide(v){SIDE=v;try{localStorage.setItem('suite_side',v)}catch(e){}renderHome()}
