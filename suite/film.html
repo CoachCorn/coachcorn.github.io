@@ -166,6 +166,10 @@ async function tsToMp4(src){
   // Camcorder (AVCHD) .MTS files carry a 4-byte time stamp before every 188-byte packet (192 bytes each); the converter only reads 188, so strip the stamps first.
   {const u=new Uint8Array(buf);const at=i=>u[i]===0x47;
    if(u.length>600&&at(4)&&at(196)&&at(388)&&!(at(188)&&at(376))){const n=Math.floor(u.length/192),o=new Uint8Array(n*188);for(let k=0;k<n;k++)o.set(u.subarray(k*192+4,k*192+192),k*188);buf=o.buffer}}
+  // AVCHD camcorders list a network entry (program 0) first in the program table; the converter takes the first entry as the video program, finds nothing, and reports "no video". Move the real program to the front.
+  {const u=new Uint8Array(buf);for(let k=0;k+188<=u.length;k+=188){if(u[k]!==0x47||!(u[k+1]&0x40)||((u[k+1]&0x1f)<<8|u[k+2])!==0)continue;
+    let q=k+4;if((u[k+3]&0x30)===0x30)q+=1+u[k+4];q+=1+u[q];if(u[q]!==0)continue;const len=((u[q+1]&0x0f)<<8)|u[q+2],e0=q+8,end=Math.min(q+3+len-4,k+188);
+    if(e0+4>end||(u[e0]<<8|u[e0+1])!==0)continue;for(let e=e0+4;e+4<=end;e+=4){if((u[e]<<8|u[e+1])!==0){const t=u.slice(e0,e0+4);u.copyWithin(e0,e,e+4);u.set(t,e);break}}}}
   return new Promise((res,rej)=>{const t=new muxjs.mp4.Transmuxer({keepOriginalTimestamps:false});const parts=[];let init=false;
     t.on('data',s=>{if(!init){init=true;parts.push(s.initSegment)}parts.push(s.data)});
     t.on('done',()=>{if(!init)return rej(new Error('no video found in that .MTS file'));let n=0;parts.forEach(p=>n+=p.byteLength);const out=new Uint8Array(n);let o=0;parts.forEach(p=>{out.set(p,o);o+=p.byteLength});res(new Blob([out],{type:'video/mp4'}))});
