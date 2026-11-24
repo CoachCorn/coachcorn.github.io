@@ -115,6 +115,7 @@ html,button,.chip,input,select{touch-action:manipulation;-webkit-tap-highlight-c
 </main>
 <div class="modal" id="modal"><div class="box" id="mbox"></div></div>
 <script src="../shared/glossary.js"></script>
+<script src="../shared/autocap.js"></script>
 <script src="../shared/demoseed.js"></script>
 <script src="../shared/demoseedD.js"></script>
 <script>
@@ -158,14 +159,14 @@ const DEF=SIGNED?DEF_DC:DEF_DEMO;
 const RS={GH:['TROJANS','STATE','CAROLINA','PANTHER','ALTER STEELER'],BUCK:['TEXAS','VEGAS','RAIDER','G VEGAS','G RAIDER','GANG VEGAS','GANG RAIDER'],IZ:['SOONERS','WASHINGTON','COMMANDER','PHILLY','EAGLE'],GT:['HOUSTON','PITT','STEELER','CLEV','BROWNS'],POWER:['LA','CHARGER','RAVEN'],JET:['BRUINS','H RAIDER','Y VEGAS','X RAIDER','Z VEGAS']};
 /* Concept families: pairs are the Left/Right versions of one concept (shown boxed together on the button grid), FAM folds them in the report. */
 const PAIRS=[['CAROLINA','PANTHER'],['LA','CHARGER'],['VEGAS','RAIDER'],['PITT','STEELER'],['LAP','RACE'],['FLASH','STRIKE'],['G VEGAS','G RAIDER'],['GANG VEGAS','GANG RAIDER']];
-const FAM={CAROLINA:'GY Counter',PANTHER:'GY Counter',STATE:'GY Counter',TROJANS:'GY Counter',ALTER_STEELER:'GY Counter',LA:'Power',CHARGER:'Power',RAVEN:'Power',VEGAS:'Buck Sweep',RAIDER:'Buck Sweep','G VEGAS':'Buck Sweep','G RAIDER':'Buck Sweep','GANG VEGAS':'Buck Sweep','GANG RAIDER':'Buck Sweep',TEXAS:'Buck Sweep',PITT:'GT Counter',PITTSBURGH:'GT Counter',STEELER:'GT Counter',HOUSTON:'GT Counter',CLEV:'GT Counter',BROWNS:'GT Counter',SOONERS:'Zone Insert',WASHINGTON:'Zone Insert',COMMANDER:'Zone Insert',PHILLY:'Zone Insert',EAGLE:'Zone Insert',BRUINS:'Jet Sweep','H RAIDER':'Jet Sweep','Y VEGAS':'Jet Sweep','X RAIDER':'Jet Sweep','Z VEGAS':'Jet Sweep',LAP:'Cross',RACE:'Cross',CAL:'Cross',FLASH:'Verticals',STRIKE:'Verticals',MINERS:'Verticals',BRONCHOS:'Sail','BT BRONCHOS':'Sail',AGGIES:'Shock','RACE SAIL':'Sail','LAP SAIL':'Sail',STANFORD:'Post Spike',TULSA:'Post Spike'};
+const FAM={CAROLINA:'GY Counter',PANTHER:'GY Counter',STATE:'GY Counter',TROJANS:'GY Counter',ALTER_STEELER:'GY Counter',LA:'Power',CHARGER:'Power',RAVEN:'Power',VEGAS:'Buck Sweep',RAIDER:'Buck Sweep','G VEGAS':'Buck Sweep','G RAIDER':'Buck Sweep','GANG VEGAS':'Buck Sweep','GANG RAIDER':'Buck Sweep',TEXAS:'Buck Sweep',PITT:'GT Counter',PITTSBURGH:'GT Counter',STEELER:'GT Counter',HOUSTON:'GT Counter',CLEV:'GT Counter',BROWNS:'GT Counter',SOONERS:'Zone Insert',WASHINGTON:'Zone Insert',COMMANDER:'Zone Insert',PHILLY:'Zone Insert',EAGLE:'Zone Insert',BRUINS:'Jet Sweep','H RAIDER':'Jet Sweep','Y VEGAS':'Jet Sweep','X RAIDER':'Jet Sweep','Z VEGAS':'Jet Sweep',LAP:'Cross',RACE:'Cross',CAL:'Cross',FLASH:'Verticals',STRIKE:'Verticals',MINERS:'Verticals',BRONCHOS:'Sail','BT BRONCHOS':'Sail',AGGIES:'Aggies','RACE SAIL':'Sail','LAP SAIL':'Sail',STANFORD:'Post Spike',TULSA:'Post Spike'};
 FAM['ALTER STEELER']='GY Counter';delete FAM.ALTER_STEELER;
 /* One-word calls: Texas/Trips family points to field, Crown = California, Kong = Oklahoma. Run OWCs always go to the boundary; pass OWCs always carry Black/Brown to the boundary. */
 const OW={TEXAS:{t:'run',fam:'Trips',pair:['G VEGAS','G RAIDER']},HOUSTON:{t:'run',fam:'Trips',pair:['PITT','STEELER']},STATE:{t:'run',fam:'Kong',pair:['CAROLINA','PANTHER']},SOONERS:{t:'run',fam:'Kong'},TROJANS:{t:'run',fam:'Crown',pair:['CAROLINA','PANTHER']},BRUINS:{t:'run',fam:'Crown'},
  AGGIES:{t:'pass',fam:'Trips',pp:1},MINERS:{t:'pass',fam:'Trips',pp:1,byHash:{L:'STRIKE',R:'FLASH'},tg:'FLIP'},BRONCHOS:{t:'pass',fam:'Kong',pp:1,byHash:{L:'RACE SAIL',R:'LAP SAIL'}},TULSA:{t:'pass',fam:'Kong',pp:1},CAL:{t:'pass',fam:'Crown',pp:1,byHash:{L:'LAP',R:'RACE'}},STANFORD:{t:'pass',fam:'Crown',pp:1}};
 /* One-word rules now live on the glossary's one-word terms (term.ow). OW0 is the Deer Creek seed; owLoad copies it onto the glossary once, then OW is rebuilt from the glossary. */
 const OW0=JSON.parse(JSON.stringify(OW));
-function owLoad(){if(!glOn())return;let ch=false;for(const t of GLO.terms){if(t.type!=='oneword')continue;const k=GL.U(t.name);if(!t.ow&&SIGNED&&OW0[k]){t.ow=JSON.parse(JSON.stringify(OW0[k]));if(OW_NAME[k])t.ow.an=OW_NAME[k];GL.touch(t);ch=true}}if(ch)GL.save(GLO);
+function owLoad(){if(!glOn())return;let ch=false;for(const t of GLO.terms){if(t.type!=='oneword')continue;const k=GL.U(t.name);if(!t.ow&&SIGNED&&OW0[k]){t.ow=JSON.parse(JSON.stringify(OW0[k]));if(OW_NAME[k])t.ow.an=OW_NAME[k];GL.touch(t);ch=true}else if(t.ow&&t.ow.an==='Shock'){t.ow.an='Aggies';GL.touch(t);ch=true}}if(ch)GL.save(GLO);
  for(const k in OW)delete OW[k];for(const t of GLO.terms)if(t.type==='oneword'&&t.status==='active'&&t.ow&&t.ow.fam)OW[GL.U(t.name)]=t.ow;
  for(const k in OW_NAME)delete OW_NAME[k];for(const k in OW)if(OW[k].an)OW_NAME[k]=OW[k].an}
 const ALIAS={PITTSBURGH:'PITT',PITTS:'PITT'};const al=x=>{const u=String(x||'').toUpperCase();return ALIAS[u]||x};
@@ -304,9 +305,10 @@ function quickO(txt,dd){const out={bits:[],unk:[]};let toks=String(txt||'').repl
  else if(hadTD&&so.yd!=null||hadTD){dd.gain=100-dd.f}
  /* glossary words, longest first */
  const L=A.lists,T=[],left=sr.rest.map(U),add=(k,a)=>(a||[]).forEach(x=>T.push([U(x).split(' '),k,x]));
- add('ft',L.ftags);add('mo',L.motions);add('fm',L.formations);add('glf',L.glfs);if(useOW())add('ow',L.owcs);add('run',L.runs);add('pass',L.passes);add('tag',L.tagsRun);add('tag',L.tagsPass);
+ const MQ=MGR()&&edit===null; /* manager mode: only run / pass words count; calls, tags and formations are added later by a coach */
+ if(MQ)T.push([['RUN'],'mrp','run'],[['PASS'],'mrp','pass']);else{add('ft',L.ftags);add('mo',L.motions);add('fm',L.formations);add('glf',L.glfs);if(useOW())add('ow',L.owcs);add('run',L.runs);add('pass',L.passes);add('tag',L.tagsRun);add('tag',L.tagsPass)}
  /* shorthand from the glossary's "Also called": lands in the same slot as the full name and logs as the full name */
- if(glOn()){const AK={ft:['ftags'],mo:['motions'],fm:['formations'],glf:['glfs'],ow:['owcs'],run:['runs'],pass:['passes'],tag:['tagsRun','tagsPass']};
+ if(glOn()&&!MQ){const AK={ft:['ftags'],mo:['motions'],fm:['formations'],glf:['glfs'],ow:['owcs'],run:['runs'],pass:['passes'],tag:['tagsRun','tagsPass']};
   for(const k in AK)for(const lk of AK[k]){const ty=GLX_MAP[lk].type;GLO.terms.forEach(t=>{if(t.type!==ty||t.status!=='active'||!(t.aliases||[]).length)return;const cn=(L[lk]||[]).find(x=>U(String(x))===U(t.name));if(cn==null)return;
     t.aliases.forEach(a=>{a=String(a||'').trim();if(a&&U(a)!==U(t.name))T.push([U(a).split(/\s+/),k,cn])})})}}
  const ORD=['ft','mo','fm','glf','ow','run','pass','tag'],rest=[];
@@ -314,7 +316,8 @@ function quickO(txt,dd){const out={bits:[],unk:[]};let toks=String(txt||'').repl
   T.forEach(t=>{const n=t[0].length;if(n&&i+n<=left.length&&t[0].every((w,j)=>w===left[i+j])){if(n>best){best=n;c=[t]}else if(n===best)c.push(t)}});
   if(!best){rest.push(left[i]);i++;continue}
   c.sort((a,b)=>ORD.indexOf(a[1])-ORD.indexOf(b[1]));const t=c[0],v=t[2];
-  if(t[1]==='ft'){if(!dd.ftags.includes(v))dd.ftags.push(v);out.bits.push('formation tag '+v)}
+  if(t[1]==='mrp'){dd.ptype=v;out.bits.push(v)}
+  else if(t[1]==='ft'){if(!dd.ftags.includes(v))dd.ftags.push(v);out.bits.push('formation tag '+v)}
   else if(t[1]==='mo'){dd.motion=v;out.bits.push('motion '+v)}
   else if(t[1]==='fm'){dd.formation=v;out.bits.push('formation '+v)}
   else if(t[1]==='glf'){dd.glf=v;if(!dd.call&&!dd.owc)dd.ptype='pass';out.bits.push('GLF '+v)}
@@ -324,6 +327,7 @@ function quickO(txt,dd){const out={bits:[],unk:[]};let toks=String(txt||'').repl
   i+=best}
  if(dd.owc)owApply(dd);
  if(dd.result&&!dd.call&&!dd.owc){if(dd.result==='RUSH')dd.ptype='run';else if(['COMP','INC','SACK','INT'].includes(dd.result))dd.ptype='pass'}
+ if(MQ)rest.length=0;
  out.unk=rest;out.hasResult=!!dd.result;return out}
 function qbRead(o){return(o.bits.length?'Understood: '+o.bits.join(' · '):'')+(o.unk.length?' | Not in your lists: '+o.unk.join(', ')+' (use + Other)':'')}
 function qbPreview(){const c=JSON.parse(JSON.stringify(d)),o=quickO(QB,c),el=document.getElementById('qbread');if(el)el.textContent=qbRead(o)}
@@ -353,7 +357,7 @@ function renderEntry(){const L=A.lists,e=edit!==null,mg=MGR()&&!e;
  let h='<div class="ent">';
  h+=`<div class="s12" style="display:flex;justify-content:flex-end;gap:8px;align-items:center">${mg?'<span class="note" style="flex:1"><b>Manager mode:</b> log down, distance, ball, hash, run or pass, result, yards and players. A coach adds the calls later from the log.</span>':''}<button class="chip ${MGR()?'on':''}" data-a="mgr">Manager mode${MGR()?': on':''}</button></div>`;
  if(CONFIG.blankUntilPlan&&!G().plan)h+=G().noPlan?`<div class="s12 card" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="note" style="flex:1;min-width:200px">Tagging ${esc2(G().opp)} without a gameplan: every button is shown.</span><button class="btn" data-a="gpopen">Paste gameplan</button></div>`:`<div class="s12 card" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="note" style="flex:1;min-width:200px">No gameplan loaded for ${esc2(G().opp)}. Formation tags, motions, formations and play tags stay blank until you paste it.</span><button class="btn pri" data-a="gpopen">Paste gameplan</button><button class="btn" data-a="gpnone">No gameplan, tag as I go</button></div>`;
- if(!mg)h+=C('s12','Type the play',`<span class="note">1 10 -28 Rt Hash, tags, motion, formation, play, result. Enter adds it (and logs it when it has a result).</span>`,`<input id="qbar" type="text" placeholder="1 10 -28 Rt Hash  Stack  Trade  Kong  Charger  Rush 6" autocomplete="off" autocapitalize="off" enterkeyhint="go" value="${QB.replace(/"/g,'&quot;')}" style="width:100%;padding:10px 12px;font-size:17px;font-weight:600;background:transparent;color:var(--tx);border:1px solid var(--line);border-radius:8px"><div class="note" id="qbread" style="min-height:18px;margin-top:6px;color:var(--ok)"></div>`);
+ h+=C('s12','Type the play',`<span class="note">${mg?'1 10 -28 Rt Hash, run or pass, result, yards. Enter adds it (and logs it when it has a result). Calls are added later by a coach.':'1 10 -28 Rt Hash, tags, motion, formation, play, result. Enter adds it (and logs it when it has a result).'}</span>`,`<input id="qbar" type="text" placeholder="${mg?'1 10 -28 Rt Hash  Run  Rush 6':'1 10 -28 Rt Hash  Stack  Trade  Kong  Charger  Rush 6'}" autocomplete="off" autocapitalize="characters" enterkeyhint="go" value="${QB.replace(/"/g,'&quot;')}" style="width:100%;padding:10px 12px;font-size:17px;font-weight:600;background:transparent;color:var(--tx);border:1px solid var(--line);border-radius:8px"><div class="note" id="qbread" style="min-height:18px;margin-top:6px;color:var(--ok)"></div>`);
  h+=C('s2','Down','',`<div class="chips">${[1,2,3,4].map(n=>chip('down',n,n,d.down===n)).join('')}</div>`);
  h+=C('s6','Distance','',`<div class="chips">${[1,2,3,4,5,6,7,8,9,10].map(n=>chip('dist',n,n,d.dist===n)).join('')}<input type="number" inputmode="numeric" id="distx" class="chipin ${d.dist>10?'on':''}" placeholder="11+" value="${d.dist>10?d.dist:''}"></div>`);
  h+=C('s4','Ball on',ylFmt(d.f),`<div class="chips" style="align-items:center;justify-content:center">${chip('side','own','Own',ylSide(d.f)==='own')}${chip('side','opp','Opp',ylSide(d.f)==='opp')}<div class="step"><button class="chip" data-a="ym">−</button><input type="number" inputmode="numeric" id="ylx" min="1" max="50" value="${ylNum(d.f)}" style="width:62px;font-size:20px;font-weight:700;text-align:center;background:transparent;color:var(--tx);border:1px solid var(--line);border-radius:6px;padding:4px 0"><button class="chip" data-a="yp">+</button></div></div>`);
@@ -582,7 +586,7 @@ const DC_MEAN={ /* meanings Noah has taught; key = type|NAME */
  'run|CAROLINA':'GY Counter left.','run|PANTHER':'GY Counter right.','run|VEGAS':'Buck Sweep left.','run|RAIDER':'Buck Sweep right.','run|LA':'Power left.','run|CHARGER':'Power right.','run|PITT':'GT Counter left.','run|STEELER':'GT Counter right.',
  'pass|LAP':'Cross, left.','pass|RACE':'Cross, right.','pass|FLASH':'Flash / Strike pair (2 and 3 switch routes).','pass|STRIKE':'Flash / Strike pair (2 and 3 switch routes).',
  'glf|SHUFFLE':'Green light formation.','glf|DIAMOND':'Green light formation.','glf|QUAD':'Green light formation.','glf|SCRAMBLE':'Green light formation.','glf|MONEY':'Green light formation.','glf|MATCH':'Green light formation.'};
-const OW_NAME={BRONCHOS:'Sail',CAL:'Cross',MINERS:'Verticals',AGGIES:'Shock',STANFORD:'Post Spike',TULSA:'Post Spike'};
+const OW_NAME={BRONCHOS:'Sail',CAL:'Cross',MINERS:'Verticals',AGGIES:'Aggies',STANFORD:'Post Spike',TULSA:'Post Spike'};
 function owText(n){const w=OW[n];if(!w)return'';const fam={Kong:'Kong (Oklahoma)',Crown:'Crown (California)',Trips:'Trips (Texas)'}[w.fam]||w.fam;
  let s=(w.t==='run'?'Run':'Pass')+' one word. Formation '+fam+' to the field.';
  if(w.byHash)s+=' Left hash '+w.byHash.L+', right hash '+w.byHash.R+'.';else if(w.pair)s+=' Left hash '+w.pair[0]+', right hash '+w.pair[1]+'.';

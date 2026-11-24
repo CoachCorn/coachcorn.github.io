@@ -13,6 +13,6 @@
     {"id":"SAMPLE0009","play":"Houston","concept":"GT Counter","formation":"Pour Kong LT","personnel":"10","tags":["Mike"],"game":"Sample game A"},
     {"id":"SAMPLE0010","play":"Miners","concept":"Verticals","formation":"Spill Kong RT","personnel":"11","tags":["Flip"],"game":"Sample game A"},
     {"id":"SAMPLE0011","play":"Miners","concept":"Verticals","formation":"Pour Kong LT","personnel":"11","tags":["Flip","Boot"],"game":"Sample game B"},
-    {"id":"SAMPLE0012","play":"Aggies","concept":"Shock","formation":"Spill Kong RT","personnel":"11","tags":[],"game":"Sample game B"}
+    {"id":"SAMPLE0012","play":"Aggies","concept":"Aggies","formation":"Spill Kong RT","personnel":"11","tags":[],"game":"Sample game B"}
   ]
 }

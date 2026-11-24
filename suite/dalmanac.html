@@ -33,6 +33,8 @@ main{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:10px;padd
 .r{background:#2f7d57}.p{background:#3b6fb0}.o{background:#a07a22}
 .logrow{position:sticky;bottom:0;background:var(--bg);padding:6px 0 env(safe-area-inset-bottom);display:flex;gap:8px;z-index:2}
 .logrow .btn{flex:1;padding:13px}
+.mg .mgh{display:none}
+.chip.sm{padding:3px 10px;min-height:28px;font-size:11px}
 .pbox{border-left:3px solid var(--acc)}.pbox.sc{border-left-color:var(--warn)}
 .lg{display:flex;gap:6px;padding:7px 2px;border-top:1px solid var(--line);font-size:13px;align-items:flex-start}
 .lg b{white-space:nowrap}.lg .x{margin-left:auto;background:none;border:0;color:var(--mut);font-size:16px;padding:2px 6px}
@@ -57,6 +59,8 @@ input[type=search]{background:var(--card);border:1px solid var(--line);border-ra
 <main><div id="ent"></div><div class="panel" id="side"></div></main>
 <div id="toast"></div>
 <script src="../shared/glossary.js"></script>
+<script src="../shared/autocap.js"></script>
+<script src="../shared/ask.js"></script>
 <script src="../shared/scout.js"></script>
 <script src="../shared/scoutO.js"></script>
 <script src="../shared/defvocab.js"></script>
@@ -91,11 +95,11 @@ const isPlay=p=>!p.k||p.k==='p';
 const PL=g=>g.plays.filter(isPlay);
 const real=g=>PL(g).filter(p=>p.result!=='Penalty');
 let RENDERING=false,d=null,edit=null,ADD=null,FOC=null,FQ='',FRQ='',PQ='',CQ='';
-function fresh(prev){const g=G();return{dn:prev?prev.dn:1,di:prev?prev.di:10,side:prev?prev.side:'Own',yd:prev?prev.yd:25,hash:prev?prev.hash:'',form:'',call:'',concept:'',pkg:(g&&g.pkg)||(prev?prev.pkg:'')||'',front:'',fcode:'',mods:[],press:'',cov:'',rp:'',dir:'',str:'',result:'',td:false,gain:0,havoc:[]}}
+function fresh(prev){const g=G();return{dn:prev?prev.dn:1,di:prev?prev.di:10,side:prev?prev.side:'Own',yd:prev?prev.yd:25,hash:prev?prev.hash:'',form:'',call:'',concept:'',pkg:(g&&g.pkg)||(prev?prev.pkg:'')||'',front:'',fcode:'',mods:[],press:'',cov:'',rp:'',dir:'',str:'',fib:false,fdir:'',result:'',td:false,gain:0,havoc:[]}}
 const ballOn=x=>x.side==='Own'?+x.yd:100-x.yd;
 const effOf=(dn,di,g)=>dn===1?g>=4:dn===2?g>=Math.ceil(di/2):g>=di;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
-const drafted=p=>({dn:p.dn,di:p.di,side:p.side,yd:p.yd,hash:p.hash||'',form:p.form||'',call:p.call||'',concept:p.concept||'',pkg:p.pkg||'',front:p.front||'',fcode:p.fcode||'',mods:[...(p.mods||[])],press:p.press||'',cov:p.cov||'',rp:p.rp||'',dir:p.dir||'',str:p.str||'',result:p.result||'',td:!!p.td,dtd:!!p.dtd,hvOff:false,gain:p.gain||0,havoc:[...(p.havoc||[])]});
+const drafted=p=>({dn:p.dn,di:p.di,side:p.side,yd:p.yd,hash:p.hash||'',form:p.form||'',call:p.call||'',concept:p.concept||'',pkg:p.pkg||'',front:p.front||'',fcode:p.fcode||'',mods:[...(p.mods||[])],press:p.press||'',cov:p.cov||'',rp:p.rp||'',dir:p.dir||'',str:p.str||'',fib:!!p.fib,fdir:p.fdir||'',result:p.result||'',td:!!p.td,dtd:!!p.dtd,hvOff:false,gain:p.gain||0,havoc:[...(p.havoc||[])]});
 /* the next snap, from the play that was just logged (a coach can change anything before logging) */
 function advanceFrom(p){const nxt=fresh(p);nxt.hash=p.hash||'';
  const dn=+p.dn,di=+p.di,f0=+p.f,gain=+p.gain||0;
@@ -138,9 +142,9 @@ function applySit(txt){const o=parseSit(txt,formList());if(o.dn!=null)d.dn=o.dn;
 /* ---------- top bar ---------- */
 function renderTop(){$('gsel').innerHTML=D.games.length?D.games.map(g=>`<option value="${g.id}" ${g.id===D.cur?'selected':''}>${esc(g.opp||'Game')} · ${esc((g.date||'').slice(0,10))}</option>`).join(''):'<option>No game yet</option>';
  const g=G(),ns=ST.names();$('ssel').innerHTML='<option value="">(none)</option>'+ns.map(n=>`<option ${g&&g.scout===n?'selected':''}>${esc(n)}</option>`).join('')}
-function newGame(){let name=prompt('Opponent name',ST.active()||'');if(name==null)return;name=name.trim();if(!name)return;
+function newGame(){ASK('Opponent name',ST.active()||'',name=>{
  const sc=ST.names().find(n=>n.toUpperCase()===name.toUpperCase())||'';
- const g={id:'d'+Date.now(),opp:name,date:new Date().toISOString(),scout:sc,pkg:'',plays:[]};D.games.push(g);D.cur=g.id;d=fresh();edit=null;save();renderAll()}
+ const g={id:'d'+Date.now(),opp:name,date:new Date().toISOString(),scout:sc,pkg:'',plays:[]};D.games.push(g);D.cur=g.id;d=fresh();edit=null;save();renderAll()})}
 $('ngame').onclick=newGame;
 $('gsel').onchange=e=>{D.cur=e.target.value;resume();save();renderAll()};
 $('ssel').onchange=e=>{const g=G();if(!g)return;g.scout=e.target.value;save();renderEntry()};
@@ -181,11 +185,18 @@ function resHtml(){if((d.rp==='R'||d.result==='Rush')&&+d.gain<0&&!d.hvOff&&!d.h
  return`<div class="lab">Result</div><div class="chips">${RES.map(x=>ch('result',x,x,d.result===x,'res')).join('')}${ch('td','1','TD',d.td,'res')}${ch('dtd','1','DEF TD',d.dtd,'res')}</div>
   <div class="row" style="margin-top:8px"><span class="mut">Yards</span>${stepper('gain',d.gain,'g')}<div class="chips">${[-5,0,2,4,6,8,10,15,20].map(v=>ch('gq',v,(v>0?'+':'')+v,+d.gain===v)).join('')}</div></div>
   <div class="row"><span class="mut">Havoc</span><div class="chips">${['TFL','SACK','PBU','FF'].map(x=>ch('havoc',x,x,d.havoc.includes(x),'hv')).join('')}</div></div>`}
+const MGR=()=>{try{return localStorage.getItem('dalm_mgr')==='1'}catch(e){return false}};
+const MG=()=>MGR()&&!edit;
+/* The formation goes to the field, so left hash = formation right, right hash = formation left. FIB (formation into the boundary) flips it and is off unless tapped or typed. Middle hash: tap a side. */
+function fmSide(){const h=d.hash;if(h==='L'||h==='R'){const base=h==='L'?'RT':'LT';return{side:d.fib?(base==='RT'?'LT':'RT'):base,auto:true}}return{side:h==='M'?(d.fdir||''):'',auto:false}}
+function fsRow(){const f=fmSide(),lr=d.hash==='L'||d.hash==='R';
+ return`<div class="row"><span class="mut">Formation side</span><div class="chips">${d.hash==='M'?['LT','RT'].map(x=>ch('fdir',x,x,d.fdir===x)).join(''):`<span class="chip on" style="pointer-events:none">${f.side||'–'}</span>`}${lr?ch('fib','1','FIB',!!d.fib):''}</div><span class="note">${lr?(d.fib?'Into the boundary (FIB)':'To the field'):d.hash==='M'?'Middle hash: tap a side':'Pick a hash'}</span></div>`}
 function sitChips(){return`<div class="row"><span class="mut">Down</span><div class="chips">${[1,2,3,4].map(n=>ch('dn',n,n,+d.dn===n)).join('')}</div></div>
  <div class="row"><span class="mut">To go</span><div class="chips">${[1,2,3,4,5,6,7,8,9,10].map(n=>ch('di',n,n,+d.di===n)).join('')}<input type="text" inputmode="numeric" id="dx" class="chipin ${+d.di>10?'on':''}" placeholder="11+" value="${+d.di>10?d.di:''}"></div></div>
  <div class="row"><span class="mut">Ball on</span><div class="chips">${ch('side','Own','Own',d.side==='Own')}${ch('side','Opp','Opp',d.side==='Opp')}</div>${stepper('yd',d.yd,'y')}</div>
  <div class="row"><span class="mut">Hash</span><div class="chips">${['L','M','R'].map(h=>ch('hash',h,h,d.hash===h)).join('')}</div></div>
- ${strRow()}`}
+ ${fsRow()}
+ ${MG()?'':strRow()}`}
 /* Strength comes from the program's setting (Defensive Setup). When the setting can work it out (Field/Boundary and a left or right hash) it fills in; otherwise tap the side. */
 function strEff(){const a=DV.strengthSide(d);return{side:d.str||a.side||'',auto:!d.str&&!!a.side,why:a.why}}
 function strRow(){const e=strEff(),m=DV.strength().mode,lab={fb:'Field / Boundary',lr:'Left / Right',pass:'Pass strength',te:'TE side',custom:'Custom'}[m];
@@ -202,7 +213,7 @@ function boxHtml(title,cls,r,fallback,pending){
  const dir=r.dirN>=3?` · direction L ${r.dirL}% / R ${r.dirR}% (${r.dirN})`:'';
  const top=r.top.length?`<div style="margin-top:4px"><b>Calls:</b> ${r.top.map(t=>esc(t.name)+' '+t.p+'%').join(' · ')}</div>`:'';
  return`<div class="card pbox ${cls}"><div class="lab"><span>${title}</span><span>n=${r.n}</span></div>${bar}<div class="note" style="margin-top:4px">${esc(r.label)}${r.lvl?' (fell back)':''}${dir}${r.eff!=null?' · eff '+r.eff+'%':''}</div>${top}</div>`}
-function predictBoxes(){const g=G();if(!g)return'';if(!d.form)return'<div class="note" style="margin:0 2px 8px">Pick their formation to see the predicted call.</div>';
+function predictBoxes(){const g=G();if(!g||MG())return'';if(!d.form)return'<div class="note" style="margin:0 2px 8px">Pick their formation to see the predicted call.</div>';
  const look={formation:d.form,down:+d.dn,dist:+d.di,f:ballOn(d)};
  const gr=real(g).filter(p=>!edit||p.pid!==edit).map(asRow),r1=SCOUTO.lookup(gr,look);
  let fb='';if(!r1&&gr.length>=3){const s=SCOUTO.split(gr);fb=`<div class="note">This game so far: run ${s.run}% · pass ${s.pass}% · RPO ${s.rpo}% (${s.nTyped} plays)</div>`}
@@ -214,24 +225,25 @@ function renderEntry(){const e=$('ent'),g=G(),keep=e.scrollTop;
  if(!g){e.innerHTML='<div class="card"><div class="lab">No game yet</div><button class="btn pri" id="first">+ New game</button></div>';const f=$('first');if(f)f.onclick=newGame;return}
  const L=lists(),ed=edit?g.plays.findIndex(p=>p.pid===edit):-1;
  const n=ed>=0?PL(g).findIndex(p=>p.pid===edit)+1:PL(g).length+1;
- RENDERING=true;e.innerHTML=`
+ RENDERING=true;e.classList.toggle('mg',MG());e.innerHTML=`
  ${ed>=0?`<div class="card banner">Editing play ${n}. Change anything, then Save changes. <button class="btn" data-a="cancel">Cancel</button></div>`:''}
- <div class="card"><div class="lab"><span>Situation (their offense)</span></div>
+ <div class="card"><div class="lab"><span>Situation (their offense)</span><button class="chip sm ${MGR()?'on':''}" data-a="mgr" title="For a manager logging what he sees">Manager mode</button></div>
+  ${MG()?'<div class="note" style="margin-bottom:6px"><b>Manager mode:</b> log down, distance, ball, hash, their formation, run or pass, result and yards. A coach adds the front, coverage, pressure and call later from the log.</div>':''}
   <div class="cols2"><div id="sitchips">${sitChips()}</div>
   <div class="qt"><div class="lab"><span>Type it out instead</span></div>
-   <input type="text" id="sit" placeholder="1 10 -28 Rt Hash Kong Cyclone Under Smoke Star Dart Charger Rush 6" autocomplete="off" autocapitalize="off" enterkeyhint="go" value="${esc(QT)}">
+   <input type="text" id="sit" placeholder="1 10 -28 Rt Hash Kong Cyclone Under Smoke Star Dart Charger Rush 6" autocomplete="off" autocapitalize="characters" enterkeyhint="go" value="${esc(QT)}">
    <div class="qread" id="qread">${QT?'':'<span class="mut">Just type it. Words in your glossary land in their slot, the rest is their play. Enter logs it once it has a formation and a result.</span>'}</div></div></div></div>
  <div class="card"><div class="lab"><span>Their formation</span><span class="note" id="fnote">${esc(d.form)}</span></div>
   ${sbox('fq','Search formations, Enter picks',FQ)}<div class="chips" id="fchips">${formChips()}</div></div>
  <div id="pbox">${predictBoxes()}</div>
- <div class="card"><div class="lab"><span>Our package</span><span class="note">stays selected until you change it</span></div><div class="chips" id="pkchips">${pkgChips()}</div></div>
- <div class="card"><div class="lab">Our front</div>${sbox('frq','Search fronts or codes, Enter picks',FRQ)}<div class="chips" id="frchips">${frontChips()}</div>
+ <div class="card mgh"><div class="lab"><span>Our package</span><span class="note">stays selected until you change it</span></div><div class="chips" id="pkchips">${pkgChips()}</div></div>
+ <div class="card mgh"><div class="lab">Our front</div>${sbox('frq','Search fronts or codes, Enter picks',FRQ)}<div class="chips" id="frchips">${frontChips()}</div>
   <div class="row" style="margin-top:6px"><span class="mut">Modifier</span><div class="chips">${L.mods.map(x=>ch('mods',x,esc(x),d.mods.includes(x))).join('')}</div></div></div>
- <div class="card"><div class="lab">Pressure / pop</div>${sbox('pq','Search pressures, Enter picks',PQ)}<div class="chips" id="pchips">${pressChips()}</div></div>
- <div class="card"><div class="lab">Our coverage</div>${sbox('cq','Type a coverage, Enter picks',CQ)}<div class="chips" id="cchips">${covChips()}</div></div>
+ <div class="card mgh"><div class="lab">Pressure / pop</div>${sbox('pq','Search pressures, Enter picks',PQ)}<div class="chips" id="pchips">${pressChips()}</div></div>
+ <div class="card mgh"><div class="lab">Our coverage</div>${sbox('cq','Type a coverage, Enter picks',CQ)}<div class="chips" id="cchips">${covChips()}</div></div>
  <div class="card"><div class="lab"><span>What they ran</span><span class="note" id="inf">${infNote()}</span></div>
-  <div class="lab" style="margin-top:2px"><span>Concept (the play)</span></div><div class="chips" id="cnchips">${cnChips()}</div>
-  <div class="row" style="margin-top:8px"><span class="mut">Call word (the tag)</span><input type="text" id="call" placeholder="e.g. DART CHARGER. The concept fills in." value="${esc(d.call)}" autocapitalize="characters" autocomplete="off" enterkeyhint="next" style="flex:1;min-width:200px"></div>
+  <div class="lab mgh" style="margin-top:2px"><span>Concept (the play)</span></div><div class="chips mgh" id="cnchips">${cnChips()}</div>
+  <div class="row mgh" style="margin-top:8px"><span class="mut">Call word (the tag)</span><input type="text" id="call" placeholder="e.g. DART CHARGER. The concept fills in." value="${esc(d.call)}" autocapitalize="characters" autocomplete="off" enterkeyhint="next" style="flex:1;min-width:200px"></div>
   <div class="row" id="rpchips">${rpChips()}</div></div>
  <div class="card" id="rescard">${resHtml()}</div>
  <div class="logrow"><button class="btn pri" id="log">${ed>=0?'Save changes':'Log play '+n}</button></div>`;
@@ -266,6 +278,7 @@ function applyQuick(txt,commit){const out={bits:[],unk:[],hadResult:false};let t
  const sr=parseSitR(jt,null),so=sr.o;sr.rest=sr.rest.flatMap(w=>w.split('_'));
  if(so.dn!=null){d.dn=so.dn;d.di=so.di;out.bits.push(so.dn+' & '+so.di)}if(so.yd!=null){d.yd=so.yd;d.side=so.side;out.bits.push(so.side+' '+so.yd)}if(so.hash){d.hash=so.hash;out.bits.push({L:'left',M:'middle',R:'right'}[so.hash]+' hash')}
  const left=sr.rest.map(U);
+ const fi=left.indexOf('FIB');if(fi>=0){d.fib=true;out.bits.push('FIB');left.splice(fi,1)}
  /* glossary words */
  const L=lists(),T=[];
  formList().forEach(f=>T.push([f.split(' '),'form',f]));
@@ -363,6 +376,7 @@ $('ent').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b
   if(a==='add'){ADD=b.dataset.t;renderEntry();return}
   if(a==='addok'){doAdd();return}if(a==='addno'){ADD=null;renderEntry();return}
   if(a==='cancel'){edit=null;resume();renderAll();return}
+  if(a==='mgr'){try{localStorage.setItem('dalm_mgr',MGR()?'0':'1')}catch(x){}renderEntry();return}
   if(a==='ym'||a==='yp'){readNum('yd');d.yd=clamp(+d.yd+(a==='yp'?1:-1),1,50);renderEntry();return}
   if(a==='gm'||a==='gp'){readNum('gain');d.gain=clamp(+d.gain+(a==='gp'?1:-1),-99,99);renderEntry();return}
   return}
@@ -370,6 +384,8 @@ $('ent').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b
  if(k==='dn')d.dn=+v;else if(k==='di')d.di=+v;
  else if(k==='side')d.side=v;
  else if(k==='str'){d.str=d.str===v?'':v}
+ else if(k==='fib'){d.fib=!d.fib}
+ else if(k==='fdir'){d.fdir=d.fdir===v?'':v}
  else if(k==='gq')d.gain=+v;
  else if(k==='concept'){if(d.concept&&d.concept.toUpperCase()===v.toUpperCase())d.concept='';else{d.concept=v;const c=conceptList().find(x=>x.name.toUpperCase()===v.toUpperCase());if(c&&d.rp!=='RPO')d.rp=c.type==='run'?'R':'P'}}
  else if(k==='pkg'){d.pkg=v;const g=G();if(g){g.pkg=v;save()}}
@@ -391,7 +407,7 @@ function logPlay(){const g=G();if(!g)return;readNum('gain');
  let gain=['Incomplete','Interception'].includes(d.result)?0:(+d.gain||0);if(d.result==='Sack'&&gain>0)gain=-gain;
  const rp=d.rp||({Rush:'R',Complete:'P',Incomplete:'P',Sack:'P',Scramble:'P',Interception:'P'}[d.result]||'');
  const hv=[...d.havoc];if(rp==='R'&&gain<0&&!d.hvOff&&!hv.includes('TFL'))hv.push('TFL');if(d.result==='Sack'&&!hv.includes('SACK'))hv.push('SACK');if(d.result==='Interception'&&!hv.includes('PBU'))hv.push('PBU');
- const p={pid:edit||'p'+Date.now().toString(36),ts:Date.now(),dn:+d.dn,di:+d.di,side:d.side,yd:+d.yd,f:ballOn(d),hash:d.hash,form:d.form,call:d.call,concept:d.concept||(d.call&&SCOUTO.decode(d.call).known?SCOUTO.decode(d.call).concept:''),pkg:d.pkg,front:d.front,fcode:d.fcode,mods:[...d.mods],press:d.press,cov:d.cov,rp,dir:d.dir,str:strEff().side,result:d.result,td:d.td,dtd:!!d.dtd,gain,havoc:hv};
+ const p={pid:edit||'p'+Date.now().toString(36),ts:Date.now(),dn:+d.dn,di:+d.di,side:d.side,yd:+d.yd,f:ballOn(d),hash:d.hash,form:d.form,call:d.call,concept:d.concept||(d.call&&SCOUTO.decode(d.call).known?SCOUTO.decode(d.call).concept:''),pkg:d.pkg,front:d.front,fcode:d.fcode,mods:[...d.mods],press:d.press,cov:d.cov,rp,dir:d.dir,str:strEff().side,fs:fmSide().side,fib:!!d.fib,fdir:d.fdir,result:d.result,td:d.td,dtd:!!d.dtd,gain,havoc:hv};
  if(d.pkg)g.pkg=d.pkg;
  if(d.form&&DV.glo()&&!glForms().includes(SCOUTO.famOf(d.form)))addWord('formation',d.form,{side:'O'});
  if(edit){const i=g.plays.findIndex(x=>x.pid===edit);if(i>=0){p.ts=g.plays[i].ts;p.upd=Date.now();g.plays[i]=p}edit=null;resume();save();renderAll();toast('Saved changes');return}
@@ -410,7 +426,7 @@ function renderSide(){const g=G(),s=$('side');if(!g){s.innerHTML='';return}
  g.plays.forEach(p=>{
   if(p.k==='d'||p.k==='q'||p.k==='h'){dn++;if(!LF)items.push(`<div class="mk">${p.k==='d'?'New drive':p.k==='h'?'Halftime':'End Q'+p.n}</div>`);return}
   if(p.k==='x'){if(!LF)items.push('<div class="mk">Timeout / no play</div>');return}
-  idx++;if(LF&&!({R:p.rp==='R',P:p.rp==='P',RPO:p.rp==='RPO',eff:effOf(p.dn,p.di,p.gain),exp:p.gain>=15,hav:p.havoc.length||['Sack','Interception'].includes(p.result)||p.dtd}[LF]))return;items.push(`<div class="lg ${edit===p.pid?'ed':''}"><b>${idx}</b><div><b>${p.dn}&amp;${p.di}</b> ${esc(p.form)} <span class="mut">${esc(p.hash)} · D${dn}</span><br><span class="mut">${esc([p.pkg,p.front,(p.mods||[]).join(' '),p.press,p.cov].filter(Boolean).join(' · ')||'no call logged')}</span><br>${p.call?`<small class="mut">${esc(p.call.toLowerCase())}</small><br>`:''}${p.concept?`<b class="cn">${esc(p.concept)}</b> `:''}${esc(p.rp)}${p.dir?' '+esc(p.dir):''} ${esc(p.result)}${p.td?' TD':''}${p.dtd?' DEF TD':''} ${p.gain>0?'+':''}${p.gain}${p.havoc.length?' · '+esc(p.havoc.join(' ')):''}</div><button class="x" data-edit="${p.pid}" title="Edit this play">✎</button><button class="x" data-del="${p.pid}" title="Delete this play">✕</button></div>`)});
+  idx++;if(LF&&!({R:p.rp==='R',P:p.rp==='P',RPO:p.rp==='RPO',eff:effOf(p.dn,p.di,p.gain),exp:p.gain>=15,hav:p.havoc.length||['Sack','Interception'].includes(p.result)||p.dtd}[LF]))return;items.push(`<div class="lg ${edit===p.pid?'ed':''}"><b>${idx}</b><div><b>${p.dn}&amp;${p.di}</b> ${esc(p.form)}${p.fs?' '+esc(p.fs)+(p.fib?' FIB':''):''} <span class="mut">${esc(p.hash)} · D${dn}</span><br><span class="mut">${esc([p.pkg,p.front,(p.mods||[]).join(' '),p.press,p.cov].filter(Boolean).join(' · ')||'no call logged')}</span><br>${p.call?`<small class="mut">${esc(p.call.toLowerCase())}</small><br>`:''}${p.concept?`<b class="cn">${esc(p.concept)}</b> `:''}${esc(p.rp)}${p.dir?' '+esc(p.dir):''} ${esc(p.result)}${p.td?' TD':''}${p.dtd?' DEF TD':''} ${p.gain>0?'+':''}${p.gain}${p.havoc.length?' · '+esc(p.havoc.join(' ')):''}</div><button class="x" data-edit="${p.pid}" title="Edit this play">✎</button><button class="x" data-del="${p.pid}" title="Delete this play">✕</button></div>`)});
  s.innerHTML=`<div class="lab"><span>${esc(g.opp)}</span><span>${PL(g).length} plays</span></div>
  <div class="stat"><div><span class="mut">Run / pass / RPO</span><b class="rpb">${[['R',c.R],['P',c.P],['RPO',c.RPO]].map(([k,v])=>`<button class="lfb ${LF===k?'on':''}" data-lf="${k}">${pc(v,typed.length)}</button>`).join('<i>/</i>')}</b></div><div><span class="mut">Yds / play</span><b>${n?(yds/n).toFixed(1):'–'}</b></div><div class="tl ${LF==='eff'?'on':''}" data-lf="eff"><span class="mut">Opp. eff</span><b>${pc(eff,n)}</b></div><div class="tl ${LF==='exp'?'on':''}" data-lf="exp"><span class="mut">Opp. exp (15+)</span><b>${pc(ex,n)}</b></div><div class="tl ${LF==='hav'?'on':''}" data-lf="hav"><span class="mut">Havoc plays</span><b>${pc(hv,n)}</b></div><div class="tl ${!LF?'on':''}" data-lf=""><span class="mut">Total play log</span><b>${n}</b></div></div>${LF?`<div class="mut" style="margin:0 0 6px">Showing: ${LFN[LF]} · <a href="#" data-lf="" style="color:var(--blue)">show all</a></div>`:''}`+items.reverse().join('');
  s.querySelectorAll('[data-lf]').forEach(b=>b.onclick=e=>{e.preventDefault();const v=b.dataset.lf;LF=(v&&LF===v)?'':v;renderSide()});
@@ -428,7 +444,7 @@ function csv(g){const q=v=>{const s=v==null?'':String(v);return /[",\n]/.test(s)
   const o={};pn++;o['PERIOD']=per;o['PLAY #']=pn;o['ODK']='D';o['DN']=p.dn;o['DIST']=p.di;o['GN/LS']=p.gain;o['YARD LN']=p.side==='Own'?-p.yd:p.yd;
   o['EFF']=p.result==='Penalty'?'':(effOf(p.dn,p.di,p.gain)?'Y':'N');o['EXPLOSIVE?']=p.gain>=15?'Y':'';
   o['DEF FRONT']=[p.front,...(p.mods||[])].filter(Boolean).join(' ');o['DC COVERAGE']=p.cov;o['BLITZ']=p.press;
-  o['NOTES']=[p.pkg?'PKG '+p.pkg:'',p.str?'STRENGTH '+(p.str==='L'?'LEFT':'RIGHT'):'',p.concept?'CONCEPT '+p.concept:'',p.havoc.length?'HAVOC '+p.havoc.join('/'):''].filter(Boolean).join('; ');
+  o['NOTES']=[p.pkg?'PKG '+p.pkg:'',p.str?'STRENGTH '+(p.str==='L'?'LEFT':'RIGHT'):'',p.fs?'FORMATION '+p.fs+(p.fib?' (FIB)':''):'',p.concept?'CONCEPT '+p.concept:'',p.havoc.length?'HAVOC '+p.havoc.join('/'):''].filter(Boolean).join('; ');
   o['HASH']=p.hash;o['PLAY TYPE']=p.rp==='R'?'Run':p.rp?'Pass':'';o['RESULT']=p.result+(p.td?', TD':'')+(p.dtd?', DEF TD':'');o['OFF FORM']=p.form;o['OFF PLAY']=p.call;o['PASS CONCEPT']=p.rp==='P'?(p.concept||''):'';o['PLAY DIR']=p.dir;o['RPO']=p.rp==='RPO'?'Y':'';
   rows.push(HEAD.map(h=>q(o[h])).join(','))});return rows.join('\n')}
 $('exp').onclick=()=>{const g=G();if(!g||!PL(g).length){toast('No plays to export');return}

@@ -106,6 +106,7 @@ td .cc.empty{color:#3e5163;font-size:20px}
 <div class="full" id="ed"></div>
 <div id="toast"></div>
 <script src="../shared/glossary.js"></script>
+<script src="../shared/autocap.js"></script>
 <script src="../shared/scout.js"></script>
 <script src="../shared/demoseedD.js"></script>
 <script src="../shared/scoutO.js"></script>
@@ -284,7 +285,7 @@ $('main').addEventListener('click',e=>{const p=plan();if(!p)return;const bl=e.ta
 
 /* ---------- dialogs ---------- */
 function dialog({title,text,fields=[],buttons=[]}){const m=$('modal');
- $('mbox').innerHTML=`<h3>${esc(title)}</h3>${text?`<p class="note">${esc(text)}</p>`:''}${fields.map((f,i)=>`<div class="lab">${esc(f.label)}</div><input type="text" data-fi="${i}" value="${esc(f.val||'')}" ${f.list?`list="${f.list}"`:''} autocapitalize="off" autocorrect="off">`).join('')}
+ $('mbox').innerHTML=`<h3>${esc(title)}</h3>${text?`<p class="note">${esc(text)}</p>`:''}${fields.map((f,i)=>`<div class="lab">${esc(f.label)}</div><input type="text" data-fi="${i}" value="${esc(f.val||'')}" ${f.list?`list="${f.list}"`:''} autocapitalize="words" autocorrect="off">`).join('')}
  <div class="row">${buttons.map((b,i)=>`<button class="btn ${b.cls||''}" data-bi="${i}">${esc(b.t)}</button>`).join('')}</div>`;
  m.classList.add('show');const first=$('mbox').querySelector('input');if(first)setTimeout(()=>first.focus(),50);
  $('mbox').onclick=e=>{const bt=e.target.closest('[data-bi]');if(!bt)return;const b=buttons[+bt.dataset.bi],vals=[...$('mbox').querySelectorAll('[data-fi]')].map(i=>i.value);
@@ -309,7 +310,7 @@ const drawOf=b=>(typeof E!=='undefined'&&E&&$('ed').classList.contains('show')&&
 function ftPicker(bi,after){const g=glossary(),p=plan(),b=p.blocks[bi];if(!g)return toast('No glossary on this device yet');b.ftags=b.ftags||[];let q='';
  const all=()=>GL.active(g,'ftag').map(t=>t.name).sort((a,b2)=>a.localeCompare(b2));const has=n=>b.ftags.some(x=>x.toUpperCase()===n.toUpperCase());
  const draw=()=>{const u=q.trim().toUpperCase(),rows=all().filter(n=>!u||n.toUpperCase().includes(u)),ex=all().some(n=>n.toUpperCase()===u);
-  $('mbox').innerHTML=`<h3>Formation tags for ${esc(b.name||'this formation')}</h3><p class="note">These apply to every call in this block. Tap to turn on or off, or type one and press Enter.</p><input type="text" id="ftq" value="${esc(q)}" placeholder="Search or type a new tag" autocapitalize="off" autocorrect="off" style="width:100%">
+  $('mbox').innerHTML=`<h3>Formation tags for ${esc(b.name||'this formation')}</h3><p class="note">These apply to every call in this block. Tap to turn on or off, or type one and press Enter.</p><input type="text" id="ftq" value="${esc(q)}" placeholder="Search or type a new tag" autocapitalize="words" autocorrect="off" style="width:100%">
   <div class="chips" style="margin:10px 0">${rows.map(n=>`<button class="chip ${has(n)?'on':''}" data-ftt="${esc(n)}">${esc(n)}</button>`).join('')||'<span class="note">No formation tags in your glossary yet. Type one above to add it.</span>'}${u&&!ex?`<button class="chip" data-ftn="1">Add “${esc(q.trim())}”</button>`:''}</div>
   <div class="row"><button class="btn" data-ftd="1">Done</button><button class="btn pri" data-ftd="2">Done and make these the default for this formation</button></div>`;
   const i=$('ftq');i.oninput=()=>{q=i.value;const pos=i.selectionStart;draw();const n=$('ftq');n.focus();n.setSelectionRange(pos,pos)};
@@ -789,10 +790,10 @@ function openCell(bi,key){const p=plan(),b=p.blocks[bi],r=p.rows.find(x=>x.id===
   const typed=(C.q[k]||'').trim();if(typed&&!list.some(n=>n.toUpperCase()===typed.toUpperCase()))h+=`<button class="chip" data-pick="${k}" data-v="${esc(typed)}" style="border-style:dashed">Use “${esc(typed)}”</button>`;
   if(!opts[k].length&&!typed&&!cv)h+=`<span class="note">No ${k} words in the glossary yet. Type one above.</span>`;return h}
  $('mbox').style.width='min(1100px,96vw)';$('mbox').innerHTML=`<h3>${esc(p.blocks[bi].name||'Formation')} · ${esc(r.label)} × ${esc(c.head||'column')}</h3>
- <input type="text" id="qb" value="${esc(barText(C.s))}" placeholder="Type the call: tags, formation, play" autocapitalize="off" autocorrect="off" autocomplete="off" enterkeyhint="next" style="font-size:20px;font-weight:700;padding:12px;margin:6px 0">
+ <input type="text" id="qb" value="${esc(barText(C.s))}" placeholder="Type the call: tags, formation, play" autocapitalize="characters" autocorrect="off" autocomplete="off" enterkeyhint="next" style="font-size:20px;font-weight:700;padding:12px;margin:6px 0">
  <div id="qs" class="chips" style="margin-bottom:4px"></div><div id="qp" style="margin-bottom:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">${pv('')}</div>
  <div class="note">Words from your glossary land in their slot; anything else becomes the play. Press Enter to save and move to the next cell, or tap words below.</div>
- <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:0 14px">${SLOTS.map(sl=>`<div class="slot"><div class="top"><b>${sl[1]}</b><input type="text" data-q="${sl[0]}" placeholder="Search or type" autocapitalize="off" autocorrect="off"></div><div class="chips" id="ch_${sl[0]}">${chips(sl[0])}</div></div>`).join('')}</div>
+ <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:0 14px">${SLOTS.map(sl=>`<div class="slot"><div class="top"><b>${sl[1]}</b><input type="text" data-q="${sl[0]}" placeholder="Search or type" autocapitalize="words" autocorrect="off"></div><div class="chips" id="ch_${sl[0]}">${chips(sl[0])}</div></div>`).join('')}</div>
  <div class="lab">Note</div><input type="text" id="cn" value="${esc(C.n)}" placeholder="Optional"><div class="row"><button class="btn pri" data-x="save">Save cell</button><button class="btn" data-x="clear">Clear cell</button><button class="btn" data-x="cancel">Cancel</button></div>`;
  m.classList.add('show');
  const acList=()=>{const v=$('qb').value;if(/\s$/.test(v))return[];const t=(v.split(/\s+/).pop()||'').toLowerCase();if(t.length<2)return[];const out=[];ORD.forEach(k=>(opts[k]||[]).forEach(n=>{const l=n.toLowerCase();if(l.startsWith(t)&&l!==t&&!out.includes(n))out.push(n)}));return out.slice(0,8)};
