@@ -136,7 +136,7 @@ body.opp .selfonly{display:none!important} body:not(.opp) .opponly{display:none!
     <div class="bar">
       <button id="saveHl" title="Upload the turning-point and explosive clips so every device can watch them">Save highlight clips to KDNCE</button><button class="pri" id="aiAll" disabled>AI tag untagged plays</button><button id="aiStop" hidden>Stop</button>
       <label class="c">Model <select id="tier"><option value="complex">Most capable</option><option value="default">Balanced</option></select></label>
-      <span id="aiStatus" class="sub" style="font-size:14px"></span><span style="flex:1"></span>
+      <span id="aiStatus" class="sub" style="font-size:14px"></span><span id="aiUse" class="sub" style="font-size:12px"></span><span style="flex:1"></span>
       <span class="meta">Plays <b id="sPlays">0</b> · Need review <b id="sReview">0</b> · Almanac <b id="sAlm">none</b> · <span id="aiAvail"></span></span>
       <label class="c"><input type="checkbox" id="onlyReview"> Review queue only</label>
     </div>
@@ -518,6 +518,7 @@ async function aiTag(idx){
     }catch(e){if(e&&e.code==='cancelled')break;
       if(e&&['not_granted','sampling_disabled','not_declared','capability_disabled','capability_removed','images_unavailable'].includes(e.code)){toast('AI tagging is not allowed in this view');S.sample=null;break}
       if(e&&e.code==='rate_limited'){toast('Hit the usage limit; try again later');break}
+      if(e&&['bad_key','not_ready'].includes(e.code)){toast('AI is not connected on the server yet');break}
       p.conf='low';p.note='AI read failed ('+((e&&e.code)||'error')+')'}
     refresh();if(S.sel===i)renderDetail();
   }
@@ -980,8 +981,23 @@ function takeAlmanac(txt){const nm=((txt.split('\n')[0]||'').split('\t')[1]||'')
   if(id){openLocal(id);fillPicker();$('#gamePick').value='loc:'+id}else pick('new:self');
   TAB='tagger';$('#setupBox').open=true;loadAlmText(txt);fillPicker();render()}
 addEventListener('message',e=>{if(e.origin!==location.origin||!e.data)return;if(e.data.almanac)takeAlmanac(e.data.almanac);if(e.data.film==='reload'){const busy=S.plays.some(p=>Object.keys(p.angles||{}).length);if(busy)toast('This game list changed on another iPad. Reopen the Film Room to see it.');else location.reload()}});
-(async()=>{try{const s=await claude.use('sample');if(s){const lim=await s.limits().catch(()=>null);if(lim&&lim.images){S.sample=s;S.imgMax=lim.images.maxCount||20}}}catch(e){}
-  $('#aiAll').disabled=!(S.sample&&S.plays.length);$('#aiAvail').textContent=S.sample?'AI reading on':'AI reading off in this view';if(TAB==='result'&&G&&G.local)render()})();
+/* KDNCE AI reading: the server holds the Anthropic key; this adapter gives the tagger the same sample()/sample.json() calls it always used. */
+function mkSample(base,token,info){
+  const b64=blob=>new Promise((res,rej)=>{const f=new FileReader();f.onload=()=>res(String(f.result).split(',')[1]);f.onerror=()=>rej(Object.assign(new Error('image'),{code:'images_unavailable'}));f.readAsDataURL(blob)});
+  const call=async(prompt,o={})=>{o=o||{};const images=await Promise.all((o.images||[]).map(b64));
+    let r;try{r=await fetch(base+'/ai',{method:'POST',signal:o.signal,headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({prompt,images,tier:o.modelTier==='complex'?'complex':'default'})})}
+    catch(e){throw Object.assign(new Error('network'),{code:(e&&e.name==='AbortError')?'cancelled':'network'})}
+    const j=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(new Error(j.error||'AI failed'),{code:j.code||'error'});
+    S.aiUse=S.aiUse||{in:0,out:0,calls:0};S.aiUse.in+=(j.usage&&j.usage.in)||0;S.aiUse.out+=(j.usage&&j.usage.out)||0;S.aiUse.calls++;updAiUse();return j};
+  const f=async(prompt,o)=>{const j=await call(prompt,o);return{text:j.text}};
+  f.json=async(prompt,o)=>{const j=await call(prompt,o);const m=String(j.text||'').match(/\{[\s\S]*\}/);if(!m)throw Object.assign(new Error('no JSON'),{code:'bad_reply'});
+    try{return JSON.parse(m[0])}catch(e){throw Object.assign(new Error('bad JSON'),{code:'bad_reply'})}};
+  f.limits=async()=>({images:{maxCount:info.imgMax}});return f}
+function updAiUse(){const u=S.aiUse;if(!u||!$('#aiUse'))return;$('#aiUse').textContent=`${u.calls} AI calls this visit · ${(u.in/1000).toFixed(0)}k tokens in · ${(u.out/1000).toFixed(1)}k out`}
+(async()=>{let why='AI reading off: sign in to use it';
+  try{const sy=SY();if(SIGNED&&sy.token&&sy.url){const base=sy.url.replace(/\/$/,'');const r=await fetch(base+'/aistatus',{headers:{Authorization:'Bearer '+sy.token}});const j=await r.json().catch(()=>({}));
+    if(r.ok&&j.ready){S.sample=mkSample(base,sy.token,j);S.imgMax=j.imgMax||20;S.aiCap=j.cap;S.aiUsed=j.used}else if(r.ok)why='AI reading off: server key not added yet'}}catch(e){why='AI reading off: server not reachable'}
+  $('#aiAll').disabled=!(S.sample&&S.plays.length);$('#aiAvail').textContent=S.sample?`AI reading on (${S.aiUsed||0} of ${S.aiCap} calls used today)`:why;if(TAB==='result'&&G&&G.local)render()})();
 </script>
 </body>
 </html>
