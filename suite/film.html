@@ -162,7 +162,10 @@ const ANGLES=['Wide','Tight','End Zone'];
 const isTs=n=>/\.(mts|m2ts)$/i.test(n);
 async function tsToMp4(src){
   if(typeof muxjs==='undefined')await new Promise((ok,no)=>{const s=document.createElement('script');s.src='mux.min.js';s.onload=ok;s.onerror=()=>no(new Error('converter not available'));document.head.appendChild(s)});
-  const buf=src instanceof Blob?await src.arrayBuffer():src;
+  let buf=src instanceof Blob?await src.arrayBuffer():src;
+  // Camcorder (AVCHD) .MTS files carry a 4-byte time stamp before every 188-byte packet (192 bytes each); the converter only reads 188, so strip the stamps first.
+  {const u=new Uint8Array(buf);const at=i=>u[i]===0x47;
+   if(u.length>600&&at(4)&&at(196)&&at(388)&&!(at(188)&&at(376))){const n=Math.floor(u.length/192),o=new Uint8Array(n*188);for(let k=0;k<n;k++)o.set(u.subarray(k*192+4,k*192+192),k*188);buf=o.buffer}}
   return new Promise((res,rej)=>{const t=new muxjs.mp4.Transmuxer({keepOriginalTimestamps:false});const parts=[];let init=false;
     t.on('data',s=>{if(!init){init=true;parts.push(s.initSegment)}parts.push(s.data)});
     t.on('done',()=>{if(!init)return rej(new Error('no video found in that .MTS file'));let n=0;parts.forEach(p=>n+=p.byteLength);const out=new Uint8Array(n);let o=0;parts.forEach(p=>{out.set(p,o);o+=p.byteLength});res(new Blob([out],{type:'video/mp4'}))});
@@ -187,8 +190,11 @@ function angleOf(s){s=s.toLowerCase();if(/end ?zone|\bez\b|endzone/.test(s))retu
 function newPlay(n){return {n,angles:{},view:'Wide',film:{},yl:null,hash:'',type:'',result:'',td:false,nd:false,h2:false,gainOverride:'',skip:false,almRow:null,
   conf:'',src:'',note:'',star:false,carrier:'',ballEnd:null,box:'',mof:'',cov:'',press:null}}
 function groupClips(entries){
-  const parsed=entries.map((e,i)=>{const m=e.name.match(/^(.*?)[\s_-]*clip[\s_-]*(\d+)/i);return {...e,angle:angleOf(m?m[1]:e.name),num:m?+m[2]:i+1}});
+  // The clip number is the number in the file name ("Wide - Clip 003.mp4" -> 3, camcorder "00006.MTS" -> 6), never the order the browser lists the files in.
+  entries=[...entries].sort((a,b)=>natCmp(a.name,b.name));
+  const parsed=entries.map((e,i)=>{const m=e.name.match(/^(.*?)[\s_-]*clip[\s_-]*(\d+)/i);const d=m?null:e.name.replace(/\.[^.]*$/,'').match(/(\d+)\s*$/);return {...e,angle:angleOf(m?m[1]:e.name),num:m?+m[2]:d?+d[1]:i+1}});
   const by=new Map();parsed.forEach(p=>{if(!by.has(p.num))by.set(p.num,[]);by.get(p.num).push(p)});
+  groupClips.dups=0;by.forEach(l=>{const seen=new Set();l.forEach(x=>{if(seen.has(x.angle))groupClips.dups++;seen.add(x.angle)})});
   return [...by.keys()].sort((a,b)=>a-b).map(k=>{const pl=newPlay(k);by.get(k).forEach(x=>{if(!pl.angles[x.angle])pl.angles[x.angle]={name:x.name,get:x.get,url:null,dur:null}});
     pl.view=pl.angles.Wide?'Wide':Object.keys(pl.angles)[0];return pl});
 }
@@ -199,7 +205,7 @@ function loadFiles(list){const v=[...list].filter(f=>/\.(mp4|mov|m4v|mts|m2ts)$/
   attach(groupClips(v.map(f=>({name:f.name,get:async()=>isTs(f.name)?await tsToMp4(f):f}))))}
 function attach(plays){if(!plays.length){toast('No clips found');return}
   S.plays=plays;mergeSaved();const n=plays.reduce((a,p)=>a+Object.keys(p.angles).length,0);
-  $('#clipStatus').textContent=`${plays.length} plays loaded (${n} clips across angles)`;
+  $('#clipStatus').textContent=`${plays.length} plays loaded (${n} clips across angles)`+(groupClips.dups?`. ${groupClips.dups} file${groupClips.dups>1?'s':''} had the same clip number and angle as another and were left out`:'');
   refresh();$('#aiAll').disabled=!S.sample;toast(plays.length+' plays loaded')}
 async function ensureUrl(a){if(a&&!a.url){a.url=URL.createObjectURL(await a.get())}return a}
 function freeFar(i){S.plays.forEach((q,k)=>{if(Math.abs(k-i)>6)Object.values(q.angles).forEach(a=>{if(a.url&&!a.keep){URL.revokeObjectURL(a.url);a.url=null}})})}
@@ -387,11 +393,11 @@ $('#onlyReview').onchange=renderTable;
 /* ================= detail ================= */
 async function select(i){if(i<0||i>=S.plays.length)return;S.sel=i;renderTable();
   const row=document.querySelector(`tr[data-i="${i}"]`);row&&row.scrollIntoView({block:'nearest'});
-  renderDetail();const p=S.plays[i],a=p.angles[p.view];if(a&&!a.url){try{await ensureUrl(a)}catch(e){}if(S.sel===i)renderDetail()}freeFar(i)}
+  renderDetail();const p=S.plays[i],a=p.angles[p.view];if(a&&!a.url){a.err='';try{await ensureUrl(a)}catch(e){a.err=String((e&&e.message)||e)}if(S.sel===i)renderDetail()}freeFar(i)}
 function seg(f,opts,val){return `<div class="seg" data-f="${f}">${opts.map(o=>`<button class="${o===val?'on':''}" data-v="${o}">${o}</button>`).join('')}</div>`}
 function renderDetail(){const i=S.sel,p=S.plays[i];if(!p)return;const c=p.calc||{},a=p.angles[p.view];
   const tabs=`<div class="seg" id="angTabs">${ANGLES.map(n=>`<button data-a="${n}" class="${p.view===n?'on':''}" ${p.angles[n]?'':'disabled'}>${n}</button>`).join('')}</div>`;
-  const vid=a&&a.url?`<video src="${a.url}" controls autoplay muted loop playsinline></video>`:'<div class="empty">Loading clip…</div>';
+  const vid=a&&a.url?`<video src="${a.url}" controls autoplay muted loop playsinline></video>`:`<div class="empty">${a&&a.err?'Could not open this clip: '+esc(a.err):(a&&isTs(a.name||'')?'Converting camcorder clip…':'Loading clip…')}</div>`;
   const fr=p._frames?`<div class="frames">${p._frames.map(f=>`<img src="${f.u}" title="${esc(f.label)}">`).join('')}</div>`:'';
   const almOpts=S.alm.length?`<label class="f">Almanac row<select id="almRow"><option value="">Auto${p._alm?' (row '+p._alm.i+')':' (none)'}</option>${S.alm.map(r=>r.noplay?`<option value="${r.i}" ${+p.almRow===r.i?'selected':''}>${r.i}: timeout / no play</option>`:`<option value="${r.i}" ${+p.almRow===r.i?'selected':''}>${r.i}: ${r.dn??'-'}&${r.dist??'-'} ${esc(r.run||r.pass)} ${esc(r.result)} @${ylTxt(r.yl)}</option>`).join('')}</select></label>`:'';
   $('#detail').innerHTML=`<div class="bar"><h3>Clip ${p.n}</h3><span style="flex:1"></span><button id="prev">◀</button><button id="next">▶</button><button id="aiOne" ${S.sample?'':'disabled'}>AI tag this play</button></div>
@@ -414,7 +420,7 @@ function renderDetail(){const i=S.sel,p=S.plays[i];if(!p)return;const c=p.calc||
   <div class="bar"><button class="pri" id="ok">Looks right ✓ (Enter)</button></div>
   <div class="note">Keys: <kbd>↑</kbd><kbd>↓</kbd> play · <kbd>L</kbd><kbd>M</kbd><kbd>R</kbd> hash · <kbd>U</kbd> run <kbd>P</kbd> pass · <kbd>1</kbd>–<kbd>9</kbd> result · <kbd>T</kbd> TD · <kbd>D</kbd> new drive · <kbd>Space</kbd> play/pause. With an almanac, down, distance and spot come from it; the film supplies hash and checks the spot.</div>`;
   $('#prev').onclick=()=>select(i-1);$('#next').onclick=()=>select(i+1);$('#aiOne').onclick=()=>aiTag([i]);
-  $$('#angTabs button').forEach(b=>b.onclick=async()=>{p.view=b.dataset.a;await ensureUrl(p.angles[p.view]).catch(()=>{});renderDetail()});
+  $$('#angTabs button').forEach(b=>b.onclick=async()=>{p.view=b.dataset.a;const aa=p.angles[p.view];if(aa){aa.err='';await ensureUrl(aa).catch(e=>{aa.err=String((e&&e.message)||e)})}renderDetail()});
   $('#ok').onclick=()=>{p.src='human';refresh();select(i+1)};
   const num=v=>v===''?null:+v;
   $('#yl').onchange=e=>edit({yl:num(e.target.value)});$('#gov').onchange=e=>edit({gainOverride:e.target.value});$('#be').onchange=e=>edit({ballEnd:num(e.target.value)});
