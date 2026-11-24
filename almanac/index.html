@@ -89,6 +89,8 @@ table.t td{padding:6px 4px;border-top:1px solid var(--line)}
 .chip{padding:5px 9px;min-height:36px;min-width:36px;font-size:14px}
 .big{font-size:22px;min-width:44px}
 header .btn{padding:7px 10px}
+/* collapsed top bar: only the game picker, Undo and the toggle stay */
+body.hdrc header .btn:not(#undo):not(#hdrtog){display:none}body.hdrc header>span{display:none}body.hdrc header #gsel{flex:1;min-width:0}
 .last{font-size:12px;color:var(--mut);align-self:center;max-width:230px;line-height:1.2}
 .dclose{display:none;position:sticky;top:0;z-index:2;background:var(--card);padding-bottom:6px}
 @media(min-width:821px){main{grid-template-columns:minmax(0,1fr)}
@@ -103,6 +105,7 @@ html,button,.chip,input,select{touch-action:manipulation;-webkit-tap-highlight-c
  <h1>Almanac</h1>
  <select id="gsel"></select>
  <button class="btn" id="newgame">+ Game</button>
+ <button class="btn" id="hdrtog" aria-expanded="true">▴ Less</button>
  <button class="btn" id="logbtn">Log</button>
  <button class="btn" id="newdrive">New Drive</button>
  <button class="btn" id="dend" title="Punt, field goal or downs: ends the drive, next play is 1st and 10">Drive end</button>
@@ -619,6 +622,10 @@ document.getElementById('qtr').onclick=()=>{const pl=G().plays,h=pl.some(p=>p.k=
  if(!h&&!q1)m={k:'q',n:1};else if(!h)m={k:'h'};else if(!q3)m={k:'q',n:3};else{toast('All quarter breaks marked (use Undo to fix)');return}
  mark(m)};
 document.getElementById('noplay').onclick=()=>mark({k:'x'});
+/* Top buttons fold away (remembered per device; phones start folded) */
+const HDRC=()=>{try{const v=localStorage.getItem('alm_hdrc');return v==null?innerWidth<700:v==='1'}catch(e){return innerWidth<700}};
+function hdrSet(c){document.body.classList.toggle('hdrc',c);const b=document.getElementById('hdrtog');b.textContent=c?'▾ More':'▴ Less';b.setAttribute('aria-expanded',String(!c))}
+hdrSet(HDRC());document.getElementById('hdrtog').onclick=()=>{const c=!document.body.classList.contains('hdrc');try{localStorage.setItem('alm_hdrc',c?'1':'0')}catch(e){}hdrSet(c)};
 document.getElementById('half').onclick=()=>{if(G().plays.some(p=>p.k==='h')){toast('Halftime already marked');return}mark({k:'h'})};
 document.getElementById('undo').onclick=()=>{const pl=G().plays;if(pl.length){const x=pl.pop();tomb(G(),x);d=freshDraft(lastNext());edit=null;save();renderAll();toast('Undid '+(x.k==='q'?'quarter break':x.k==='h'?'halftime':x.k==='d'?(x.end?'drive end ('+DEND[x.end]+')':'drive marker'):x.k==='x'?'timeout / no play':'last play'))}else toast('Nothing to undo')};
 const HEAD=['DOWN','DISTANCE','JUMBO Y/N','SHIFT','MOTION','PLAY TAG','RUN CALL','PASS CALL','RGS Y/N','SHOT Y/N','RESULT','PLAYER','YARD LINE','GAIN/LOSS','<50','CROSS 50','>50','BCKWD CROSS 50','GAIN/LOSS','EXPLOSIVE','EFFICIENT','RUN SCHEME','PASS SCHEME','FORMATION','DIRECTION','PLAY TYPE','FORMATION TAG','CONCEPT','TARGET','ONE WORD','GLF','PASSER'];
