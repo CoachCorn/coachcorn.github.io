@@ -117,6 +117,7 @@ html,button,.chip,input,select{touch-action:manipulation;-webkit-tap-highlight-c
 <script src="../shared/glossary.js"></script>
 <script src="../shared/autocap.js"></script>
 <script src="../shared/demoseed.js"></script>
+<script src="../shared/gscout.js"></script>
 <script src="../shared/demoseedD.js"></script>
 <script>
 /* ===== PROGRAM SETTINGS: change this block (and the lists below) to set the app up for another program ===== */
@@ -395,7 +396,7 @@ function renderLog(){const g=G(),s=summary();
   <div class="sub">${[p.ftag&&p.ftag,motionFull(p),p.shift&&'shift',p.hash&&p.hash+' hash',p.formation&&p.formation+(p.dir?' '+p.dir:''),p.fib&&'FIB '+p.fib,p.glf&&'GLF '+p.glf+(p.glfOut?' (shifted out)':''),p.target&&'→ '+p.target,p.jumbo&&'jumbo',p.rgs&&'RGS',p.shot&&'shot'].filter(Boolean).join(' · ')}</div></div>
   <div><div class="gain ${p.gain>0?'pos':p.gain<0?'neg':''}">${p.gain>0?'+':''}${p.gain}</div><div class="sub" style="text-align:right">${p.td?'TD ':''}${r?r[1]:''}${p.passer?' QB#'+p.passer+' ':''}${p.player?' #'+p.player:''}</div></div></div>`});
  const el=document.getElementById('logp');el.innerHTML=h;el.scrollTop=el.scrollHeight}
-function renderHdr(){const sb=document.getElementById('scoutbtn');if(sb){const on=!!(G()&&G().scout);sb.textContent=on?'Scout ✓':'Scout';sb.classList.toggle('pri',on)}
+function renderHdr(){const sb=document.getElementById('scoutbtn');if(sb){const on=!!scOf();sb.textContent=on?'Scout ✓':'Scout';sb.classList.toggle('pri',on)}
 const gb=document.getElementById('gpbtn');if(gb){const on=G()&&G().plan&&Object.values(G().plan).some(a=>a&&a.length);gb.textContent=on?'Gameplan ✓':'Gameplan';gb.classList.toggle('pri',!!on)}
 document.getElementById('gsel').innerHTML=A.games.map(g=>`<option value="${g.id}" ${g.id===A.cur?'selected':''}>${g.opp}</option>`).join('')}
 function renderAll(){renderHdr();renderEntry();renderLog()}
@@ -532,9 +533,14 @@ function parseScout(g){const hi=findHeader(g),H={};(g[hi]||[]).forEach((c,i)=>{c
  blocks.forEach((b,i)=>{if(!b.name)b.name='Block '+(i+1)+' (plays '+b.first+'–'+b.lastPn+')'});
  return{blocks:blocks.filter(b=>b.rows.length),skipped,zoneMis,zoneChk}}
 function yardF(v){const s=cellS(v);if(!s)return null;const n=parseFloat(s.replace('+',''));if(isNaN(n)||n===0)return null;if(n<0)return Math.min(50,-n);return n>=50?50:100-n}
-/* --- predict: formation + down & distance + field zone, falling back until at least SC_MIN plays --- */
-function scoutLookup(rows,dd){const fm=normFm(dd.formation),bk=dbk(dd.down,dd.dist),zn=zoneOf(dd.f);
- const lv=[['formation · down & distance · field zone',x=>x.fm===fm&&x.dn===dd.down&&dbk(x.dn,x.di)===bk&&zoneOf(x.f)===zn],
+/* Which scout: one loaded on this game (older games), else the program's saved scout for this opponent (synced, shared with the Gameplan) */
+function scOf(g){g=g||G();if(!g)return null;if(g.scout&&g.scout.rows&&g.scout.rows.length)return g.scout;const x=window.GSCOUT&&GSCOUT.get(g.opp);return x?{name:x.label||x.name,rows:x.rows,src:x.src,saved:true}:null}
+/* --- predict: formation + down & distance + field zone, falling back until at least SC_MIN plays.
+   Before a formation is typed or picked: hash + field zone (+ down & distance) --- */
+const hOf=x=>String(x||'').trim().charAt(0).toUpperCase();
+function scoutLookup(rows,dd){const fm=normFm(dd.formation),bk=dbk(dd.down,dd.dist),zn=zoneOf(dd.f),hs=hOf(dd.hash),dd2=x=>x.dn===dd.down&&dbk(x.dn,x.di)===bk;
+ const lv=!fm?[['hash · down & distance · field zone',x=>hOf(x.h)===hs&&dd2(x)&&zoneOf(x.f)===zn],['hash · field zone',x=>hOf(x.h)===hs&&zoneOf(x.f)===zn],
+  ['down & distance · field zone',x=>dd2(x)&&zoneOf(x.f)===zn],['field zone',x=>zoneOf(x.f)===zn],['down & distance',x=>dd2(x)]]:[['formation · down & distance · field zone',x=>x.fm===fm&&x.dn===dd.down&&dbk(x.dn,x.di)===bk&&zoneOf(x.f)===zn],
   ['formation · down & distance',x=>x.fm===fm&&x.dn===dd.down&&dbk(x.dn,x.di)===bk],['formation only',x=>x.fm===fm],['down & distance only (too few plays from this formation)',x=>x.dn===dd.down&&dbk(x.dn,x.di)===bk]];
  for(let i=0;i<lv.length;i++){const s=rows.filter(lv[i][1]).filter(x=>x.cv&&x.fr&&x.rs!=='');if(s.length>=SC_MIN)return scoutBuild(i,lv[i][0],s)}
  return null}
@@ -548,33 +554,36 @@ function lookHtml(L,rank){const code=frontCode(L.fr,L.rs);
 /* Best calls are typed midweek in the gameplan grid and arrive in G().best, keyed "FRONT|RUSH|COVERAGE" (exact look) or just "COVERAGE": { "BASE|4|STAR": "CAL LAP" } */
 function bestFor(L){const B=(G()&&G().best)||{};const v=B[L.fr+'|'+L.rs+'|'+L.cv]||B[L.cv];return Array.isArray(v)?v[0]:v}
 function bestHtml(L,rank){const c=L&&bestFor(L);return`<div class="look best ${c?'':'empty'}"><div class="lk1">${c?'<b>'+esc2(c)+'</b>':'<span class="mut">not set</span>'}</div><div class="lk2">Best call${rank?' 2':''}</div></div>`}
-function scoutCard(){const g=G();if(!g||!g.scout||!d.formation||!d.hash)return'';const r=scoutLookup(g.scout.rows,d);
- if(!r)return`<div class="s12 card pcard"><div class="lab"><span>Predicted defense</span><span class="note">${esc2(g.scout.name)}</span></div><div class="note">Not enough scout plays (need ${SC_MIN}) for ${esc2(d.formation)} or this down and distance.</div></div>`;
+function scoutCard(){const g=G(),sc=scOf(g);if(!g||!sc||!d.hash)return'';const r=scoutLookup(sc.rows,d);
+ if(!r)return`<div class="s12 card pcard"><div class="lab"><span>Predicted defense</span><span class="note">${esc2(sc.name)}</span></div><div class="note">Not enough scout plays (need ${SC_MIN}) for ${d.formation?esc2(d.formation)+' or this down and distance':'this hash and field zone'}.</div></div>`;
  const comp=[r.cov&&'Coverage '+esc2(r.cov.k)+' '+r.cov.p+'%',r.rush&&'Rush '+esc2(r.rush.k)+' '+r.rush.p+'%',r.front&&'Front '+esc2(r.front.k)+' '+r.front.p+'%'].filter(Boolean).join(' · ');
  const rows=r.looks.map((L,i)=>`<div class="pgrid">${lookHtml(L,i)}${bestHtml(L,i)}</div>`).join('');
- return`<div class="s12 card pcard"><div class="lab"><span>Predicted call · ${esc2(g.scout.name)}</span><span class="note ${r.lvl?'fb':''}">${r.lvl?'Fell back to ':'Using '}${esc2(r.label)} · n=${r.n}</span></div>
+ return`<div class="s12 card pcard"><div class="lab"><span>Predicted call · ${esc2(sc.name)}${d.formation?'':' <span class="note">(pick a formation to narrow it)</span>'}</span><span class="note ${r.lvl?'fb':''}">${r.lvl?'Fell back to ':'Using '}${esc2(r.label)} · n=${r.n}</span></div>
  ${rows}<div class="note" style="margin-top:4px">${comp}</div></div>`}
 /* --- the Scout button and import window --- */
-function scoutModal(){const g=G(),s=g.scout;
- modal(`<h3 style="margin-top:0">Opponent scout</h3><p class="note">${s?`<b>Loaded for ${esc2(g.opp)}:</b> ${esc2(s.name)}, ${s.rows.length} defensive plays (${esc2(s.src||'')}). Pick a file to replace it.`:`Import the opponent scout workbook (the Raw Data tab) as an .xlsx or a .csv. It is stored on this device and works with no signal.`}</p>
+function scoutModal(){const g=G(),s=scOf(g);
+ modal(`<h3 style="margin-top:0">Opponent scout</h3><p class="note">${s?`<b>Loaded for ${esc2(g.opp)}:</b> ${esc2(s.name)}, ${s.rows.length} defensive plays (${esc2(s.src||'')}). Pick a file to replace it.`:`Import the opponent scout workbook (the Raw Data tab) as an .xlsx or a .csv.`} The scout is saved once for ${esc2(g.opp)}${SIGNED?', syncs to every device signed in to your program':''} and is shared with the Gameplan. It works with no signal.</p>
  <input type="file" id="scfile" accept=".xlsx,.xlsm,.csv,text/csv" style="width:100%"><div id="scout2"></div>
  <p style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">${s?'<button class="btn bad" id="scrm">Remove scout</button>':''}<button class="btn" onclick="modal_close()">Close</button></p>`);
- const rm=document.getElementById('scrm');if(rm)rm.onclick=()=>{g.scout=null;save();modal_close();renderAll();toast('Scout removed')};
+ const rm=document.getElementById('scrm');if(rm)rm.onclick=()=>{g.scout=null;if(window.GSCOUT)GSCOUT.remove(g.opp);save();modal_close();renderAll();toast('Scout removed for '+g.opp)};
  document.getElementById('scfile').onchange=async ev=>{const f=ev.target.files[0],box=document.getElementById('scout2');if(!f)return;box.innerHTML='<p class="note">Reading…</p>';
   try{let rows,sheet='';if(/\.csv$/i.test(f.name)){rows=parseCsv(await f.text());if(findHeader(rows)<0)throw new Error('Could not find a PLAY # column in that CSV');sheet='CSV'}else{const x=await readXlsx(await f.arrayBuffer());rows=x.rows;sheet=x.sheet}
    const P=parseScout(rows);if(!P.blocks.length)throw new Error('No defensive plays found');
    const tot=P.blocks.reduce((a,b)=>a+b.rows.length,0);
-   box.innerHTML=`<div class="lab" style="margin-top:10px"><span>Which opponent</span></div><select id="scblk" style="width:100%">${P.blocks.map((b,i)=>`<option value="${i}">${esc2(b.name)} — ${b.rows.length} plays</option>`).join('')}${P.blocks.length>1?`<option value="all">All blocks combined — ${tot} plays</option>`:''}</select>
+   box.innerHTML=`<div class="lab" style="margin-top:10px"><span>Which opponent</span></div><select id="scblk" style="width:100%">${P.blocks.length>1?`<option value="all" selected>All blocks combined — ${tot} plays</option>`:''}${P.blocks.map((b,i)=>`<option value="${i}">${esc2(b.name)} — ${b.rows.length} plays</option>`).join('')}</select>
    <div class="lab" style="margin-top:8px"><span>Name</span></div><input type="text" id="scname" style="width:100%"><div id="scinfo" class="note" style="margin:8px 0"></div><button class="btn pri" id="scload">Load for ${esc2(g.opp)}</button>`;
    const sel=document.getElementById('scblk'),nm=document.getElementById('scname'),info=document.getElementById('scinfo');
    const cur=()=>sel.value==='all'?{name:'All blocks',rows:P.blocks.flatMap(b=>b.rows)}:P.blocks[+sel.value];
-   const upd=()=>{const b=cur();nm.value=b.name.indexOf('Block ')===0?g.opp:b.name;const fc={};for(const r of b.rows)fc[r.fm||'?']=(fc[r.fm||'?']||0)+1;
+   const upd=()=>{const b=cur();nm.value=(b.name.indexOf('Block ')===0||b.name==='All blocks')?g.opp:b.name;const fc={};for(const r of b.rows)fc[r.fm||'?']=(fc[r.fm||'?']||0)+1;
     const A0=(A.lists.formations||[]).map(x=>x.toUpperCase());const fl=Object.entries(fc).sort((a,c)=>c[1]-a[1]).map(([k,v])=>`${esc2(k)} ${v}${A0.includes(k)?'':' <span style="color:var(--warn)">(not an Almanac formation)</span>'}`).join(' · ');
     info.innerHTML=`<b>Formations:</b> ${fl}${P.zoneChk&&P.zoneMis?`<br><span style="color:var(--warn)">${P.zoneMis} of ${P.zoneChk} field zones differ from the sheet's own tags.</span>`:''}${P.skipped?`<br>${P.skipped} rows skipped (offense or incomplete).`:''}`};
    sel.onchange=upd;upd();
-   document.getElementById('scload').onclick=()=>{const b=cur();g.scout={name:nm.value.trim()||b.name,src:f.name+' · '+sheet,at:Date.now(),rows:b.rows};save();modal_close();renderAll();toast('Scout loaded: '+g.scout.rows.length+' plays')}
+   document.getElementById('scload').onclick=()=>{const b=cur();try{GSCOUT.put(g.opp,{rows:b.rows,src:f.name+' · '+sheet,label:nm.value.trim()||b.name})}catch(e){toast('Not enough room on this device for that scout');return}
+    g.scout=null;save();modal_close();renderAll();toast('Scout saved for '+g.opp+': '+b.rows.length+' plays')}
   }catch(err){box.innerHTML=`<p style="color:var(--bad)">${esc2(err.message||err)}</p>`}}}
 document.getElementById('scoutbtn').onclick=scoutModal;
+addEventListener('storage',e=>{if(e.key&&e.key.indexOf('gscout_v1_')===0)renderAll()});
+addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.gscout==='changed')renderAll()});
 /* ===== Glossary link: the Almanac's button lists and the shared program glossary stay in step both ways ===== */
 const GLX_MAP={formations:{type:'formation'},ftags:{type:'ftag'},motions:{type:'motion'},runs:{type:'run'},passes:{type:'pass'},owcs:{type:'oneword'},glfs:{type:'glf'},tagsRun:{type:'tag',use:'run'},tagsPass:{type:'tag',use:'pass'},targets:{type:'route'}};
 let GLO=null;const glOn=()=>!!(window.GL&&GLO);

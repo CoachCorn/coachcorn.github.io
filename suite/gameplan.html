@@ -108,6 +108,7 @@ td .cc.empty{color:#3e5163;font-size:20px}
 <script src="../shared/glossary.js"></script>
 <script src="../shared/autocap.js"></script>
 <script src="../shared/scout.js"></script>
+<script src="../shared/gscout.js"></script>
 <script src="../shared/demoseedD.js"></script>
 <script src="../shared/scoutO.js"></script>
 <script src="../shared/defvocab.js"></script>
@@ -645,14 +646,22 @@ function demoScout(){if(DEMOSC)return DEMOSC;let sd=20270128;const rnd=()=>{sd|=
  const CP={'MESH':[.60,.12,'MAN FREE'],'STICK':[.56,.12,'COVER 3'],'FOUR VERTS':[.40,.30,'COVER 2'],'Y-CROSS':[.52,.16,'QUARTERS'],'INSIDE ZONE':[.40,.08,'COVER 2'],'OUTSIDE ZONE':[.47,.12,'COVER 3'],'POWER':[.43,.10,''],'COUNTER':[.52,.18,'QUARTERS'],'DRAW':[.34,.06,''],'ISO':[.32,.05,'']},CK=Object.keys(CP);
  for(const r of rows){const k=CK[Math.floor(rnd()*CK.length)],c=CP[k],b=c[2]&&r.cv===c[2]?.16:0,e=rnd()<c[0]+b,x=rnd()<c[1]+b/2;r.cn=k;r.pt=/ZONE|POWER|COUNTER|DRAW|ISO/.test(k)?'Run':'Pass';r.ef=e?1:0;r.ex=x?1:0;r.gn=x?16+Math.floor(rnd()*14):e?5+Math.floor(rnd()*6):Math.floor(rnd()*4)-1}
  return DEMOSC={name:'Demo opponent (made up)',rows,from:'Demo scout (made up)'}}
-function scoutFor(p){if(!p||!window.SCOUT)return null;const src=p.scoutSrc||'auto';if(src==='none')return null;
- if(!signedIn()&&src==='auto'){const G0=almGames();if(!G0.length&&!ownScout(p))return demoScout()}
- if(src==='own'){const o=ownScout(p);return o?{name:o.name,rows:o.rows,from:'Loaded in Gameplan'}:null}
+/* The plan's opponent: typed when the plan was made, else read from its name ("v. Mustang") */
+const oppOf=p=>p&&(p.opp||GSCOUT.norm(p.name))||'';
+/* A scout loaded on one device before scouts synced moves into the program's saved scouts (once). */
+function migrateOwn(p){const o=ownScout(p);if(!o||!o.rows||!o.rows.length)return;const k=oppOf(p)||o.name;
+ try{if(!GSCOUT.get(k))GSCOUT.put(k,{rows:o.rows,src:o.src,label:o.name,at:o.at});localStorage.removeItem(SKEY+p.id)}catch(e){return}
+ if(p.scoutSrc==='own'){p.scoutSrc='auto';if(!p.opp)p.opp=k;touch(p)}}
+/* Which scout feeds this plan: its own choice, else the saved scout for its opponent, else the Almanac game for that opponent, else the Almanac's current game. */
+function scoutFor(p){if(!p||!window.SCOUT)return null;migrateOwn(p);const src=p.scoutSrc||'auto';if(src==='none')return null;
+ const sv=x=>x?{name:x.label||x.name,rows:x.rows,from:'Saved scout · '+x.name,opp:x.name}:null;
+ if(src.indexOf('g:')===0)return sv(GSCOUT.get(src.slice(2)));
  const G=almGames();let g=null;
  if(src.indexOf('alm:')===0)g=G.find(x=>x.id===src.slice(4));
- else{if(p.opp)g=G.find(x=>U(x.opp)===U(p.opp)||U(x.scout.name).includes(U(p.opp)));
+ else{const o=oppOf(p),s0=o&&GSCOUT.get(o);if(s0)return sv(s0);
+  if(o)g=G.find(x=>U(x.opp)===U(o)||U(x.scout.name).includes(U(o)));
   if(!g){const A=almData();g=G.find(x=>A&&x.id===A.cur)||null}
-  if(!g){const o=ownScout(p);if(o)return{name:o.name,rows:o.rows,from:'Loaded in Gameplan'}}}
+  if(!g&&!signedIn())return demoScout()}
  return g?{name:g.scout.name,rows:g.scout.rows,from:'Almanac · '+g.opp}:null}
 /* ---- "Start here": what gives this opponent's defense trouble, by the scout data ---- */
 const HMIN=5;const HTOP=10;  // Start here lists: only items 10%+ better on BOTH efficiency and explosives
@@ -698,14 +707,15 @@ function pdHTML(b,sc){if(!sc)return'<div class="note">No scout for this plan yet
  const r=predict(b,sc);if(!r)return'<div class="note">'+esc(b.name?'Nothing in this scout to go on yet.':'Name the formation to see the prediction.')+'</div>';
  const looks=r.looks.map(L=>{const code=SCOUT.frontCode(L.fr,L.rs);return`<div class="look"><span><b>${esc(L.cv)}</b> · ${esc(L.rs)} rush · ${code?esc(code)+' <span class="mut">'+esc(L.fr)+'</span>':esc(L.fr)}</span><span class="p">${L.p}% · n=${L.n}</span></div>`}).join('');
  return looks+`<div class="${r.lvl?'fb2':'note'}" style="margin-top:4px">${r.lvl?'Formation has only n='+r.nF+' in this scout. Fell back to '+esc(r.label)+' (n='+r.n+').':'By formation · n='+r.n+'.'} ${esc(sc.from)}</div>`}
-$('scout').onclick=()=>{const p=plan();if(!p)return toast('Start a plan first');const G=almGames(),own=ownScout(p),src=p.scoutSrc||'auto',cur=scoutFor(p);
+$('scout').onclick=()=>{const p=plan();if(!p)return toast('Start a plan first');const cur=scoutFor(p),G=almGames(),SV=GSCOUT.all(),src=p.scoutSrc||'auto';
  $('mbox').innerHTML=`<h3>Opponent scout</h3><div class="note">${cur?'<b>In use:</b> '+esc(cur.name)+' · '+cur.rows.length+' plays · '+esc(cur.from):'No scout is feeding this plan yet.'}</div>
- <div class="lab">Opponent for this plan</div><input type="text" id="sc_opp" value="${esc(p.opp||String(p.name||'').replace(/^(v\.?|vs\.?)\s+/i,'').trim())}" placeholder="Used to find the matching scout in the Almanac">
- <div class="lab">Use this scout</div><select id="sc_src" style="width:100%"><option value="auto" ${src==='auto'?'selected':''}>Automatic (opponent match, then the Almanac's current game)</option>
+ <div class="lab">Opponent for this plan</div><input type="text" id="sc_opp" value="${esc(p.opp||oppOf(p))}" placeholder="The scout is saved under this opponent">
+ <div class="lab">Use this scout</div><select id="sc_src" style="width:100%"><option value="auto" ${src==='auto'?'selected':''}>Automatic (the saved scout for this opponent)</option>
+  ${SV.map(x=>`<option value="g:${esc(x.name)}" ${src==='g:'+x.name?'selected':''}>Saved · ${esc(x.name)} (${x.rows.length} plays)</option>`).join('')}
   ${G.map(g=>`<option value="alm:${esc(g.id)}" ${src==='alm:'+g.id?'selected':''}>Almanac · ${esc(g.opp)} · ${esc(g.scout.name)} (${g.scout.rows.length} plays)</option>`).join('')}
-  ${own?`<option value="own" ${src==='own'?'selected':''}>Loaded here · ${esc(own.name)} (${own.rows.length} plays)</option>`:''}<option value="none" ${src==='none'?'selected':''}>None</option></select>
+<option value="none" ${src==='none'?'selected':''}>None</option></select>
  <div class="lab">Load a scout file here</div><input type="file" id="sc_file" accept=".xlsx,.xlsm,.csv,text/csv" style="width:100%;font-size:14px"><div id="sc_load"></div>
- <div class="note" style="margin-top:6px">A scout loaded here stays on this device. A scout loaded in the Almanac syncs with the game.</div>
+ <div class="note" style="margin-top:6px">A scout is saved once per opponent and ${signedIn()?'syncs to every device signed in to your program':'stays on this device in demo mode'}. The Gameplan and the Almanac both use it.</div>
  <div class="row"><button class="btn pri" id="sc_ok">Save</button><button class="btn" id="sc_x">Close</button></div>`;
  $('modal').classList.add('show');$('mbox').onclick=null;$('mbox').onkeydown=null;
  $('sc_x').onclick=()=>$('modal').classList.remove('show');
@@ -713,12 +723,13 @@ $('scout').onclick=()=>{const p=plan();if(!p)return toast('Start a plan first');
  $('sc_file').onchange=async ev=>{const f=ev.target.files[0],box=$('sc_load');if(!f)return;box.innerHTML='<p class="note">Reading…</p>';
   try{const P=await SCOUT.readFile(f),tot=P.blocks.reduce((a,b)=>a+b.rows.length,0);
    box.innerHTML=`${P.blocks.length>1?`<div class="lab">Name the games in this file (optional)</div>${P.blocks.map((b,i)=>`<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px"><input type="text" data-bn="${i}" placeholder="${esc(b.name)}" style="flex:1"><span class="note">${b.rows.length} plays</span></div>`).join('')}`:''}<div class="lab">Which opponent</div><select id="sc_blk" style="width:100%">${P.blocks.length>1?`<option value="all" selected>All blocks combined — ${tot} plays</option>`:''}${P.blocks.map((b,i)=>`<option value="${i}">${esc(b.name)} — ${b.rows.length} plays</option>`).join('')}</select>
-    <div class="lab">Name</div><input type="text" id="sc_nm"><div class="row"><button class="btn pri" id="sc_go">Load for this plan</button></div>`;
+    <div class="lab">Name</div><input type="text" id="sc_nm"><div class="row"><button class="btn pri" id="sc_go">Save for this opponent</button></div>`;
    const sel=$('sc_blk'),nm=$('sc_nm'),pick=()=>sel.value==='all'?{name:'All blocks',rows:P.blocks.flatMap(b=>b.rows)}:P.blocks[+sel.value];
-   const upd=()=>{const b=pick();nm.value=(b.name.indexOf('Block ')===0||b.name==='All blocks')?(p.opp||b.name):b.name};sel.onchange=upd;upd();
+   const upd=()=>{const b=pick();nm.value=(b.name.indexOf('Block ')===0||b.name==='All blocks')?(oppOf(p)||$('sc_opp').value.trim()||b.name):b.name};sel.onchange=upd;upd();
    box.oninput=e=>{const i=e.target.dataset&&e.target.dataset.bn;if(i==null)return;const v=e.target.value.trim();P.blocks[+i].name=v||P.blocks[+i].name0||P.blocks[+i].name;const o=sel.querySelector(`option[value="${i}"]`);if(o)o.textContent=P.blocks[+i].name+' — '+P.blocks[+i].rows.length+' plays';if(sel.value===i)upd()};P.blocks.forEach(b=>b.name0=b.name);
-   $('sc_go').onclick=()=>{const b=pick();try{localStorage.setItem(SKEY+p.id,JSON.stringify({name:nm.value.trim()||b.name,src:f.name+' · '+P.sheet,at:Date.now(),rows:b.rows}))}catch(e){return toast('Not enough room on this device for that scout')}
-    p.scoutSrc='own';if(!p.opp)p.opp=nm.value.trim();touch(p);$('modal').classList.remove('show');render();toast('Scout loaded: '+b.rows.length+' plays')}
+   $('sc_go').onclick=()=>{const b=pick(),opp=$('sc_opp').value.trim()||nm.value.trim();if(!opp)return toast('Type the opponent first');
+    try{GSCOUT.put(opp,{rows:b.rows,src:f.name+' · '+P.sheet,label:nm.value.trim()||b.name})}catch(e){return toast(e.message&&/opponent/.test(e.message)?e.message:'Not enough room on this device for that scout')}
+    p.opp=opp;p.scoutSrc='auto';touch(p);$('modal').classList.remove('show');render();toast('Scout saved for '+GSCOUT.norm(opp)+': '+b.rows.length+' plays')}
   }catch(err){box.innerHTML='<p style="color:var(--bad)">'+esc(err.message||err)+'</p>'}}};
 
 /* ---------- send to Mental Reps ---------- */
@@ -977,6 +988,7 @@ function boot(){ST=readStore();try{cur=localStorage.getItem('gp_cur')||null}catc
 addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.gameplan==='library'){if(e.data.kind==='concept'||e.data.kind==='formation')LIB.kind=e.data.kind;if(!E&&!($('modal').classList.contains('show')&&$('lb_q')))libOpen();else if(!E)libOpen();return}});
 if(/^#lib/.test(location.hash)){if(/concept/.test(location.hash))LIB.kind='concept';setTimeout(()=>{try{libOpen()}catch(e){}},600)}
 addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.gameplan==='changed'&&!E&&!$('modal').classList.contains('show')){ST=readStore();render()}});
+addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.gscout==='changed'&&!E&&!$('modal').classList.contains('show'))render()});
 addEventListener('storage',e=>{if(!E&&!$('modal').classList.contains('show')){if(e.key===KEY){ST=readStore();render()}else if(e.key==='almanac_v1')render()}});
 boot();
 </script><script src="../shared/filedrop.js"></script></body></html>
