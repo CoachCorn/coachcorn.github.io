@@ -45,6 +45,10 @@ input[type=range]{width:100%;height:36px}
 .logbtn{width:100%;padding:16px;font-size:18px;margin-top:4px}
 .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}
 .tile{background:#102030;border-radius:10px;padding:8px;text-align:center}
+.tile.tbtn{cursor:pointer;border:1px solid transparent}.tile.tbtn:hover{border-color:var(--line)}.tile.on{border-color:var(--acc,#4ea1ff);background:#13304a}
+.dend{font-size:12px;font-weight:800;color:var(--mut);text-align:right;margin:2px 0;letter-spacing:.04em;text-transform:uppercase}
+.play.nocall{cursor:pointer}.play.nocall .call .mut{font-weight:500}
+.nochip #entry .card:not(.keep):not(.pcard){display:none}
 .tile b{display:block;font-size:20px}.tile span{font-size:11px;color:var(--mut)}
 .drive{font-size:12px;color:var(--mut);margin:10px 0 4px;padding-top:6px;border-top:1px solid var(--line);display:flex;justify-content:space-between}
 .play{display:grid;grid-template-columns:62px 1fr auto;gap:6px;padding:7px 6px;border-radius:8px;align-items:center}
@@ -95,6 +99,7 @@ html,button,.chip,input,select{touch-action:manipulation;-webkit-tap-highlight-c
  <button class="btn" id="newgame">+ Game</button>
  <button class="btn" id="logbtn">Log</button>
  <button class="btn" id="newdrive">New Drive</button>
+ <button class="btn" id="dend" title="Punt, field goal or downs: ends the drive, next play is 1st and 10">Drive end</button>
  <button class="btn" id="qtr">QTR</button>
  <button class="btn" id="half">Halftime</button>
  <button class="btn" id="noplay" title="Timeout or any clip that is not a play, so the film lines up">Timeout / No play</button>
@@ -264,6 +269,13 @@ function advance(p){let f=p.f,down=p.down,dist=p.dist,newDrive=false;
 let QB='';
 const QCL=(v,a,b)=>Math.min(b,Math.max(a,v));
 const HASHW={L:'L',LT:'L',LEFT:'L',R:'R',RT:'R',RIGHT:'R',M:'M',MID:'M',MIDDLE:'M'};
+const PEN_TYPES=['False start','Holding','Offsides','Encroachment','Pass interference','Delay of game','Illegal formation','Illegal motion','Illegal shift','Personal foul','Facemask','Unsportsmanlike','Ineligible downfield','Intentional grounding','Block in the back','Chop block'];
+const DEND={PUNT:'Punt',FG:'Field goal',MFG:'Missed FG',DOWNS:'Downs'};
+/* filler words in a typed play ("9 threw to number 2 on the bubble for a gain of 3") */
+const QFILL=new Set(['TO','THREW','THROWS','THROWN','THROW','ON','THE','A','AN','FOR','OF','GAIN','BY','NUMBER','NO','#','AT','YD','YDS','YARD','YARDS','AND','WITH']);
+/* closest match for a typo: one letter off for short words, two for long ones; only when exactly one word is that close */
+function lev(a,b){if(Math.abs(a.length-b.length)>2)return 9;const m=[...Array(b.length+1).keys()];for(let i=1;i<=a.length;i++){let pv=m[0];m[0]=i;for(let j=1;j<=b.length;j++){const t=m[j];m[j]=Math.min(m[j]+1,m[j-1]+1,pv+(a[i-1]===b[j-1]?0:1));pv=t}}return m[b.length]}
+function closest(w,cands){if(w.length<4||/\d/.test(w))return null;const lim=w.length>=7?2:1;let best=null,bd=9,ties=0;for(const c of cands){if(c.length<3)continue;const x=lev(w,c);if(x<bd){bd=x;best=c;ties=0}else if(x===bd&&c!==best)ties++}return bd<=lim&&!ties?best:null}
 const QRES={RUSH:'RUSH',RUN:'RUSH',COMP:'COMP',COMPLETE:'COMP',CATCH:'COMP',INC:'INC',INCOMPLETE:'INC',SACK:'SACK',SCRAM:'SCRAM',SCRAMBLE:'SCRAM',PEN:'PEN',PENALTY:'PEN',INT:'INT',INTERCEPTION:'INT',PICK:'INT',FUM:'FUM',FUMBLE:'FUM'};
 function qParseSit(txt){const forms=null;let s=' '+String(txt||'').toUpperCase().replace(/[,;]/g,' ')+' ',o={},m;
  s=s.replace(/\b(\d)(ST|ND|RD|TH)\b/g,'$1');
@@ -292,18 +304,45 @@ function quickO(txt,dd){const out={bits:[],unk:[]};let toks=String(txt||'').repl
   else if(j<toks.length&&isNum(toks[j])){g=parseInt(toks[j],10);if(neg&&g>0)g=-g;j++}
   if(g!=null&&j<toks.length&&/^(YDS?|YARDS?)$/.test(U(toks[j])))j++;
   return{g,end:j}};
- const ri=toks.findIndex(t=>QRES[U(t)]),ti=toks.findIndex(t=>U(t)==='TD');let gain=null,drop=[],hadTD=false;
- if(ri>=0){dd.result=QRES[U(toks[ri])];out.bits.push(dd.result);const r=take(ri);gain=r.g;for(let k=ri;k<r.end;k++)drop.push(k)}
- if(ti>=0){hadTD=true;drop.push(ti);if(ri<0){const r=take(ti);if(r.g!=null)gain=r.g;for(let k=ti;k<r.end;k++)drop.push(k)}}
- if(ri<0&&ti<0){const m=toks.join(' ').match(/(?:^|\s)([+-]?\d{1,2})\s*(YDS?|YARDS?)(?=\s|$)/i);if(m){gain=parseInt(m[1],10);toks=toks.join(' ').replace(m[0],' ').split(/\s+/).filter(Boolean)}}
- toks=toks.filter((t,i)=>!drop.includes(i));
+ /* Before the result: situation, tags, formation, call. After the result: numbers and the route.
+    Numbers after the result, in the order the play happened: pass = QB, receiver, yards (2 numbers = receiver, yards; 1 = yards);
+    incomplete / INT = QB, receiver (no yards); run or fumble = ball carrier, yards; sack or scramble = QB, yards. "to" and filler words are optional. */
+ const ri=toks.findIndex(t=>QRES[U(t)]);let gain=null,hadTD=false,post=[];out.gainTyped=false;
+ if(ri>=0){dd.result=QRES[U(toks[ri])];out.bits.push(dd.result);post=toks.slice(ri+1);toks=toks.slice(0,ri)}
+ {const ti=toks.findIndex(t=>/^(TD|TOUCHDOWN)$/.test(U(t)));if(ti>=0){hadTD=true;toks.splice(ti,1)}}
+ if(ri<0){const m=toks.join(' ').match(/(?:^|\s)([+-]?\d{1,2})\s*(YDS?|YARDS?)(?=\s|$)/i);if(m){gain=parseInt(m[1],10);out.gainTyped=true;toks=toks.join(' ').replace(m[0],' ').split(/\s+/).filter(Boolean)}}
+ const pw=[];
+ if(ri>=0){let neg=false;const nums=[];
+  for(let k=0;k<post.length;k++){const u=U(post[k]).replace(/^#/,'');if(!u)continue;
+   if(u==='LOSS'||u==='MINUS'){neg=true;continue}if(u==='TD'||u==='TOUCHDOWN'){hadTD=true;continue}
+   if(u==='NO'&&U(post[k+1]||'')==='GAIN'){nums.push(0);k++;continue}
+   if(/^[+-]?\d{1,2}$/.test(u)){nums.push(parseInt(u,10));continue}
+   if(QFILL.has(u))continue;pw.push(u)}
+  const r=dd.result,A1=x=>String(x),noY=r==='INC'||r==='INT';let qb=null,pl=null;
+  if(noY){if(nums.length>=2){qb=nums[0];pl=nums[1]}else if(nums.length===1)pl=nums[0]}
+  else if(r==='COMP'){if(nums.length>=3){qb=nums[0];pl=nums[1];gain=nums[2]}else if(nums.length===2){pl=nums[0];gain=nums[1]}else if(nums.length===1)gain=nums[0]}
+  else if(r==='SACK'||r==='SCRAM'){if(nums.length>=2){qb=nums[0];gain=nums[1]}else if(nums.length===1)gain=nums[0]}
+  else if(r==='PEN'){if(nums.length)gain=nums[nums.length-1]}
+  else{if(nums.length>=2){pl=nums[nums.length-2];gain=nums[nums.length-1]}else if(nums.length===1)gain=nums[0]}
+  if(gain!=null){out.gainTyped=true;if(neg&&gain>0)gain=-gain}
+  if(qb!=null){dd.passer=A1(qb);out.bits.push('QB #'+qb)}
+  if(pl!=null){dd.player=A1(pl);out.bits.push((r==='RUSH'||r==='FUM'?'carrier #':'to #')+pl)}
+  /* words after the result: the route (pass) or the penalty type */
+  if(pw.length){if(r==='PEN'){const t=pw.join(' '),hit=PEN_TYPES.find(x=>x.toUpperCase()===t)||PEN_TYPES.find(x=>x.toUpperCase().startsWith(t))||closest(t,PEN_TYPES.map(x=>x.toUpperCase()));
+     dd.pen=hit?(PEN_TYPES.find(x=>x.toUpperCase()===String(hit).toUpperCase())||hit):t.charAt(0)+t.slice(1).toLowerCase();out.bits.push('penalty '+dd.pen)}
+   else{const T=(A.lists.targets||[]).map(x=>String(x).toUpperCase()),t=pw.join(' ');let hit=T.find(x=>x===t);
+    if(!hit){for(let n=pw.length;n>0&&!hit;n--)for(let i=0;i+n<=pw.length&&!hit;i++){const c=pw.slice(i,i+n).join(' ');if(T.includes(c))hit=c}}
+    if(!hit)hit=closest(t,T);
+    if(hit){dd.target=(A.lists.targets||[]).find(x=>String(x).toUpperCase()===hit);out.bits.push('route '+dd.target)}
+    else if(!['RUSH','FUM'].includes(r)&&!MGR()){dd.target=t;out.newTarget=t;out.bits.push('route '+t+' (new)')}}}}
  const sr=qParseSit(toks.join(' ')),so=sr.o;
  if(so.dn!=null){dd.down=so.dn;dd.dist=so.di;out.bits.push(so.dn+' & '+so.di)}
  if(so.yd!=null){dd.f=so.side==='Own'?so.yd:100-so.yd;out.bits.push(so.side+' '+so.yd)}
  if(so.hash){dd.hash=so.hash;out.bits.push({L:'left',M:'middle',R:'right'}[so.hash]+' hash');if(dd.hash==='M')dd.fib=null;if(dd.hash!=='M'&&dd.fib)dd.dir=((dd.fib==='Y')===(dd.hash==='L'))?'LT':'RT';else dd.dir=null}
  if(hadTD){dd.td=true;out.bits.push('TD')}
  if(gain!=null){if(dd.result==='SACK'&&gain>0)gain=-gain;if(dd.result==='INC'||dd.result==='INT')gain=0;dd.gain=QCL(gain,-99,99);out.bits.push((dd.gain>0?'+':'')+dd.gain+' yds')}
- else if(hadTD&&so.yd!=null||hadTD){dd.gain=100-dd.f}
+ else if(hadTD){dd.gain=100-dd.f;out.gainTyped=true}
+ else if(dd.result==='INC'||dd.result==='INT'){dd.gain=0}
  /* glossary words, longest first */
  const L=A.lists,T=[],left=sr.rest.map(U),add=(k,a)=>(a||[]).forEach(x=>T.push([U(x).split(' '),k,x]));
  const MQ=MGR()&&edit===null; /* manager mode: only run / pass words count; calls, tags and formations are added later by a coach */
@@ -315,7 +354,9 @@ function quickO(txt,dd){const out={bits:[],unk:[]};let toks=String(txt||'').repl
  const ORD=['ft','mo','fm','glf','ow','run','pass','tag'],rest=[];
  for(let i=0;i<left.length;){let best=0,c=[];
   T.forEach(t=>{const n=t[0].length;if(n&&i+n<=left.length&&t[0].every((w,j)=>w===left[i+j])){if(n>best){best=n;c=[t]}else if(n===best)c.push(t)}});
-  if(!best){rest.push(left[i]);i++;continue}
+  if(!best){const one=T.filter(t=>t[0].length===1),fz=closest(left[i],[...new Set(one.map(t=>t[0][0]))]);
+   if(fz){const c2=one.filter(t=>t[0][0]===fz).sort((a,b)=>ORD.indexOf(a[1])-ORD.indexOf(b[1]));left[i]=fz;out.bits.push('read '+fz.toLowerCase()+' (typo)');void c2;continue}
+   rest.push(left[i]);i++;continue}
   c.sort((a,b)=>ORD.indexOf(a[1])-ORD.indexOf(b[1]));const t=c[0],v=t[2];
   if(t[1]==='mrp'){dd.ptype=v;out.bits.push(v)}
   else if(t[1]==='ft'){if(!dd.ftags.includes(v))dd.ftags.push(v);out.bits.push('formation tag '+v)}
@@ -332,14 +373,54 @@ function quickO(txt,dd){const out={bits:[],unk:[]};let toks=String(txt||'').repl
  out.unk=rest;out.hasResult=!!dd.result;return out}
 function qbRead(o){return(o.bits.length?'Understood: '+o.bits.join(' · '):'')+(o.unk.length?' | Not in your lists: '+o.unk.join(', ')+' (use + Other)':'')}
 function qbPreview(){const c=JSON.parse(JSON.stringify(d)),o=quickO(QB,c),el=document.getElementById('qbread');if(el)el.textContent=qbRead(o)}
-function qbEnter(){const o=quickO(QB,d);QB=o.unk.join(' ').toLowerCase();FOCID='qbar';
- if(d.result&&!o.unk.length){QB='';logPlay();return}
- renderEntry();const el=document.getElementById('qbread');if(el)el.textContent=qbRead(o);if(!d.result)toast('Applied. Add a result (rush 6, comp 12...) to log it.')}
+/* The play as typed text, so a play opened from the log can be fixed in the type bar */
+function playText(p){const W=x=>x?String(x):'',res={COMP:'comp',INC:'inc',RUSH:'rush',SCRAM:'scramble',SACK:'sack',PEN:'pen',INT:'int',FUM:'fumble'}[p.result]||'';
+ const post=[];if(['COMP','INC','INT','SACK','SCRAM'].includes(p.result)&&p.passer)post.push(p.passer);if(p.player&&!['SACK','SCRAM','PEN'].includes(p.result))post.push(p.player);if(p.target&&!['RUSH','FUM'].includes(p.result))post.push(p.target);
+ if(p.result==='PEN'&&p.pen)post.push(p.pen);if(!['INC','INT'].includes(p.result))post.push(p.gain);
+ return[p.down,p.dist,ylFmt(p.f),p.hash?p.hash+' hash':'',...(p.ftags||[]),W(p.motion),W(p.formation),...(p.tags||[]).filter(t=>!p.autoT||t!==p.autoT),W(p.owc||p.call),res,...post,p.td?'TD':''].filter(x=>x!==''&&x!=null).join(' ').toLowerCase()}
+let QB0='';   // the text the type bar started with when a play was opened from the log
+/* Unknown words with a result still log: they become the call (or tags) and go into the lists for a coach to tidy later */
+function keepNew(words){const L=A.lists,g0=G(),add=(k,x)=>{L[k]=L[k]||[];if(!L[k].some(y=>String(y).toUpperCase()===x))L[k].push(x);g0.extra=g0.extra||{};const a=g0.extra[k]=g0.extra[k]||[];if(!a.includes(x))a.push(x)};
+ const w=words.map(x=>x.toUpperCase()).join(' ').trim();if(!w)return'';
+ if(!d.call&&!d.owc){const k=d.ptype==='run'?'runs':'passes';add(k,w);d.call=w;return'new play '+w}
+ for(const x of w.split(' ')){add('tagsRun',x);add('tagsPass',x);if(!d.tags.includes(x))d.tags.push(x)}return'new tag '+w}
+function qbEnter(){const raw=QB.trim(),R=raw.toUpperCase().replace(/\s+/g,' ');
+ if(edit!==null&&raw===QB0.trim()){nextEdit();return}   // unchanged text: Enter moves to the next play
+ if(/^(TIMEOUT|TIME OUT|TO|NO PLAY|NOPLAY|NO-PLAY)$/.test(R)){QB='';mark({k:'x'});return}
+ const EW={PUNT:'PUNT',FG:'FG','FIELD GOAL':'FG','MADE FG':'FG','MISSED FG':'MFG','MISSED FIELD GOAL':'MFG','FG MISSED':'MFG',DOWNS:'DOWNS','TURNOVER ON DOWNS':'DOWNS','ON DOWNS':'DOWNS'};
+ if(EW[R]){QB='';mark({k:'d',end:EW[R]});return}
+ if(edit!==null){const keep={jumbo:d.jumbo,shift:d.shift,rgs:d.rgs,shot:d.shot,glf:d.glf,fib:d.fib,mpos:d.mpos};d=Object.assign(freshDraft(null),keep,{passer:null})}
+ const o=quickO(QB,d);FOCID='qbar';
+ if(!d.result){QB=o.unk.join(' ').toLowerCase();renderEntry();const el=document.getElementById('qbread');if(el)el.textContent=qbRead(o);
+  ask('Result and yards? (rush 6, comp 9 2 12, inc, sack 7)',t=>{QB=(raw+' '+t).trim();qbEnter()});return}
+ let note='';if(o.unk.length)note=keepNew(o.unk);
+ if(o.newTarget){const T=A.lists.targets=A.lists.targets||[];if(!T.some(y=>String(y).toUpperCase()===o.newTarget))T.push(o.newTarget)}
+ if(d.passer){const P=A.lists.passers=A.lists.passers||[];if(!P.includes(d.passer))P.push(d.passer)}
+ QB='';const go=()=>{logPlay();if(note)toast('Logged. Added '+note.toLowerCase()+' to your lists')};
+ if(!o.gainTyped&&!['INC','INT'].includes(d.result)){ask('Gain or loss on this play? (6, -3; blank = 0)',t=>{const n=parseInt(String(t).replace(/[^\d-]/g,''),10);d.gain=isNaN(n)?0:QCL(d.result==='SACK'&&n>0?-n:n,-99,99);go()},'',true);return}
+ go()}
+/* Drive markers, timeouts, quarter and half breaks go after the play that is open, or at the end */
+function mark(m){const pl=G().plays;if(edit!==null){pl.splice(edit+1,0,m);edit=null}else pl.push(m);
+ const lastP=[...pl].reverse().find(x=>x.k==='p');
+ d=m.k==='x'?freshDraft(lastNext()):freshDraft({down:1,dist:10,f:25,hash:lastP?lastP.hash:null});save();renderAll();
+ toast(m.k==='x'?'Timeout / no play marked':m.end?'Drive ended: '+DEND[m.end]+'. Next play starts a new drive at 1st and 10':m.k==='h'?'Halftime marked':m.k==='q'?'End of Q'+m.n+' marked':'New drive')}
+/* Editing a play's result or gain redoes the down, distance and spot of the plays after it in the same drive */
+function cascade(i){const pl=G().plays;let prev=pl[i],n=0;for(let j=i+1;j<pl.length;j++){const q=pl[j];if(q.k!=='p')break;const a=advance(prev);if(a.nd)break;
+ if(q.down!==a.next.down||q.dist!==a.next.dist||q.f!==a.next.f){q.down=a.next.down;q.dist=a.next.dist;q.f=a.next.f;q.upd=Date.now();n++}prev=q}return n}
+function openEdit(i){const p=G().plays[i];if(!p||p.k!=='p')return;edit=i;d=Object.assign(freshDraft(null),p);delete d.k;d.tags=p.tags?[...p.tags]:(p.tag?String(p.tag).split(' ').filter(Boolean):[]);d.ftags=p.ftags?[...p.ftags]:(p.ftag?String(p.ftag).split(' ').filter(Boolean):[]);
+ QB=QB0=playText(p);FOCID='qbar';KEEPSCROLL=true;renderAll()}
+function nextEdit(){const pl=G().plays;for(let j=(edit==null?-1:edit)+1;j<pl.length;j++)if(pl[j].k==='p'){openEdit(j);return}cancelEdit()}
+function cancelEdit(){edit=null;QB='';QB0='';d=freshDraft(lastNext());FOCID='qbar';renderAll()}
 function logPlay(){if(!d.result){toast('Pick a result');return}
  const p=Object.assign({k:'p'},d);p.tags=[...(d.tags||[])];p.ftags=[...(d.ftags||[])];p.tag=p.tags.join(' ');p.ftag=p.ftags.join(' ');if(p.call)p.call=al(p.call);if(p.owc){owApply(p);p.tag=p.tags.join(' ');p.call=owLong(p.owc,p.hash);p.ptype=(OW[p.owc]||{t:p.ptype}).t}else p.owc=null;delete p.autoT;
+ if(p.result!=='PEN')delete p.pen;
+ /* a word that is both a formation and a play (Shuffle): with a result logged, the play ran too */
+ {const U=x=>String(x||'').toUpperCase();if(!p.call&&!p.owc&&p.formation){const r=(A.lists.runs||[]).find(x=>U(x)===U(p.formation)),q=(A.lists.passes||[]).find(x=>U(x)===U(p.formation));if(r||q){p.call=r||q;p.ptype=r?'run':'pass'}}}
  {const U=x=>String(x||'').toUpperCase(),gl=(A.lists.glfs||[]).map(U);if(!p.glf&&p.formation&&gl.includes(U(p.formation)))p.glf=U(p.formation);
   if(p.glf){if(!p.formation)p.formation=p.glf.charAt(0)+p.glf.slice(1).toLowerCase();if(!p.call&&!p.owc){p.call=p.glf;p.ptype='pass'}p.glfOut=U(p.formation)!==p.glf}else{p.glf=null;p.glfOut=false}}
- if(edit!==null){p.upd=Date.now();G().plays[edit]=p;edit=null;d=freshDraft(lastNext())}
+ if(edit!==null){const i=edit,old=G().plays[i];p.upd=Date.now();if(old&&old.pid)p.pid=old.pid;G().plays[i]=p;
+  const ch=!old||['gain','result','td','down','dist','f'].some(k=>old[k]!==p[k]),n=ch?cascade(i):0;save();if(n)toast('Updated the next '+n+' play'+(n===1?'':'s')+' in this drive');
+  QB='';QB0='';nextEdit();return}
  else{G().plays.push(p);const a=advance(p);if(a.nd)G().plays.push({k:'d'});d=freshDraft(Object.assign({},a.next,{hash:p.hash||null}))}
  save();renderAll()}
 function lastNext(){const pl=G().plays;for(let i=pl.length-1;i>=0;i--)if(pl[i].k==='p'){const a=advance(pl[i]);return Object.assign({},a.next,{hash:pl[i].hash||null})}return{down:1,dist:10,f:25}}
@@ -350,15 +431,17 @@ function conceptChips(list){const used=new Set(),out=[];for(const x of list){if(
   if(pr){pr.forEach(y=>used.add(y));out.push('<span class="pair">'+pr.map(y=>chip('call',y,y,d.call===y&&!d.owc)).join('')+'</span>')}else{used.add(x);out.push(chip('call',x,x,d.call===x&&!d.owc))}}return out.join('')}
 /* Manager mode (per device): a non-coach in the box logs only what he can see. Calls are added later by a coach (tap the play in the log; editing always shows the full form). */
 const MGR=()=>{try{return localStorage.getItem('alm_mgr')==='1'}catch(e){return false}};
+const NOCHIP=()=>{try{return localStorage.getItem('alm_nochip')==='1'}catch(e){return false}};
 function renderEntry(){const L=A.lists,e=edit!==null,mg=MGR()&&!e;
  if(!d.tags)d.tags=d.tag?String(d.tag).split(' ').filter(Boolean):[];if(!d.ftags)d.ftags=d.ftag?String(d.ftag).split(' ').filter(Boolean):[];
  const runL=planL('runs',d.call),passL=planL('passes',d.call),owL=[...(A.lists.owcs||[])],tagL=[...new Set([...planL('tagsRun',d.tags),...planL('tagsPass',d.tags)])].sort((a,b)=>a.localeCompare(b));
  const oth=c=>`<button class="chip" data-a="oth" data-c="${c}">+ Other</button>`;
  const C=(cls,t,r,body)=>`<div class="card ${cls}">${lab(t,r)}${body}</div>`;
  let h='<div class="ent">';
- h+=`<div class="s12" style="display:flex;justify-content:flex-end;gap:8px;align-items:center">${mg?'<span class="note" style="flex:1"><b>Manager mode:</b> log down, distance, ball, hash, run or pass, result, yards and players. A coach adds the calls later from the log.</span>':''}<button class="chip ${MGR()?'on':''}" data-a="mgr">Manager mode${MGR()?': on':''}</button></div>`;
+ h+=`<div class="s12" style="display:flex;justify-content:flex-end;gap:8px;align-items:center">${mg?'<span class="note" style="flex:1"><b>Manager mode:</b> log down, distance, ball, hash, run or pass, result, yards and players. A coach adds the calls later from the log.</span>':''}<button class="chip ${NOCHIP()?'on':''}" data-a="nochip" title="Show only the type bar and the predicted call">${NOCHIP()?'Chip boxes hidden':'Hide chip boxes'}</button><button class="chip ${MGR()?'on':''}" data-a="mgr">Manager mode${MGR()?': on':''}</button></div>`;
+ document.body.classList.toggle('nochip',NOCHIP()&&!e);
  if(CONFIG.blankUntilPlan&&!G().plan)h+=G().noPlan?`<div class="s12 card" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="note" style="flex:1;min-width:200px">Tagging ${esc2(G().opp)} without a gameplan: every button is shown.</span><button class="btn" data-a="gpopen">Paste gameplan</button></div>`:`<div class="s12 card" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="note" style="flex:1;min-width:200px">No gameplan loaded for ${esc2(G().opp)}. Formation tags, motions, formations and play tags stay blank until you paste it.</span><button class="btn pri" data-a="gpopen">Paste gameplan</button><button class="btn" data-a="gpnone">No gameplan, tag as I go</button></div>`;
- h+=C('s12','Type the play',`<span class="note">${mg?'1 10 -28 Rt Hash, run or pass, result, yards. Enter adds it (and logs it when it has a result). Calls are added later by a coach.':'1 10 -28 Rt Hash, tags, motion, formation, play, result. Enter adds it (and logs it when it has a result).'}</span>`,`<input id="qbar" type="text" placeholder="${mg?'1 10 -28 Rt Hash  Run  Rush 6':'1 10 -28 Rt Hash  Stack  Trade  Kong  Charger  Rush 6'}" autocomplete="off" autocapitalize="characters" enterkeyhint="go" value="${QB.replace(/"/g,'&quot;')}" style="width:100%;padding:10px 12px;font-size:17px;font-weight:600;background:transparent;color:var(--tx);border:1px solid var(--line);border-radius:8px"><div class="note" id="qbread" style="min-height:18px;margin-top:6px;color:var(--ok)"></div>`);
+ h+=C('s12 keep',e?'Editing this play':'Type the play',e?`<span class="note">Change the text and press Enter to save. Enter with no change opens the next play. Esc goes back to a new play.</span>`:`<span class="note">${mg?'1 10 -28 Rt Hash, run or pass, result, yards. Enter adds it (and logs it when it has a result). Calls are added later by a coach.':'1 10 -28 Rt Hash, tags, motion, formation, play, result. Enter adds it (and logs it when it has a result).'}</span>`,`<input id="qbar" type="text" placeholder="${mg?'1 10 -28 Rt Hash  Run  Rush 6':'1 10 -28 Rt Hash  Stack  Trade  Kong  Charger  Rush 6'}" autocomplete="off" autocapitalize="characters" enterkeyhint="go" value="${QB.replace(/"/g,'&quot;')}" style="width:100%;padding:10px 12px;font-size:17px;font-weight:600;background:transparent;color:var(--tx);border:1px solid var(--line);border-radius:8px"><div class="note" id="qbread" style="min-height:18px;margin-top:6px;color:var(--ok)"></div>`);
  h+=C('s2','Down','',`<div class="chips">${[1,2,3,4].map(n=>chip('down',n,n,d.down===n)).join('')}</div>`);
  h+=C('s6','Distance','',`<div class="chips">${[1,2,3,4,5,6,7,8,9,10].map(n=>chip('dist',n,n,d.dist===n)).join('')}<input type="number" inputmode="numeric" id="distx" class="chipin ${d.dist>10?'on':''}" placeholder="11+" value="${d.dist>10?d.dist:''}"></div>`);
  h+=C('s4','Ball on',ylFmt(d.f),`<div class="chips" style="align-items:center;justify-content:center">${chip('side','own','Own',ylSide(d.f)==='own')}${chip('side','opp','Opp',ylSide(d.f)==='opp')}<div class="step"><button class="chip" data-a="ym">−</button><input type="number" inputmode="numeric" id="ylx" min="1" max="50" value="${ylNum(d.f)}" style="width:62px;font-size:20px;font-weight:700;text-align:center;background:transparent;color:var(--tx);border:1px solid var(--line);border-radius:6px;padding:4px 0"><button class="chip" data-a="yp">+</button></div></div>`);
@@ -374,28 +457,46 @@ function renderEntry(){const L=A.lists,e=edit!==null,mg=MGR()&&!e;
  h+=C('s6','Run concepts','',`${csbox('run','Search run concepts')}<div class="chips scroll" id="cc_run">${conceptChips(runL)}${oth('runs')}</div>`);
  h+=C('s6','Pass concepts','',`${csbox('pass','Search pass concepts')}<div class="chips scroll" id="cc_pass">${conceptChips(passL)}${oth('passes')}</div>`);
  h+=C('s12','Target (route)','',`${sbox('tgsrch','Search routes — Enter picks',SQ.target)}<div class="chips scroll" id="tgchips">${tgtChipsHtml()}</div>`);}
- h+=C('s4','Result','',`<div class="chips">${RESULTS.map(r=>chip('result',r[0],r[1],d.result===r[0],['SACK','INT','FUM'].includes(r[0])?'neg':'res')).join('')}${chip('td','t','TD',d.td,'res')}</div>`);
+ h+=C('s4','Result','',`<div class="chips">${RESULTS.map(r=>chip('result',r[0],r[1],d.result===r[0],['SACK','INT','FUM'].includes(r[0])?'neg':'res')).join('')}${chip('td','t','TD',d.td,'res')}</div>${d.result==='PEN'?`<div class="chips" style="margin-top:6px">${PEN_TYPES.map(x=>`<button class="chip ${d.pen===x?'on':''}" data-a="pen" data-v="${x}">${x}</button>`).join('')}</div>`:''}`);
  h+=C('s5','Gain / loss','',`<div class="chips" style="align-items:center;justify-content:center"><div class="step"><button class="chip" data-a="gm">−</button><input id="gv" type="number" inputmode="numeric" min="-99" max="99" value="${d.gain}" style="width:62px;font-size:20px;font-weight:700;text-align:center;background:transparent;color:var(--tx);border:1px solid var(--line);border-radius:6px;padding:4px 0"><button class="chip" data-a="gp">+</button></div></div><div class="chips" style="margin-top:6px;justify-content:center">${[-5,0,2,4,6,8,10,15,20].map(n=>chip('gain',n,(n>0?'+':'')+n,d.gain===n)).join('')}</div>`);
  h+=C('s3','Passer','',`<div class="chips">${(L.passers||[]).map(x=>chip('passer',x,'#'+x,d.passer===x)).join('')}<button class="chip" data-a="qother">+ Other</button></div>`);
  h+=C('s12','Player','',`${sbox('plsrch','Search number — Enter picks',SQ.player)}<div class="chips scroll" id="plchips">${plyChipsHtml()}</div>`);
  const lp=G().plays.filter(x=>x.k==='p').pop();h+=`<div class="s12 logrow">${lp&&!e?`<div class="last"><b>Last</b> ${lp.down}&amp;${lp.dist} ${lp.tag?lp.tag+' ':''}${lp.owc||lp.call||''} <b>${lp.gain>0?'+':''}${lp.gain}</b></div>`:''}<button class="btn pri logbtn" data-a="log">${e?'Save changes':'Log play'}</button>${e?'<button class="btn" data-a="cancel">Cancel</button><button class="btn bad" data-a="del">Delete play</button>':''}</div></div>`;
  document.getElementById('entry').innerHTML=h;if(TFOC)FOCID='tsrch';TFOC=false;if(FOCID){const t=document.getElementById(FOCID);FOCID=null;if(t){t.focus();t.setSelectionRange(t.value.length,t.value.length)}}}
 function drivesOf(arr){const dr=[];let c=[];for(const p of arr){if(p.k==='x')continue;if(p.k!=='p'){if(c.length)dr.push(c);c=[]}else c.push(p)}if(c.length)dr.push(c);return dr}
+/* drives with how they ended: [{plays, end}] (end = the drive-end marker's code, if any) */
+function driveList(arr){const out=[];let c=[];for(const p of arr){if(p.k==='x')continue;if(p.k!=='p'){if(c.length)out.push({plays:c,end:p.k==='d'?p.end||'':''});c=[]}else c.push(p)}if(c.length)out.push({plays:c,end:''});return out}
+/* first downs in a drive: the next play is a 1st down (or, on the last play, the gain reached the line); penalties and touchdowns don't count */
+const fdOf=c=>{let fd=0;for(let i=0;i<c.length;i++){const p=c[i];if(p.result==='PEN'||p.td)continue;if(i<c.length-1?c[i+1].down===1:p.gain>=p.dist)fd++}return fd};
+const is2fd=D=>fdOf(D.plays)>=2||D.plays.some(p=>p.td)||D.end==='FG';
 function summary(){const P=plays(),pen=P.filter(p=>p.result!=='PEN');const E=pen.filter(p=>eff(p)==='Y').length,X=pen.filter(p=>expl(p)==='Y').length;
- const dr=drivesOf(G().plays);
- let hit=0;for(const c of dr){let fd=0;for(let i=1;i<c.length;i++)if(c[i].down===1&&c[i-1].down!==1&&c[i-1].result!=='PEN')fd++;if(fd>=2||c.some(p=>p.td))hit++}
+ const dr=drivesOf(G().plays),DL=driveList(G().plays);
+ let hit=DL.filter(is2fd).length;
  const pc=(a,b)=>b?Math.round(100*a/b)+'%':'–';
  return{n:pen.length,eff:pc(E,pen.length),exp:pc(X,pen.length),fd:hit+'/'+dr.length,dr}}
-function renderLog(){const g=G(),s=summary();
- let h=`<div class="dclose"><button class="btn" id="logclose">Close log</button></div>${(()=>{const n=g.plays.filter(p=>p.k==='p'&&!p.call&&!p.owc).length;return n?`<div class="note" style="margin:6px 0;padding:8px 10px;border:1px solid var(--warn,#f2b632);border-radius:10px"><b>${n} play${n===1?'':'s'} with no call yet.</b> Tap a play below to add its formation, tags and call.</div>`:''})()}<div class="tiles"><div class="tile"><b>${s.n}</b><span>Plays</span></div><div class="tile"><b>${s.eff}</b><span>Efficient (50)</span></div><div class="tile"><b>${s.exp}</b><span>Explosive (${A.lists.expRun===A.lists.expPass?A.lists.expRun+"+":A.lists.expRun+"/"+A.lists.expPass})</span></div><div class="tile"><b>${s.fd}</b><span>2FDOS drives</span></div></div>`;
- let dn=1;h+=`<div class="drive"><span>Drive 1</span></div>`;
- g.plays.forEach((p,i)=>{if(p.k==='q'){dn++;h+=`<div class="half">END Q${p.n}</div><div class="drive"><span>Drive ${dn}</span></div>`;return}if(p.k==='h'){dn++;h+=`<div class="half">HALFTIME</div><div class="drive"><span>Drive ${dn}</span></div>`;return}if(p.k==='d'){dn++;h+=`<div class="drive"><span>Drive ${dn}</span></div>`;return}if(p.k==='x'){h+=`<div class="drive"><span>Timeout / no play</span></div>`;return}
-  const E=eff(p),X=expl(p),r=RESULTS.find(x=>x[0]===p.result);
-  h+=`<div class="play ${edit===i?'sel':''}" data-i="${i}"><div><div class="dd">${p.down}&amp;${p.dist}</div><div class="yl">${ylFmt(p.f)}</div></div>
-  <div><div class="call">${p.tag?p.tag+' ':''}${p.owc||p.call||'—'}${E==='Y'?'<span class="badge b-e">EFF</span>':''}${X==='Y'?'<span class="badge b-x">EXP</span>':''}</div>
+let LOGF='',OPEN=new Set(),KEEPSCROLL=false;   // log filter (eff / exp / fd), opened drives in the 2FDOS list
+function playRow(p,i){const E=eff(p),X=expl(p),r=RESULTS.find(x=>x[0]===p.result);
+ return`<div class="play ${edit===i?'sel':''} ${!p.call&&!p.owc?'nocall':''}" data-i="${i}"><div><div class="dd">${p.down}&amp;${p.dist}</div><div class="yl">${ylFmt(p.f)}</div></div>
+  <div><div class="call">${p.tag?p.tag+' ':''}${p.owc||p.call||'<span class="mut">no call · tap to add</span>'}${E==='Y'?'<span class="badge b-e">EFF</span>':''}${X==='Y'?'<span class="badge b-x">EXP</span>':''}</div>
   <div class="sub">${[p.ftag&&p.ftag,motionFull(p),p.shift&&'shift',p.hash&&p.hash+' hash',p.formation&&p.formation+(p.dir?' '+p.dir:''),p.fib&&'FIB '+p.fib,p.glf&&'GLF '+p.glf+(p.glfOut?' (shifted out)':''),p.target&&'→ '+p.target,p.jumbo&&'jumbo',p.rgs&&'RGS',p.shot&&'shot'].filter(Boolean).join(' · ')}</div></div>
-  <div><div class="gain ${p.gain>0?'pos':p.gain<0?'neg':''}">${p.gain>0?'+':''}${p.gain}</div><div class="sub" style="text-align:right">${p.td?'TD ':''}${r?r[1]:''}${p.passer?' QB#'+p.passer+' ':''}${p.player?' #'+p.player:''}</div></div></div>`});
- const el=document.getElementById('logp');el.innerHTML=h;el.scrollTop=el.scrollHeight}
+  <div><div class="gain ${p.gain>0?'pos':p.gain<0?'neg':''}">${p.gain>0?'+':''}${p.gain}</div><div class="sub" style="text-align:right">${p.td?'TD ':''}${r?r[1]:''}${p.result==='PEN'&&p.pen?' · '+esc2(p.pen):''}${p.passer?' QB#'+p.passer+' ':''}${p.player?' #'+p.player:''}</div></div></div>`}
+function renderLog(){const g=G(),s=summary(),el=document.getElementById('logp'),top=el.scrollTop,atEnd=el.scrollHeight-el.clientHeight-top<40;
+ const nc=g.plays.findIndex(p=>p.k==='p'&&!p.call&&!p.owc),ncN=g.plays.filter(p=>p.k==='p'&&!p.call&&!p.owc).length;
+ const T=(k,b,l)=>`<div class="tile ${k?'tbtn':''} ${LOGF&&LOGF===k?'on':''}" ${k?`data-lf="${k}"`:''}><b>${b}</b><span>${l}</span></div>`;
+ let h=`<div class="dclose"><button class="btn" id="logclose">Close log</button></div>${ncN?`<div class="note nocallbar" data-goi="${nc}" style="margin:6px 0;padding:8px 10px;border:1px solid var(--warn,#f2b632);border-radius:10px;cursor:pointer"><b>${ncN} play${ncN===1?'':'s'} with no call yet.</b> Tap here (or the play) to add its formation, tags and call.</div>`:''}
+ <div class="tiles">${T('',s.n,'Plays')}${T('eff',s.eff,'Efficient (50)')}${T('exp',s.exp,'Explosive ('+(A.lists.expRun===A.lists.expPass?A.lists.expRun+'+':A.lists.expRun+'/'+A.lists.expPass)+')')}${T('fd',s.fd,'2FDOS drives')}</div>
+ ${LOGF?`<div class="note" style="margin:6px 0">${{eff:'Efficient plays only',exp:'Explosive plays only',fd:'2FDOS drives (2+ first downs or a score). Tap a drive to see its calls'}[LOGF]} · <a href="#" data-lf="">show all</a></div>`:''}`;
+ if(LOGF==='fd'){let dn=0;const pl=g.plays;let cur=[],start=0;const flush=(end)=>{if(!cur.length)return;dn++;const D={plays:cur.map(x=>x[1]),end};if(is2fd(D)){const o=OPEN.has(dn),last=cur[cur.length-1][1];
+    h+=`<div class="drive dtog" data-dn="${dn}" style="cursor:pointer"><span>${o?'▾':'▸'} Drive ${dn} · ${cur.length} plays · ${fdOf(D.plays)} first downs${D.plays.some(x=>x.td)?' · TD':end==='FG'?' · FG':''}</span><span>${ylFmt(cur[0][1].f)} → ${last.td?'TD':ylFmt(Math.min(99,last.f+last.gain))}</span></div>`;if(o)cur.forEach(([i,p])=>h+=playRow(p,i))}cur=[]};
+  pl.forEach((p,i)=>{if(p.k==='x')return;if(p.k!=='p'){flush(p.k==='d'?p.end||'':'');return}cur.push([i,p])});flush('');}
+ else{let dn=1;h+=`<div class="drive"><span>Drive 1</span></div>`;
+ g.plays.forEach((p,i)=>{if(p.k==='q'){dn++;h+=`<div class="half">END Q${p.n}</div><div class="drive"><span>Drive ${dn}</span></div>`;return}if(p.k==='h'){dn++;h+=`<div class="half">HALFTIME</div><div class="drive"><span>Drive ${dn}</span></div>`;return}
+  if(p.k==='d'){dn++;h+=(p.end?`<div class="dend">${esc2(DEND[p.end]||p.end)}</div>`:'')+`<div class="drive"><span>Drive ${dn}</span></div>`;return}if(p.k==='x'){h+=`<div class="drive"><span>Timeout / no play</span></div>`;return}
+  if(LOGF==='eff'&&eff(p)!=='Y')return;if(LOGF==='exp'&&expl(p)!=='Y')return;h+=playRow(p,i)})}
+ el.innerHTML=h;
+ /* stay where you are: only jump to the bottom for a new play when you were already at the bottom; an opened play is scrolled into view */
+ if(edit!==null||KEEPSCROLL){el.scrollTop=top;const sel=el.querySelector('.play.sel');if(sel){const r=sel.getBoundingClientRect(),b=el.getBoundingClientRect();if(r.top<b.top||r.bottom>b.bottom)sel.scrollIntoView({block:'nearest'})}}
+ else if(LOGF)el.scrollTop=top;else if(atEnd||!top)el.scrollTop=el.scrollHeight;else el.scrollTop=top;KEEPSCROLL=false}
 function renderHdr(){const sb=document.getElementById('scoutbtn');if(sb){const on=!!scOf();sb.textContent=on?'Scout ✓':'Scout';sb.classList.toggle('pri',on)}
 const gb=document.getElementById('gpbtn');if(gb){const on=G()&&G().plan&&Object.values(G().plan).some(a=>a&&a.length);gb.textContent=on?'Gameplan ✓':'Gameplan';gb.classList.toggle('pri',!!on)}
 document.getElementById('gsel').innerHTML=A.games.map(g=>`<option value="${g.id}" ${g.id===A.cur?'selected':''}>${g.opp}</option>`).join('')}
@@ -403,7 +504,8 @@ function renderAll(){renderHdr();renderEntry();renderLog()}
 function nextSB(id){const a=[...document.querySelectorAll('#entry input[type=search]')].map(e=>e.id),i=a.indexOf(id);return i>=0&&i<a.length-1?a[i+1]:null}
 function adv(id){const n=nextSB(id);const t=n&&document.getElementById(n);if(t){t.focus();try{t.scrollIntoView({block:'center'})}catch(e){}}}
 document.getElementById('entry').addEventListener('input',ev=>{if(ev.target.id==='qbar'){QB=ev.target.value;qbPreview()}});
-document.getElementById('entry').addEventListener('keydown',ev=>{if(ev.key==='Enter'&&ev.target.id==='qbar'){ev.preventDefault();if(!QB.trim())return;qbEnter();return}
+document.getElementById('entry').addEventListener('keydown',ev=>{if(ev.target.id==='qbar'&&edit!==null&&(ev.key==='Escape'||(ev.key==='Backspace'&&!ev.target.value))){ev.preventDefault();ev.stopPropagation();cancelEdit();return}
+ if(ev.key==='Enter'&&ev.target.id==='qbar'){ev.preventDefault();if(!QB.trim()){if(edit!==null)nextEdit();return}qbEnter();return}
  if(ev.key==='Enter'&&ev.target.id&&ev.target.id.indexOf('cs_')===0){ev.preventDefault();const k=ev.target.dataset.k,q=ev.target.value.trim().toUpperCase();if(!q){adv(ev.target.id);return}const nx=nextSB(ev.target.id);const box=document.getElementById('cc_'+k);const m=[...box.querySelectorAll('[data-g]')].filter(b=>b.style.display!=='none'&&!b.classList.contains('on'));const ex=m.find(b=>b.dataset.v.toUpperCase()===q)||m[0];if(ex){FOCID=nx;ex.click();if(FOCID){FOCID=null;adv(ev.target.id)}}else{const o=box.querySelector('[data-a=oth]');if(o){window.AUTOQ=q;FOCID=nx;o.click();if(FOCID){FOCID=null;adv(ev.target.id)}}}return}
 {const c=Object.keys(LS).find(k=>LS[k].id===ev.target.id);if(c&&ev.key==='Enter'){ev.preventDefault();if(!SQ[c].trim()){adv(ev.target.id);return}lsPick(c,SQ[c]);SQ[c]='';FOCID=nextSB(LS[c].id)||LS[c].id;save();renderEntry();return}}
 if(ev.key==='Enter'&&ev.target.id==='tgsrch'){ev.preventDefault();if(!SQ.target.trim()){adv('tgsrch');return}pickTarget(SQ.target);SQ.target='';FOCID=nextSB('tgsrch');save();renderEntry();return}
@@ -434,7 +536,9 @@ document.getElementById('entry').addEventListener('click',ev=>{const b=ev.target
  else if(a==='gm'){d.gain=Math.max(-99,d.gain-1)}else if(a==='gp'){d.gain=Math.min(99,d.gain+1)}
  else if(a==='oth'){const c=b.dataset.c;(window.AUTOQ?(cb=>{const v=AUTOQ;AUTOQ=null;cb(v)}):(cb=>ask('Type it in (separate several with commas)',cb)))(X0=>{for(const x0 of X0.split(',')){let x=x0.trim();if(!x)continue;x=c==='formations'?x.toLowerCase().replace(/\b\w/g,m=>m.toUpperCase()):x.toUpperCase();x=ALIAS[x]||x;const L=A.lists;L[c]=L[c]||[];{const g0=G();g0.extra=g0.extra||{};for(const k of((c==='tagsRun'||c==='tagsPass')?['tagsRun','tagsPass']:[c])){const a=g0.extra[k]=g0.extra[k]||[];if(!a.some(y=>y.toUpperCase()===x.toUpperCase()))a.push(x)}}if(!L[c].some(y=>y.toUpperCase()===x.toUpperCase()))L[c].push(x);else x=L[c].find(y=>y.toUpperCase()===x.toUpperCase());const pl=G().plan;if(pl&&pl[c]&&!pl[c].some(y=>y.toUpperCase()===x.toUpperCase()))pl[c].push(x);if(c==='tagsRun'||c==='tagsPass'){const o=c==='tagsRun'?'tagsPass':'tagsRun';if(!L[o].some(y=>y.toUpperCase()===x.toUpperCase()))L[o].push(x);if(pl&&pl[o]&&!pl[o].some(y=>y.toUpperCase()===x.toUpperCase()))pl[o].push(x)}
    if(c==='ftags'){if(!d.ftags.includes(x))d.ftags.push(x)}else if(c==='motions')d.motion=x;else if(c==='formations')d.formation=x;else if(c==='runs'||c==='passes'){d.call=x;d.owc=null;d.ptype=c==='runs'?'run':'pass'}else if(c==='owcs'){d.owc=x}else{if(!d.tags.includes(x))d.tags.push(x)}}save();renderEntry()});return}
- else if(a==='mgr'){try{localStorage.setItem('alm_mgr',MGR()?'0':'1')}catch(x){}renderEntry();return}else if(a==='gpopen'){gpState={text:'',extra:{}};gpModal();return}else if(a==='gpnone'){G().noPlan=true;save();renderAll();return}
+ else if(a==='mgr'){try{localStorage.setItem('alm_mgr',MGR()?'0':'1')}catch(x){}renderEntry();return}
+ else if(a==='nochip'){try{localStorage.setItem('alm_nochip',NOCHIP()?'0':'1')}catch(x){}FOCID='qbar';renderEntry();return}
+ else if(a==='pen'){d.pen=d.pen===b.dataset.v?null:b.dataset.v;renderEntry();return}else if(a==='gpopen'){gpState={text:'',extra:{}};gpModal();return}else if(a==='gpnone'){G().noPlan=true;save();renderAll();return}
  else if(a==='tother'){ask('Route targeted (commas add several)',X=>{const T=A.lists.targets=A.lists.targets||[];for(let x of X.split(',')){x=x.trim().toUpperCase();if(!x)continue;const f=T.find(y=>String(y).toUpperCase()===x);if(f)x=f;else T.push(x);d.target=x}save();renderEntry()});return}
  else if(a==='qother'){ask('Passer jersey number',x=>{d.passer=x;const P=A.lists.passers=A.lists.passers||[];if(!P.includes(x))P.push(x);save();renderEntry()});return}
  else if(a==='pother'){ask('Jersey number',x=>{d.player=x;renderEntry()});return}
@@ -450,19 +554,36 @@ if(ev.target.id==='tsrch'){TQ=ev.target.value;document.getElementById('tchips').
 if(ev.target.id==='gv'){const x=parseInt(ev.target.value,10);if(!isNaN(x))d.gain=Math.max(-99,Math.min(99,x))}});
 document.getElementById('entry').addEventListener('change',ev=>{if(ev.target.id==='gv'){ev.target.value=d.gain}});
 document.getElementById('entry').addEventListener('change',ev=>{if(ev.target.id==='ylx'){const x=parseInt(ev.target.value,10);if(!isNaN(x)){const m=Math.max(1,Math.min(50,x));d.f=ylSide(d.f)==='own'?m:100-m}renderEntry();return}if(ev.target.id==='distx'){const v=parseInt(ev.target.value);if(v>0)d.dist=v;renderEntry();return}if(ev.target.id==='gs')renderEntry()});
-document.getElementById('logp').addEventListener('click',ev=>{if(ev.target.closest('#logclose')){setLog(false);return}const r=ev.target.closest('.play');if(!r)return;const i=+r.dataset.i;edit=i;const p=G().plays[i];d=Object.assign(freshDraft(null),p);delete d.k;d.tags=p.tags?[...p.tags]:(p.tag?String(p.tag).split(' ').filter(Boolean):[]);d.ftags=p.ftags?[...p.ftags]:(p.ftag?String(p.ftag).split(' ').filter(Boolean):[]);renderAll()});
+document.getElementById('logp').addEventListener('click',ev=>{if(ev.target.closest('#logclose')){setLog(false);return}
+ const lf=ev.target.closest('[data-lf]');if(lf){ev.preventDefault();const k=lf.dataset.lf;LOGF=LOGF===k?'':k;OPEN.clear();KEEPSCROLL=true;renderLog();return}
+ const dt=ev.target.closest('.dtog');if(dt){const n=+dt.dataset.dn;OPEN.has(n)?OPEN.delete(n):OPEN.add(n);KEEPSCROLL=true;renderLog();return}
+ const gi=ev.target.closest('[data-goi]');if(gi){openEdit(+gi.dataset.goi);return}
+ const r=ev.target.closest('.play');if(!r)return;openEdit(+r.dataset.i)});
+addEventListener('keydown',ev=>{if(edit===null||document.getElementById('modal').classList.contains('show'))return;const t=ev.target,typing=t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.tagName==='SELECT');if(typing)return;
+ if(ev.key==='Enter'){ev.preventDefault();nextEdit()}else if(ev.key==='Escape'||ev.key==='Backspace'){ev.preventDefault();ev.stopPropagation();cancelEdit()}},true);
+/* hold − or + to keep counting */
+{let hT=null,hI=null,held=false;const stop=()=>{clearTimeout(hT);clearInterval(hI);hT=hI=null};
+ document.getElementById('entry').addEventListener('pointerdown',ev=>{const b=ev.target.closest('button[data-a]');if(!b||!['gm','gp','ym','yp','dm','dp'].includes(b.dataset.a))return;const a=b.dataset.a;held=false;stop();
+  hT=setTimeout(()=>{hI=setInterval(()=>{held=true;stepA(a);renderEntry()},90)},400)});
+ addEventListener('pointerup',stop);addEventListener('pointercancel',stop);
+ document.getElementById('entry').addEventListener('click',ev=>{if(held){held=false;const b=ev.target.closest('button[data-a]');if(b&&['gm','gp','ym','yp','dm','dp'].includes(b.dataset.a)){ev.stopImmediatePropagation();ev.preventDefault()}}},true)}
+function stepA(a){if(a==='dm'){d.dist=Math.max(1,d.dist-1)}else if(a==='dp'){d.dist++}
+ else if(a==='ym'||a==='yp'){const s=ylSide(d.f),n=ylNum(d.f)+(a==='yp'?1:-1);const m=Math.max(1,Math.min(50,n));d.f=s==='own'?m:100-m}
+ else if(a==='gm'){d.gain=Math.max(-99,d.gain-1)}else if(a==='gp'){d.gain=Math.min(99,d.gain+1)}}
 document.getElementById('gsel').onchange=e=>{A.cur=e.target.value;edit=null;d=freshDraft(lastNext());save();renderAll()};
 document.getElementById('newgame').onclick=()=>ask('Opponent',n=>{newGame(n);toast('New game: '+n);gpState={text:'',extra:{}};gpModal()});
 function setLog(on){document.querySelector('main').classList.toggle('logon',on);const b=document.getElementById('logbtn');b.textContent=on?'Log ✓':'Log';b.classList.toggle('pri',on);try{localStorage.setItem('almanac_logon',on?'1':'0')}catch(e){}if(on)renderLog()}
 document.getElementById('logbtn').onclick=()=>setLog(!document.querySelector('main').classList.contains('logon'));
 try{if(localStorage.getItem('almanac_logon')==='1')setLog(true)}catch(e){}
-document.getElementById('newdrive').onclick=()=>{G().plays.push({k:'d'});save();renderLog();toast('New drive — Drive '+(G().plays.filter(p=>p.k==='d'||p.k==='h'||p.k==='q').length+1))};
+document.getElementById('newdrive').onclick=()=>mark({k:'d'});
+document.getElementById('dend').onclick=()=>{modal(`<h3 style="margin-top:0">How did the drive end?</h3><p class="note">${edit!==null?'Goes right after the play that is open.':'Goes after the last play.'} Touchdowns, interceptions and fumbles end the drive by themselves. You can also type punt, fg, missed fg or downs in the type bar.</p><p style="display:flex;gap:10px;flex-wrap:wrap">${Object.entries(DEND).map(([k,v])=>`<button class="btn pri" data-end="${k}">${v}</button>`).join('')}<button class="btn" onclick="modal_close()">Cancel</button></p>`);
+ document.querySelectorAll('[data-end]').forEach(b=>b.onclick=()=>{modal_close();mark({k:'d',end:b.dataset.end})})};
 document.getElementById('qtr').onclick=()=>{const pl=G().plays,h=pl.some(p=>p.k==='h'),q1=pl.some(p=>p.k==='q'&&p.n===1),q3=pl.some(p=>p.k==='q'&&p.n===3);let m;
  if(!h&&!q1)m={k:'q',n:1};else if(!h)m={k:'h'};else if(!q3)m={k:'q',n:3};else{toast('All quarter breaks marked (use Undo to fix)');return}
- pl.push(m);d=freshDraft({down:1,dist:10,f:25,hash:lastNext().hash});edit=null;save();renderAll();toast(m.k==='h'?'End of Q2 (halftime) marked':'End of Q'+m.n+' marked')};
-document.getElementById('noplay').onclick=()=>{G().plays.push({k:'x'});d=freshDraft(lastNext());edit=null;save();renderAll();toast('Timeout / no play marked')};
-document.getElementById('half').onclick=()=>{if(G().plays.some(p=>p.k==='h')){toast('Halftime already marked');return}G().plays.push({k:'h'});d=freshDraft({down:1,dist:10,f:25,hash:lastNext().hash});edit=null;save();renderAll();toast('Halftime marked')};
-document.getElementById('undo').onclick=()=>{const pl=G().plays;if(pl.length){const x=pl.pop();tomb(G(),x);d=freshDraft(lastNext());edit=null;save();renderAll();toast('Undid '+(x.k==='q'?'quarter break':x.k==='h'?'halftime':x.k==='d'?'drive marker':x.k==='x'?'timeout / no play':'last play'))}else toast('Nothing to undo')};
+ mark(m)};
+document.getElementById('noplay').onclick=()=>mark({k:'x'});
+document.getElementById('half').onclick=()=>{if(G().plays.some(p=>p.k==='h')){toast('Halftime already marked');return}mark({k:'h'})};
+document.getElementById('undo').onclick=()=>{const pl=G().plays;if(pl.length){const x=pl.pop();tomb(G(),x);d=freshDraft(lastNext());edit=null;save();renderAll();toast('Undid '+(x.k==='q'?'quarter break':x.k==='h'?'halftime':x.k==='d'?(x.end?'drive end ('+DEND[x.end]+')':'drive marker'):x.k==='x'?'timeout / no play':'last play'))}else toast('Nothing to undo')};
 const HEAD=['DOWN','DISTANCE','JUMBO Y/N','SHIFT','MOTION','PLAY TAG','RUN CALL','PASS CALL','RGS Y/N','SHOT Y/N','RESULT','PLAYER','YARD LINE','GAIN/LOSS','<50','CROSS 50','>50','BCKWD CROSS 50','GAIN/LOSS','EXPLOSIVE','EFFICIENT','RUN SCHEME','PASS SCHEME','FORMATION','DIRECTION','PLAY TYPE','FORMATION TAG','CONCEPT','TARGET','ONE WORD','GLF','PASSER'];
 function resText(p){const r=p.result;if(r==='PEN')return'PENALTY';if(r==='INC')return'INC';if(r==='INT')return'INT';if(r==='FUM')return'FUM';if(r==='SACK')return'SACK';if(p.td)return p.gain+' YD TD';return String(p.gain)}
 function rows(){const out=[HEAD];for(const p of G().plays){if(p.k==='x'){out.push(['NO PLAY']);continue}if(p.k==='q'){out.push(['NEW DRIVE']);continue}if(p.k==='h'){out.push(['HALFTIME']);continue}if(p.k==='d'){out.push(['NEW DRIVE']);continue}
@@ -641,7 +762,7 @@ function glRemoved(k,before,after){if(!glOn()||!GLX_MAP[k])return;const m=GLX_MA
 /* Sync (from the suite shell): add or replace games that came from another device. */
 window.syncBusy=()=>edit!==null||!!(d&&(d.formation||d.call||d.owc||d.result||d.glf||(d.tags&&d.tags.length)||(d.ftags&&d.ftags.length)||d.motion));
 window.syncUpsert=games=>{A.delGames=(A.delGames||[]).filter(x=>!games.some(g=>g.id===x.id));for(const g of games){const i=A.games.findIndex(x=>x.id===g.id);if(i>=0)A.games[i]=g;else A.games.push(g)}
- if(!A.games.find(g=>g.id===A.cur))A.cur=A.games[0].id;d=freshDraft(lastNext());save();renderAll();toast(games.length+' game'+(games.length===1?'':'s')+' synced from another device')};
+ if(!A.games.find(g=>g.id===A.cur))A.cur=A.games[0].id;const ae=document.activeElement,keep=ae&&ae.id&&document.getElementById('entry').contains(ae)?ae.id:null;if(edit===null&&!QB.trim())d=freshDraft(lastNext());save();KEEPSCROLL=true;FOCID=keep;renderAll();toast(games.length+' game'+(games.length===1?'':'s')+' synced from another device')};
 window.syncRemove=ids=>{trashGames(ids,true);if(!A.games.length)newGame('Game 1',true);if(!A.games.find(g=>g.id===A.cur))A.cur=A.games[0].id;d=freshDraft(lastNext());save();renderAll();toast(ids.length+' game'+(ids.length===1?'':'s')+' deleted on another device. Setup > Recently deleted can restore it.')};
 addEventListener('storage',e=>{if(window.GL&&e.key===GL.key(CONFIG.program)){GLO=GL.load(CONFIG.program)||GLO;glApply();try{localStorage.setItem(KEY,JSON.stringify(A))}catch(x){}renderAll()}});
 function glInit(){if(!window.GL){GLO=null;return}GLO=GL.load(CONFIG.program);if(!GLO){GLO=glSeed();GL.save(GLO)}if(!SIGNED&&GLO.terms.some(t=>t.type==='glf')){GLO.terms=GLO.terms.filter(t=>t.type!=='glf');GL.save(GLO)}glApply();glCapture();owLoad()}
@@ -761,8 +882,8 @@ function gpModal(){const g=G(),r=gpParse(gpState.text,gpState.extra),on=g.plan&&
  const cl=document.getElementById('gpclear');if(cl)cl.onclick=()=>{const was=on;g.plan=null;g.gp=null;g.extra=null;gpState={text:'',extra:{}};save();modal_close();d=freshDraft(lastNext());renderAll();toast(was?'Gameplan cleared — all buttons showing':'No gameplan was set')}}
 document.getElementById('gpbtn').onclick=()=>{gpState={text:'',extra:{}};gpModal()};
 
-function ask(title,cb,val){modal(`<h3 style="margin-top:0">${title}</h3><input type="text" id="askin" autocapitalize="characters" autocomplete="off" style="width:100%;font-size:20px;padding:10px" value="${esc2(val||'')}"><p style="display:flex;gap:10px"><button class="btn pri" id="askok">OK</button><button class="btn" id="askno">Cancel</button></p>`);
- const i=document.getElementById('askin');setTimeout(()=>{try{i.focus()}catch(e){}},60);const go=()=>{const v=i.value.trim();modal_close();if(v)cb(v)};document.getElementById('askok').onclick=go;document.getElementById('askno').onclick=modal_close;i.onkeydown=e=>{if(e.key==='Enter')go()}}
+function ask(title,cb,val,empty){modal(`<h3 style="margin-top:0">${title}</h3><input type="text" id="askin" autocapitalize="characters" autocomplete="off" style="width:100%;font-size:20px;padding:10px" value="${esc2(val||'')}"><p style="display:flex;gap:10px"><button class="btn pri" id="askok">OK</button><button class="btn" id="askno">Cancel</button></p>`);
+ const i=document.getElementById('askin');setTimeout(()=>{try{i.focus()}catch(e){}},60);const go=()=>{const v=i.value.trim();modal_close();if(v||empty)cb(v)};document.getElementById('askok').onclick=go;document.getElementById('askno').onclick=modal_close;i.onkeydown=e=>{if(e.key==='Enter')go()}}
 function arm(b,label,fn){if(b.dataset.armed){fn();return}b.dataset.armed='1';const t=b.textContent;b.textContent=label;setTimeout(()=>{if(b.isConnected){delete b.dataset.armed;b.textContent=t}},4000)}
 const FR=CONFIG.filmRoom;
 function copyText(t){return(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).catch(()=>{const x=document.createElement('textarea');x.value=t;document.body.appendChild(x);x.select();document.execCommand('copy');x.remove()})}
