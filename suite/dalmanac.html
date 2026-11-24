@@ -91,11 +91,11 @@ const isPlay=p=>!p.k||p.k==='p';
 const PL=g=>g.plays.filter(isPlay);
 const real=g=>PL(g).filter(p=>p.result!=='Penalty');
 let RENDERING=false,d=null,edit=null,ADD=null,FOC=null,FQ='',FRQ='',PQ='',CQ='';
-function fresh(prev){const g=G();return{dn:prev?prev.dn:1,di:prev?prev.di:10,side:prev?prev.side:'Own',yd:prev?prev.yd:25,hash:prev?prev.hash:'',form:'',call:'',concept:'',pkg:(g&&g.pkg)||(prev?prev.pkg:'')||'',front:'',fcode:'',mods:[],press:'',cov:'',rp:'',dir:'',result:'',td:false,gain:0,havoc:[]}}
+function fresh(prev){const g=G();return{dn:prev?prev.dn:1,di:prev?prev.di:10,side:prev?prev.side:'Own',yd:prev?prev.yd:25,hash:prev?prev.hash:'',form:'',call:'',concept:'',pkg:(g&&g.pkg)||(prev?prev.pkg:'')||'',front:'',fcode:'',mods:[],press:'',cov:'',rp:'',dir:'',str:'',result:'',td:false,gain:0,havoc:[]}}
 const ballOn=x=>x.side==='Own'?+x.yd:100-x.yd;
 const effOf=(dn,di,g)=>dn===1?g>=4:dn===2?g>=Math.ceil(di/2):g>=di;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
-const drafted=p=>({dn:p.dn,di:p.di,side:p.side,yd:p.yd,hash:p.hash||'',form:p.form||'',call:p.call||'',concept:p.concept||'',pkg:p.pkg||'',front:p.front||'',fcode:p.fcode||'',mods:[...(p.mods||[])],press:p.press||'',cov:p.cov||'',rp:p.rp||'',dir:p.dir||'',result:p.result||'',td:!!p.td,dtd:!!p.dtd,hvOff:false,gain:p.gain||0,havoc:[...(p.havoc||[])]});
+const drafted=p=>({dn:p.dn,di:p.di,side:p.side,yd:p.yd,hash:p.hash||'',form:p.form||'',call:p.call||'',concept:p.concept||'',pkg:p.pkg||'',front:p.front||'',fcode:p.fcode||'',mods:[...(p.mods||[])],press:p.press||'',cov:p.cov||'',rp:p.rp||'',dir:p.dir||'',str:p.str||'',result:p.result||'',td:!!p.td,dtd:!!p.dtd,hvOff:false,gain:p.gain||0,havoc:[...(p.havoc||[])]});
 /* the next snap, from the play that was just logged (a coach can change anything before logging) */
 function advanceFrom(p){const nxt=fresh(p);nxt.hash=p.hash||'';
  const dn=+p.dn,di=+p.di,f0=+p.f,gain=+p.gain||0;
@@ -184,7 +184,12 @@ function resHtml(){if((d.rp==='R'||d.result==='Rush')&&+d.gain<0&&!d.hvOff&&!d.h
 function sitChips(){return`<div class="row"><span class="mut">Down</span><div class="chips">${[1,2,3,4].map(n=>ch('dn',n,n,+d.dn===n)).join('')}</div></div>
  <div class="row"><span class="mut">To go</span><div class="chips">${[1,2,3,4,5,6,7,8,9,10].map(n=>ch('di',n,n,+d.di===n)).join('')}<input type="text" inputmode="numeric" id="dx" class="chipin ${+d.di>10?'on':''}" placeholder="11+" value="${+d.di>10?d.di:''}"></div></div>
  <div class="row"><span class="mut">Ball on</span><div class="chips">${ch('side','Own','Own',d.side==='Own')}${ch('side','Opp','Opp',d.side==='Opp')}</div>${stepper('yd',d.yd,'y')}</div>
- <div class="row"><span class="mut">Hash</span><div class="chips">${['L','M','R'].map(h=>ch('hash',h,h,d.hash===h)).join('')}</div></div>`}
+ <div class="row"><span class="mut">Hash</span><div class="chips">${['L','M','R'].map(h=>ch('hash',h,h,d.hash===h)).join('')}</div></div>
+ ${strRow()}`}
+/* Strength comes from the program's setting (Defensive Setup). When the setting can work it out (Field/Boundary and a left or right hash) it fills in; otherwise tap the side. */
+function strEff(){const a=DV.strengthSide(d);return{side:d.str||a.side||'',auto:!d.str&&!!a.side,why:a.why}}
+function strRow(){const e=strEff(),m=DV.strength().mode,lab={fb:'Field / Boundary',lr:'Left / Right',pass:'Pass strength',te:'TE side',custom:'Custom'}[m];
+ return`<div class="row"><span class="mut">Strength</span><div class="chips">${['L','R'].map(h=>ch('str',h,h,e.side===h)).join('')}</div><span class="note" id="strnote">${esc(e.side?(e.auto?e.why:'Set by you'):e.why)} · ${esc(lab)}</span></div>`}
 function cnChips(){const l=conceptList();return l.map(c=>ch('concept',c.name,esc(c.name)+`<small>${c.type==='run'?'run':'pass'}</small>`,d.concept&&d.concept.toUpperCase()===c.name.toUpperCase())).join('')+(d.concept&&!l.some(c=>c.name.toUpperCase()===d.concept.toUpperCase())?ch('concept',d.concept,esc(d.concept),true):'')}
 function rpChips(){return`<div class="chips">${[['R','Run'],['P','Pass'],['RPO','RPO']].map(([v,l])=>ch('rp',v,l,d.rp===v)).join('')}</div><span class="mut">Direction</span><div class="chips">${['L','R'].map(v=>ch('dir',v,v,d.dir===v)).join('')}</div>`}
 function infNote(){if(!d.call.trim())return'';const dc=SCOUTO.decode(d.call);
@@ -364,6 +369,7 @@ $('ent').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b
  const k=b.dataset.k;if(!k)return;let v=b.dataset.v;
  if(k==='dn')d.dn=+v;else if(k==='di')d.di=+v;
  else if(k==='side')d.side=v;
+ else if(k==='str'){d.str=d.str===v?'':v}
  else if(k==='gq')d.gain=+v;
  else if(k==='concept'){if(d.concept&&d.concept.toUpperCase()===v.toUpperCase())d.concept='';else{d.concept=v;const c=conceptList().find(x=>x.name.toUpperCase()===v.toUpperCase());if(c&&d.rp!=='RPO')d.rp=c.type==='run'?'R':'P'}}
  else if(k==='pkg'){d.pkg=v;const g=G();if(g){g.pkg=v;save()}}
@@ -385,7 +391,7 @@ function logPlay(){const g=G();if(!g)return;readNum('gain');
  let gain=['Incomplete','Interception'].includes(d.result)?0:(+d.gain||0);if(d.result==='Sack'&&gain>0)gain=-gain;
  const rp=d.rp||({Rush:'R',Complete:'P',Incomplete:'P',Sack:'P',Scramble:'P',Interception:'P'}[d.result]||'');
  const hv=[...d.havoc];if(rp==='R'&&gain<0&&!d.hvOff&&!hv.includes('TFL'))hv.push('TFL');if(d.result==='Sack'&&!hv.includes('SACK'))hv.push('SACK');if(d.result==='Interception'&&!hv.includes('PBU'))hv.push('PBU');
- const p={pid:edit||'p'+Date.now().toString(36),ts:Date.now(),dn:+d.dn,di:+d.di,side:d.side,yd:+d.yd,f:ballOn(d),hash:d.hash,form:d.form,call:d.call,concept:d.concept||(d.call&&SCOUTO.decode(d.call).known?SCOUTO.decode(d.call).concept:''),pkg:d.pkg,front:d.front,fcode:d.fcode,mods:[...d.mods],press:d.press,cov:d.cov,rp,dir:d.dir,result:d.result,td:d.td,dtd:!!d.dtd,gain,havoc:hv};
+ const p={pid:edit||'p'+Date.now().toString(36),ts:Date.now(),dn:+d.dn,di:+d.di,side:d.side,yd:+d.yd,f:ballOn(d),hash:d.hash,form:d.form,call:d.call,concept:d.concept||(d.call&&SCOUTO.decode(d.call).known?SCOUTO.decode(d.call).concept:''),pkg:d.pkg,front:d.front,fcode:d.fcode,mods:[...d.mods],press:d.press,cov:d.cov,rp,dir:d.dir,str:strEff().side,result:d.result,td:d.td,dtd:!!d.dtd,gain,havoc:hv};
  if(d.pkg)g.pkg=d.pkg;
  if(d.form&&DV.glo()&&!glForms().includes(SCOUTO.famOf(d.form)))addWord('formation',d.form,{side:'O'});
  if(edit){const i=g.plays.findIndex(x=>x.pid===edit);if(i>=0){p.ts=g.plays[i].ts;p.upd=Date.now();g.plays[i]=p}edit=null;resume();save();renderAll();toast('Saved changes');return}
@@ -422,7 +428,7 @@ function csv(g){const q=v=>{const s=v==null?'':String(v);return /[",\n]/.test(s)
   const o={};pn++;o['PERIOD']=per;o['PLAY #']=pn;o['ODK']='D';o['DN']=p.dn;o['DIST']=p.di;o['GN/LS']=p.gain;o['YARD LN']=p.side==='Own'?-p.yd:p.yd;
   o['EFF']=p.result==='Penalty'?'':(effOf(p.dn,p.di,p.gain)?'Y':'N');o['EXPLOSIVE?']=p.gain>=15?'Y':'';
   o['DEF FRONT']=[p.front,...(p.mods||[])].filter(Boolean).join(' ');o['DC COVERAGE']=p.cov;o['BLITZ']=p.press;
-  o['NOTES']=[p.pkg?'PKG '+p.pkg:'',p.concept?'CONCEPT '+p.concept:'',p.havoc.length?'HAVOC '+p.havoc.join('/'):''].filter(Boolean).join('; ');
+  o['NOTES']=[p.pkg?'PKG '+p.pkg:'',p.str?'STRENGTH '+(p.str==='L'?'LEFT':'RIGHT'):'',p.concept?'CONCEPT '+p.concept:'',p.havoc.length?'HAVOC '+p.havoc.join('/'):''].filter(Boolean).join('; ');
   o['HASH']=p.hash;o['PLAY TYPE']=p.rp==='R'?'Run':p.rp?'Pass':'';o['RESULT']=p.result+(p.td?', TD':'')+(p.dtd?', DEF TD':'');o['OFF FORM']=p.form;o['OFF PLAY']=p.call;o['PASS CONCEPT']=p.rp==='P'?(p.concept||''):'';o['PLAY DIR']=p.dir;o['RPO']=p.rp==='RPO'?'Y':'';
   rows.push(HEAD.map(h=>q(o[h])).join(','))});return rows.join('\n')}
 $('exp').onclick=()=>{const g=G();if(!g||!PL(g).length){toast('No plays to export');return}

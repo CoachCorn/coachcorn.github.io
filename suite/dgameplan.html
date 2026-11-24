@@ -68,7 +68,7 @@ main{padding:12px;max-width:1500px;margin:0 auto}
 const SIGNED=(()=>{try{const s=JSON.parse(localStorage.getItem('suite_sync'));return !!(s&&s.token&&s.exp>Date.now())}catch(e){return false}})();
 const PROGRAM=SIGNED?'deer-creek':'demo';
 if(!SIGNED){SCOUTO.useDemoWords();DefVocab.demoGlossary(PROGRAM);DemoSeedD.all()}
-const KEY='dgameplan_v1_'+PROGRAM,SO=SCOUTO.store(PROGRAM),DV=DefVocab(PROGRAM,SIGNED);
+const KEY='dgameplan_v1_'+PROGRAM,SO=SCOUTO.store(PROGRAM),DV=DefVocab(PROGRAM,SIGNED);window.DEFLAB=DV.dotLabel;
 const $=id=>document.getElementById(id),esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const toast=m=>{const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',2400)};
 const uid=p=>p+Math.random().toString(36).slice(2,8);
