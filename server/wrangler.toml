@@ -5,6 +5,10 @@ compatibility_date = "2026-11-01"
 # Pages allowed to call the server (comma-separated)
 [vars]
 ALLOWED_ORIGINS = "https://coachcorn.github.io,http://localhost:8765"
+# AI reading (Film Room): models and the daily call cap per program
+AI_MODEL_COMPLEX = "claude-opus-5-5"
+AI_MODEL_DEFAULT = "claude-sonnet-5-5"
+AI_DAILY_CALLS = "600"
 
 # Paste the D1 database id from the Cloudflare dashboard here (Storage & databases > D1 > kdnce).
 [[d1_databases]]
@@ -12,7 +16,7 @@ binding = "DB"
 database_name = "kdnce"
 database_id = "89a730a4-8c76-44ff-a857-14560fb1fea3"
 
-# Secrets (set in the dashboard, never in this file): SIGNING_KEY, ADMIN_KEY
+# Secrets (set in the dashboard, never in this file): SIGNING_KEY, ADMIN_KEY, ANTHROPIC_API_KEY (Film Room AI reading)
 
 # Highlight clips (R2 bucket kdnce-clips)
 [[r2_buckets]]

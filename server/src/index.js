@@ -34,6 +34,34 @@ async function auth(env,req){const h=req.headers.get('Authorization')||'';const 
 const CLIPKEY=/^[A-Za-z0-9_.-]{1,80}\/[A-Za-z0-9_. -]{1,120}$/, CLIP_MAX=60*1024*1024, PASS_HOURS=12;
 const needBucket=(env,req)=>env.CLIPS?null:J(env,req,{error:'Clip storage is not connected yet'},503);
 async function clipPass(env,url){const p=await verify(env,url.searchParams.get('ct')||'');if(!p||p.k!=='clip')throw Object.assign(new Error('Clip pass expired'),{status:401});return p}
+/* ---------- AI reading (Film Room tagger, postgame summary) ----------
+   The browser sends a prompt and up to AI_IMG_MAX frames; the server calls the Anthropic API with the secret key and returns the reply.
+   Signed-in programs only. A daily call cap per program protects the bill. Models are plain variables so they can change without code. */
+const AI_IMG_MAX=24, AI_BODY_MAX=14*1024*1024;
+const aiModel=(env,tier)=>tier==='complex'?(env.AI_MODEL_COMPLEX||'claude-opus-5-5'):(env.AI_MODEL_DEFAULT||'claude-sonnet-5-5');
+const aiCap=env=>Math.max(1,parseInt(env.AI_DAILY_CALLS||'600',10)||600);
+const aiDay=()=>new Date().toISOString().slice(0,10);
+async function aiUsed(env,prog){await env.DB.prepare('CREATE TABLE IF NOT EXISTS ai_use (program TEXT NOT NULL, day TEXT NOT NULL, calls INTEGER NOT NULL DEFAULT 0, tin INTEGER NOT NULL DEFAULT 0, tout INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (program, day))').run();
+ return await env.DB.prepare('SELECT calls,tin,tout FROM ai_use WHERE program=? AND day=?').bind(prog,aiDay()).first()||{calls:0,tin:0,tout:0}}
+const aiRoutes={
+ 'GET /aistatus':async(env,req)=>{const p=await auth(env,req);const u=await aiUsed(env,p.p);return J(env,req,{ready:!!env.ANTHROPIC_API_KEY,imgMax:AI_IMG_MAX,cap:aiCap(env),used:u.calls,tokensIn:u.tin,tokensOut:u.tout})},
+ 'POST /ai':async(env,req)=>{const p=await auth(env,req);
+  if(!env.ANTHROPIC_API_KEY)return J(env,req,{error:'AI is not connected yet',code:'not_ready'},503);
+  const t=await req.text();if(t.length>AI_BODY_MAX)return J(env,req,{error:'Too many images',code:'too_large'},413);
+  let b;try{b=JSON.parse(t)}catch(e){return J(env,req,{error:'Bad JSON'},400)}
+  const prompt=String(b.prompt||'');if(!prompt||prompt.length>60000)return J(env,req,{error:'Bad prompt'},400);
+  const imgs=Array.isArray(b.images)?b.images:[];if(imgs.length>AI_IMG_MAX)return J(env,req,{error:'Too many images',code:'too_large'},413);
+  const u=await aiUsed(env,p.p);if(u.calls>=aiCap(env))return J(env,req,{error:'Daily AI limit reached',code:'rate_limited'},429);
+  await env.DB.prepare('INSERT INTO ai_use (program,day,calls) VALUES (?,?,1) ON CONFLICT(program,day) DO UPDATE SET calls=calls+1').bind(p.p,aiDay()).run();
+  const content=[...imgs.map(d=>({type:'image',source:{type:'base64',media_type:'image/jpeg',data:String(d)}})),{type:'text',text:prompt}];
+  let r;try{r=await fetch((env.AI_BASE||'https://api.anthropic.com')+'/v1/messages',{method:'POST',headers:{'x-api-key':env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01','content-type':'application/json'},
+   body:JSON.stringify({model:aiModel(env,b.tier),max_tokens:Math.min(2000,parseInt(b.maxTokens||1000,10)||1000),messages:[{role:'user',content}]})})}catch(e){return J(env,req,{error:"Couldn't reach the AI service",code:'network'},502)}
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok)return J(env,req,{error:(j.error&&j.error.message)||'AI request failed',code:r.status===429?'rate_limited':r.status===401?'bad_key':'error'},r.status===429?429:502);
+  const text=(j.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('');
+  const us=j.usage||{};await env.DB.prepare('UPDATE ai_use SET tin=tin+?, tout=tout+? WHERE program=? AND day=?').bind(us.input_tokens||0,us.output_tokens||0,p.p,aiDay()).run();
+  return J(env,req,{text,usage:{in:us.input_tokens||0,out:us.output_tokens||0},model:j.model||''})}
+};
 const clipRoutes={
  'GET /cliptoken':async(env,req)=>{const p=await auth(env,req);const exp=Date.now()+PASS_HOURS*3600000;return J(env,req,{ct:await sign(env,{p:p.p,k:'clip',exp}),exp,ready:!!env.CLIPS})},
  'PUT /clip':async(env,req,url)=>{const nb=needBucket(env,req);if(nb)return nb;const p=await auth(env,req),key=url.searchParams.get('key')||'';
@@ -126,5 +154,5 @@ async function ensureSchema(env){if(schemaReady)return;await env.DB.batch([
 export default{async fetch(req,env){const url=new URL(req.url);
  if(req.method!=='OPTIONS')try{await ensureSchema(env)}catch(e){return J(env,req,{error:'Database not connected'},500)}
  if(req.method==='OPTIONS')return new Response(null,{status:204,headers:cors(env,req)});
- const h=routes[req.method+' '+url.pathname]||clipRoutes[req.method+' '+url.pathname];if(!h)return J(env,req,{error:'Not found'},404);
+ const h=routes[req.method+' '+url.pathname]||clipRoutes[req.method+' '+url.pathname]||aiRoutes[req.method+' '+url.pathname];if(!h)return J(env,req,{error:'Not found'},404);
  try{return await h(env,req,url)}catch(e){return J(env,req,{error:e.status?e.message:'Server error'},e.status||500)}}};
