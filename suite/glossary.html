@@ -5,6 +5,8 @@
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#0f1720">
 <style>
+/* dark drop-downs */:root{color-scheme:dark}select{background-color:#18232f;color:#e8eef4}select option,select optgroup{background-color:#18232f;color:#e8eef4}select:disabled{opacity:.7}
+
 :root{--bg:#0f1720;--card:#18232f;--line:#2a3948;--tx:#e8eef4;--mut:#8ea0b2;--acc:#3b9cff;--ok:#2fbf71;--warn:#f2b632;--bad:#ef5b5b}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{margin:0;background:var(--bg);color:var(--tx);font:15px -apple-system,system-ui,sans-serif}
@@ -129,9 +131,9 @@ const OLA=[['base blocks',''],['down blocks',''],['reach blocks',''],['zone step
 const ALMK=()=>{try{const s=JSON.parse(localStorage.getItem('suite_sync'));return(s&&s.token&&s.exp>Date.now())?'almanac_v1':'almanac_demo'}catch(e){return'almanac_demo'}};
 function setLet(key,defs){let L=null;try{L=(JSON.parse(localStorage.getItem(ALMK()))||{}).lists}catch(e){}const a=(L&&L[key])||[];return defs.map((d,i)=>String(a[i]||d).toUpperCase().trim()).filter((v,i,A)=>v&&A.indexOf(v)===i)}
 const teLet=()=>setLet('pTE',['M','A','F']),rbLet=()=>setLet('pRB',['B','T']);
-const OLB=['PST','PSG','C','BSG','BST'],RAIM=[['the midline of the center (inside zone)','the midline of the center'],['the inside leg of the TE (wide / outside zone)','the inside leg of the TE'],['the inside leg of the 2nd puller (gap)','the inside leg of the 2nd puller']];
-function rbRow(id,who,te){return `<tr><td>${who}</td><td>${mSel('a_'+id,OLA.map(a=>a[0]),'—')}</td><td>${mSel('w_'+id,OLB.map(k=>'with the '+k),'—')}</td><td>${mSel('t_'+id,OLT,'(no target)')}</td><td>${te?'<button type="button" class="btn" data-rbx style="min-height:28px;padding:2px 8px">×</button>':''}</td></tr>`}
-function rbSync(box){box.querySelectorAll('.rbt tr').forEach(r=>{const a=r.querySelector('[data-m^="a_"]'),w=r.querySelector('[data-m^="w_"]');if(!a||!w)return;const on=/combo|double/.test(a.value);w.style.visibility=on?'visible':'hidden';if(!on)w.value='';const t=r.querySelector('[data-m^="t_"]');if(t)t.disabled=!a.value;r.style.opacity=a.value?1:.6})}
+const OLF=['the A gap','the B gap','the C gap','the D gap','the man on him'],OLB=['PST','PSG','C','BSG','BST'],RAIM=[['the midline of the center (inside zone)','the midline of the center'],['the inside leg of the TE (wide / outside zone)','the inside leg of the TE'],['the inside leg of the 2nd puller (gap)','the inside leg of the 2nd puller']];
+function rbRow(id,who,te){return `<tr><td>${who}</td><td>${mSel('a_'+id,OLA.map(a=>a[0]),'—')}</td><td>${mSel('w_'+id,OLB.map(k=>'with the '+k),'—')} ${mSel('f_'+id,OLF,'from…')}</td><td>${mSel('t_'+id,OLT,'(no target)')}</td><td>${te?'<button type="button" class="btn" data-rbx style="min-height:28px;padding:2px 8px">×</button>':''}</td></tr>`}
+function rbSync(box){box.querySelectorAll('.rbt tr').forEach(r=>{const a=r.querySelector('[data-m^="a_"]'),w=r.querySelector('[data-m^="w_"]');if(!a||!w)return;const on=/combo|double/.test(a.value),fr=r.querySelector('[data-m^="f_"]');w.style.visibility=on?'visible':'hidden';if(!on)w.value='';if(fr){fr.style.display=on?'':'none';if(!on)fr.value=''}const t=r.querySelector('[data-m^="t_"]');if(t)t.disabled=!a.value;r.style.opacity=a.value?1:.6})}
 const MP=['X','Z','H','Y','M','A','F','B','T','Q'],MOL=['LT','LG','C','RG','RT'],SIDES=['left','right','field','boundary'];
 const mSel=(id,opts,ph)=>`<select data-m="${id}" style="max-width:100%">${ph?`<option value="">${ph}</option>`:''}${opts.map(o=>`<option>${o}</option>`).join('')}</select>`;
 const mIn=(id,ph,w)=>`<input type="text" data-m="${id}" placeholder="${ph}" style="width:${w||140}px">`;
@@ -159,19 +161,19 @@ const MAD={
   <button type="button" class="btn" id="rb_addte" style="min-height:32px;padding:4px 10px">+ Add TE</button> <span class="note">Leave a rule blank to skip that blocker. PS = playside (the side the run goes), BS = backside. Gaps are playside: C gap = 1st man outside the tackle; 2nd level C gap = 1st 2nd-level player outside the tackle.</span></div>`,
   f:v=>{const aim=v.aimx||(RAIM.find(a=>a[0]===v.aim)||[])[1]||'the hole';let o=`${v.sch} to the ${v.poa}. ${v.rb} aims at ${aim}.${v.read?' Read '+v.read+'.':''}`;
    const rows=[...OLB.map(k=>[k,k]),...Object.keys(v).filter(k=>/^p_te\d+$/.test(k)).map(k=>[v[k],k.slice(2)])];
-   rows.forEach(([who,id])=>{const a=OLA.find(x=>x[0]===v['a_'+id]);if(!who||!a)return;const w=/combo|double/.test(a[0])&&v['w_'+id]?' '+v['w_'+id]:'',tg=v['t_'+id]?((a[1]&&w)?' '+a[1]+' ':' ')+v['t_'+id]:'';o+=` ${who} ${a[0]}${w}${tg}.`});return o},
-  after:(box,pv,t)=>{let n=0;const add=(who,a,w,tg)=>{const id='te'+(n++),tb=box.querySelector('#rb_te');tb.insertAdjacentHTML('beforeend',rbRow(id,mSel('p_'+id,teLet()),1));const r=tb.lastElementChild,set=(k,x)=>{const e=r.querySelector(`[data-m="${k}_${id}"]`);if(e&&x)e.value=x};set('p',who);set('a',a);set('w',w);set('t',tg);rbSync(box);pv()};
+   rows.forEach(([who,id])=>{const a=OLA.find(x=>x[0]===v['a_'+id]);if(!who||!a)return;const cb=/combo|double/.test(a[0]),w=cb&&v['w_'+id]?' '+v['w_'+id]:'',fr=cb&&v['f_'+id]?' from '+v['f_'+id]:'',tg=v['t_'+id]?((a[1]&&(w||fr))?' '+a[1]+' ':' ')+v['t_'+id]:'';o+=` ${who} ${a[0]}${w}${fr}${tg}.`});return o},
+  after:(box,pv,t)=>{let n=0;const add=(who,a,w,tg,fr)=>{const id='te'+(n++),tb=box.querySelector('#rb_te');tb.insertAdjacentHTML('beforeend',rbRow(id,mSel('p_'+id,teLet()),1));const r=tb.lastElementChild,set=(k,x)=>{const e=r.querySelector(`[data-m="${k}_${id}"]`);if(e&&x)e.value=x};set('p',who);set('a',a);set('w',w);set('f',fr);set('t',tg);rbSync(box);pv()};
    box.querySelector('#rb_addte').onclick=()=>add(teLet()[0]);
    box.addEventListener('click',e=>{const x=e.target.closest('[data-rbx]');if(x){x.closest('tr').remove();pv()}});
    box.addEventListener('change',e=>{if(e.target.dataset.m==='sch'){const a=box.querySelector('[data-m=aim]');if(a&&!box.querySelector('[data-m=aimx]').value)a.value=/Gap/.test(e.target.value)?RAIM[2][0]:RAIM[0][0]}rbSync(box)});
-   const m=String((t&&t.meaning)||'');let q;
+   const m=String((t&&t.meaning&&(typeof t.meaning==='string'?t.meaning:t.meaning.text))||'');let q;
    if((q=m.match(/(Zone|Gap) scheme to the ([a-z ]+?)\.\s+([TBQ]) aims at (.+?)\./i))){const sv=(k,x)=>{const e=box.querySelector(`[data-m=${k}]`);if(e)e.value=x};sv('sch',q[1][0].toUpperCase()+q[1].slice(1).toLowerCase()+' scheme');sv('poa',q[2].toLowerCase());sv('rb',q[3].toUpperCase());const ai=RAIM.find(a=>a[1]===q[4]);if(ai)sv('aim',ai[0]);else{sv('aim','');sv('aimx',q[4])}
     const rd=m.match(/Read (.+?)\./);if(rd)sv('read',rd[1])}
    else{const a=box.querySelector('[data-m=aim]');if(a)a.value=RAIM[0][0]}
    const ACT=OLA.map(a=>a[0].replace(/ /g,'\\s+')).sort((a,b)=>b.length-a.length).join('|');
-   m.split(/\.\s+|\.$/).forEach(sn=>{const r=sn.trim().match(new RegExp('^(PST|PSG|C|BSG|BST|[A-Z])\\s+('+ACT+')(?:\\s+(with the \\w+))?(?:\\s+to)?(?:\\s+(.+))?$'));if(!r)return;
-    const a=OLA.find(x=>new RegExp('^'+x[0].replace(/ /g,'\\s+')+'$').test(r[2]))[0],tg=r[4]&&OLT.includes(r[4])?r[4]:'';
-    if(OLB.includes(r[1])){const s=(k,x)=>{const e=box.querySelector(`[data-m="${k}_${r[1]}"]`);if(e&&x)e.value=x};s('a',a);s('w',r[3]);s('t',tg)}else if(teLet().includes(r[1]))add(r[1],a,r[3],tg)});
+   m.split(/\.\s+|\.$/).forEach(sn=>{const r=sn.trim().match(new RegExp('^(PST|PSG|C|BSG|BST|[A-Z])\\s+('+ACT+')(?:\\s+(with the \\w+))?(?:\\s+from\\s+(the [ABCD] gap|the man on him))?(?:\\s+to)?(?:\\s+(.+))?$','i'));if(!r)return;
+    const a=OLA.find(x=>new RegExp('^'+x[0].replace(/ /g,'\\s+')+'$').test(r[2]))[0],tg=r[5]&&OLT.find(o=>o.toLowerCase()===r[5].toLowerCase())||'',fr=r[4]?OLF.find(o=>o.toLowerCase()===r[4].toLowerCase())||'':'',wt=r[3]?'with the '+r[3].split(/\s+/).pop().toUpperCase():'';
+    if(OLB.includes(r[1])){const s=(k,x)=>{const e=box.querySelector(`[data-m="${k}_${r[1]}"]`);if(e&&x)e.value=x};s('a',a);s('w',wt);s('f',fr);s('t',tg)}else if(teLet().includes(r[1]))add(r[1],a,wt,tg,fr)});
    rbSync(box)}},
  tag:{h:'What it changes and on which plays',b:()=>`${mIn('who','who, e.g. #2 or Y',90)} ${mIn('chg','what changes, e.g. runs a seam instead',240)} on ${mSel('on',['pass plays','run plays','run and pass plays'])}.`,
   f:v=>`${v.who?v.who+' ':''}${v.chg}${v.chg?' ':''}on ${v.on}.`},
