@@ -391,14 +391,15 @@ function qbPreview(){const c=JSON.parse(JSON.stringify(d)),o=quickO(QB,c),el=doc
 /* Checklist under the type bar: one pill per thing this play needs; green once the typing or the chips fill it */
 function pillsHtml(c){if(!c){c=JSON.parse(JSON.stringify(d));quickO(QB,c)}const mg=MGR()&&edit===null,r=c.result,P=(ok,txt,lab)=>`<span class="qp ${ok?'ok':''}">${esc2(ok?txt:lab)}</span>`,o=n=>n+(['th','st','nd','rd'][n]||'th');
  const RL={COMP:'Complete',INC:'Incomplete',RUSH:'Rush',SCRAM:'Scramble',SACK:'Sack',PEN:'Penalty',INT:'INT',FUM:'Fumble'};
+ const L=x=>(x||[]).filter(t=>!c.autoT||t!==c.autoT),ft=L(c.ftags),tg=L(c.tags),nr=['RUSH','FUM','SACK','SCRAM','PEN'];
  let h=P(c.down&&c.dist,c.down?o(c.down)+' & '+c.dist:'','Down & dist')+P(c.f!=null,'Ball '+ylFmt(c.f),'Ball on')+P(c.hash,(c.hash||'')+' hash','Hash');
  if(mg)h+=P(c.ptype,c.ptype==='pass'?'Pass':'Run','Run / pass');
- else h+=P(c.formation,c.formation||'','Formation')+P(c.owc||c.call,c.owc||c.call||'','Play');
+ else{h+=P(ft.length,ft.join(' '),'Form tag')+P(c.motion,c.motion||'','Motion')+P(c.formation,c.formation||'','Formation')+P(tg.length,tg.join(' '),'Tags')+P(c.owc||c.call,c.owc||c.call||'','Play')}
  h+=P(r,RL[r]||r||'','Result');
  if(!['INC','INT'].includes(r))h+=P(r&&c.gain!=null,(c.gain>0?'+':'')+c.gain+' yds','Yards');
- if(['COMP','INC','INT','SACK','SCRAM'].includes(r))h+=P(c.passer,'QB #'+c.passer,'Passer');
- if(r==='COMP')h+=P(c.player,'To #'+c.player,'Receiver');
- if(r==='RUSH')h+=P(c.player,'#'+c.player,'Ball carrier');
+ if(c.ptype==='pass'||['COMP','INC','INT','SACK','SCRAM'].includes(r))h+=P(c.passer,'QB #'+c.passer,'Passer');
+ if(!['SACK','SCRAM','PEN'].includes(r)){const pl=['RUSH','FUM'].includes(r)?'Ball carrier':r==='COMP'?'Receiver':'Player';h+=P(c.player,pl.replace('Ball carrier','Carrier')+' #'+c.player,pl)}
+ if(!mg&&!nr.includes(r))h+=P(c.target,'Route '+(c.target||''),'Target');
  return h}
 /* The play as typed text, so a play opened from the log can be fixed in the type bar */
 function playText(p){const W=x=>x?String(x):'',res={COMP:'comp',INC:'inc',RUSH:'rush',SCRAM:'scramble',SACK:'sack',PEN:'pen',INT:'int',FUM:'fumble'}[p.result]||'';
