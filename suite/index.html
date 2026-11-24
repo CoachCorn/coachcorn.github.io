@@ -49,7 +49,7 @@ button,input{font:inherit;color:var(--tx)}
 .tile .dot{position:absolute;top:10px;right:12px;background:var(--warn);color:#2a1e00;font-size:11px;font-weight:800;border-radius:9px;padding:2px 8px}
 .tile.soon{opacity:.6}.tile.soon .go{display:none}
 .tile .tag{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--mut);border:1px solid var(--line);border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:middle}
-#syncline{margin:22px auto 0;display:flex;align-items:center;justify-content:center;gap:8px;color:var(--mut);font-size:13px;flex-wrap:wrap}
+#syncline{margin:22px auto 0;display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--mut);font-size:13px}#syncline .sl1{display:flex;align-items:center;gap:8px}#syncline .sl2{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
 .swit{position:relative;display:inline-grid;grid-template-columns:1fr 1fr;margin-top:12px;padding:3px;border-radius:999px;background:#0b1118;border:1px solid var(--line);min-width:230px}
 .swit button{position:relative;z-index:1;border:0;background:none;color:var(--mut);font-weight:800;font-size:12px;letter-spacing:.08em;text-transform:uppercase;padding:9px 14px;min-height:36px;border-radius:999px;transition:color .2s}
 .swit button.on{color:#fff}
@@ -310,12 +310,12 @@ function renderHome(){const s=SUITESYNC.status(),n=reviewCount(),ai=almInfo(),ng
  $('tiles').innerHTML=(SIDE==='D'?DTOOLS:TOOLS).map(t=>{const[c,svg]=IC[t.id];return`<button class="tile ${t.soon?'soon':''}" data-t="${t.id}"><span class="ic" style="background:${c}22;color:${c}">${svg}</span><span class="tx"><b>${t.name}${t.soon?'<span class="tag">SOON</span>':''}</b><span class="d">${desc(t)}</span></span><span class="go">›</span>${t.id==='glossary'&&n?`<span class="dot">${n}</span>`:''}</button>`}).join('');
  const ago=s.last?Math.round((Date.now()-s.last)/60000):null,cls=!s.signedIn?'':s.busy?'busy':s.error?'bad':'ok';
  const txt=s.signedIn?(s.busy?'Syncing…':s.error?esc(s.error):'Synced'+(ago==null?'':ago===0?' just now':' '+ago+' min ago'))+(navigator.onLine?'':' · offline'):'This device only · not syncing';
- $('syncline').innerHTML=`<span class="sd ${cls}"></span><span>${txt}</span><button id="syncbtn">${s.signedIn?'Sync':'Sign in'}</button><button id="setbtn">Settings</button>`;
+ $('syncline').innerHTML=`<div class="sl1"><span class="sd ${cls}"></span><span>${txt}</span></div><div class="sl2"><button id="syncbtn">Account</button><button id="setbtn">Settings</button></div>`;
  $('syncbtn').onclick=signInModal;$('setbtn').onclick=toSettings;
  document.querySelectorAll('[data-side]').forEach(b=>{b.classList.toggle('on',b.dataset.side===SIDE);b.setAttribute('aria-selected',b.dataset.side===SIDE);b.onclick=()=>setSide(b.dataset.side)});$('swit').classList.toggle('d',SIDE==='D');
  const tk=themeKey(),T=tk&&THEMES[tk],H=$('home');H.classList.toggle('th',!!T);
  if(T){['t1','t1a','t2','t2ink'].forEach(k=>H.style.setProperty('--'+k,T[k]));$('pn2').innerHTML=esc(T.school)+' <span>'+esc(T.sub)+'</span>';$('facts').innerHTML=(T.facts||[]).map(f=>`<span>${esc(f)}</span>`).join('');$('dt2').textContent=$('psub').textContent;DEMOP=!s.signedIn&&tk==='demo';const own=(s.signedIn&&tk===s.program)||DEMOP,P=own?picsFor(tk):null;$('col').innerHTML=collage(T,P||{})+(HPEDIT&&own?'<div class="phnote">Tap a spot to choose, move, zoom or remove its picture · Done when finished</div>':'');$('col').classList.toggle('edit',HPEDIT&&own);
-  if(own){const b=document.createElement('button');b.id='phbtn';b.textContent=HPEDIT?'Done':'Photos';b.onclick=()=>{HPEDIT=!HPEDIT;renderHome()};$('syncline').insertBefore(b,$('setbtn'));if(!P&&!DEMOP)homePics()}
+  if(own){const b=document.createElement('button');b.id='phbtn';b.textContent=HPEDIT?'Done':'Photos';b.onclick=()=>{HPEDIT=!HPEDIT;renderHome()};$('setbtn').parentNode.insertBefore(b,$('setbtn'));if(!P&&!DEMOP)homePics()}
   $('stats2').appendChild($('week'));const L=$('left2');L.appendChild($('swit'));L.appendChild($('tiles'));L.appendChild($('syncline'))}
  else{const w=document.querySelector('.wrap');w.prepend($('tiles'));w.prepend($('week'));w.appendChild($('syncline'));document.querySelector('.hero').appendChild($('swit'))}}
 function setSide(v){SIDE=v;try{localStorage.setItem('suite_side',v)}catch(e){}renderHome()}
