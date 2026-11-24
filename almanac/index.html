@@ -676,7 +676,7 @@ function parseScout(g){const hi=findHeader(g),H={};(g[hi]||[]).forEach((c,i)=>{c
  return{blocks:blocks.filter(b=>b.rows.length),skipped,zoneMis,zoneChk}}
 function yardF(v){const s=cellS(v);if(!s)return null;const n=parseFloat(s.replace('+',''));if(isNaN(n)||n===0)return null;if(n<0)return Math.min(50,-n);return n>=50?50:100-n}
 /* Which scout: one loaded on this game (older games), else the program's saved scout for this opponent (synced, shared with the Gameplan) */
-function scOf(g){g=g||G();if(!g)return null;if(g.scout&&g.scout.rows&&g.scout.rows.length)return g.scout;const x=window.GSCOUT&&GSCOUT.get(g.opp);return x?{name:x.label||x.name,rows:x.rows,src:x.src,saved:true}:null}
+function scOf(g){g=g||G();if(!g)return null;if(g.scout&&g.scout.rows&&g.scout.rows.length)return g.scout;const x=window.GSCOUT&&GSCOUT.get(g.opp);if(x)return{name:x.label||x.name,rows:x.rows,src:x.src,saved:true};if(!SIGNED&&window.GSCOUT){const m=GSCOUT.demo();return{name:m.name,rows:m.rows,src:'demo'}}return null}
 /* --- predict: formation + down & distance + field zone, falling back until at least SC_MIN plays.
    Before a formation is typed or picked: hash + field zone (+ down & distance) --- */
 const hOf=x=>String(x||'').trim().charAt(0).toUpperCase();
