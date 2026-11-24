@@ -204,18 +204,31 @@
   await syncDoc(s,list,'dgameplan',()=>{const g=lsGet(DGK);if(!g||!Array.isArray(g.plans))return null;if(!g.plans.length&&!(g.deleted||[]).length)return null;return{plans:g.plans,deleted:g.deleted||[]}},
    m=>{const g=lsGet(DGK)||{v:1,plans:[],cur:''};g.plans=m.plans;g.deleted=m.deleted;if(!g.plans.find(p=>p.id===g.cur))g.cur=g.plans[0]?g.plans[0].id:'';lsPut(DGK,g);changed=true},mergeDPlans);
   if(changed)tell({dgameplan:'changed'})}
+/* Offense-side opponent scouts (the Gameplan's and Almanac's predicted defense): one document per opponent,
+    newest save wins, deletions stick. Same rules as the defensive offense scouts above. */
+ async function syncGScouts(s,list){let changed=false;const GK='gscout_v1_'+((st().program)||'deer-creek'),G0=lsGet(GK)||{opps:{}},names=new Map(Object.keys(G0.opps||{}).map(n=>[slug(n),n]));
+  for(const n of Object.keys(G0.del||{}))names.set(slug(n),n);
+  const wr=m=>{const o=lsGet(GK)||{opps:{},del:{}};o.opps=o.opps||{};
+   if(m.deleted){delete o.opps[m.name];(o.del=o.del||{})[m.name]=m.upd||0}else{o.opps[m.name]=m;if(o.del)delete o.del[m.name]}
+   lsPut(GK,o);changed=true};
+  const keys=new Set([...names.keys()]);for(const d of list)if(d.key.startsWith('gscout/'))keys.add(d.key.slice(7));
+  for(const k of keys){const name=names.get(k);
+   await syncDoc(s,list,'gscout/'+k,()=>{if(!name)return null;const o=lsGet(GK)||{opps:{}},e=(o.opps||{})[name],dl=(o.del||{})[name];
+     if(e&&(!dl||(e.upd||0)>=dl))return Object.assign({},e,{name});if(dl)return{name,deleted:true,upd:dl};return null},
+    wr,(a,b)=>((b.upd||0)>(a.upd||0)?b:a))}
+  if(changed)tell({gscout:'changed'})}
  /* each part on its own, so one failure (say, a server that has not been updated yet) never blocks the rest */
  async function syncDefense(s,list){let err=null;for(const f of [syncDefGames,syncScouts,syncDefPlans]){try{await f(s,list)}catch(e){err=err||e}}
   if(err)throw new Error('Defensive data did not sync: '+err.message)}
 
  async function syncNow(){const s0=st();if(busy||!s0.token||!(s0.exp>Date.now())||!navigator.onLine)return emit();busy=true;emit();
   try{const s=st();const lr=await call('GET','/docs');if(lr.status!==200)throw new Error(lr.data.error||'Server error');
-   const list=lr.data.docs||[];await syncGlossary(s,list);await syncGames(s,list);await syncSchedule(s,list);await syncGameplan(s,list);await syncFilm(s,list);let de=null;try{await syncDefense(s,list)}catch(e){de=e.message}
+   const list=lr.data.docs||[];await syncGlossary(s,list);await syncGames(s,list);await syncSchedule(s,list);await syncGameplan(s,list);await syncFilm(s,list);let de=null;try{await syncGScouts(s,list)}catch(e){de='Scouts did not sync: '+e.message}try{await syncDefense(s,list)}catch(e){de=e.message}
    const x=st();Object.assign(x,{glRev:s.glRev,glSig:s.glSig,games:s.games,gv:s.gv,schRev:s.schRev,schH:s.schH,gpRev:s.gpRev,gpH:s.gpH,film:s.film,m:s.m,last:Date.now(),error:de});put(x)}
   catch(e){const x=st();x.error=e.message||'Sync failed';put(x)}
   finally{busy=false;emit()}}
  function soon(ms=4000){clearTimeout(timer);timer=setTimeout(syncNow,ms)}
- function start(){addEventListener('online',()=>soon(1000));addEventListener('storage',e=>{if(e.key===ALM||(e.key&&(e.key.indexOf('glossary_v1_')===0||e.key.indexOf('schedule_v1_')===0||e.key.indexOf('gameplan_v1_')===0||e.key.indexOf('dgameplan_v1_')===0||e.key.indexOf('dalmanac_v1_')===0||e.key.indexOf('oscout_v1_')===0||e.key.indexOf('fr:')===0)))soon()});
+ function start(){addEventListener('online',()=>soon(1000));addEventListener('storage',e=>{if(e.key===ALM||(e.key&&(e.key.indexOf('glossary_v1_')===0||e.key.indexOf('schedule_v1_')===0||e.key.indexOf('gameplan_v1_')===0||e.key.indexOf('dgameplan_v1_')===0||e.key.indexOf('dalmanac_v1_')===0||e.key.indexOf('oscout_v1_')===0||e.key.indexOf('gscout_v1_')===0||e.key.indexOf('fr:')===0)))soon()});
   setInterval(()=>soon(0),60000);soon(3000)}
  root.SUITESYNC={mergeGame,mergeRows,status,login,setup,signOut,syncNow,start,onChange:f=>listeners.push(f)};
 })(window);
