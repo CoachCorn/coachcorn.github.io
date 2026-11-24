@@ -55,7 +55,7 @@ input[type=search]{background:var(--card);border:1px solid var(--line);border-ra
 #toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#000c;padding:10px 16px;border-radius:10px;z-index:20;display:none}
 </style></head><body>
 <header><h1>Defensive Almanac</h1><select id="gsel"></select><button class="btn" id="ngame">+ Game</button>
- <span class="mut">Scout</span><select id="ssel"></select><span style="flex:1"></span><button class="btn" id="newdrive">New Drive</button><button class="btn" id="qtr">QTR</button><button class="btn" id="half">Halftime</button><button class="btn" id="noplay" title="Timeout or any clip that is not a play, so the film lines up">No play</button><button class="btn" id="undo">Undo last</button><button class="btn" id="exp">Export CSV</button></header>
+ <span class="mut">Scout</span><select id="ssel"></select><span style="flex:1"></span><button class="btn" id="newdrive">New Drive</button><button class="btn" id="qtr">QTR</button><button class="btn" id="half">Halftime</button><button class="btn" id="noplay" title="Timeout or any clip that is not a play, so the film lines up">No play</button><button class="btn" id="undo">Undo last</button><button class="btn" id="tofilm" title="Send this game to Film Room so the defense clips line up with these plays">→ Film Room</button><button class="btn" id="exp">Export CSV</button></header>
 <main><div id="ent"></div><div class="panel" id="side"></div></main>
 <div id="toast"></div>
 <script src="../shared/glossary.js"></script>
@@ -450,6 +450,9 @@ function csv(g){const q=v=>{const s=v==null?'':String(v);return /[",\n]/.test(s)
 $('exp').onclick=()=>{const g=G();if(!g||!PL(g).length){toast('No plays to export');return}
  const blob=new Blob([csv(g)],{type:'text/csv'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=(g.opp||'game').replace(/[^A-Za-z0-9]+/g,'_')+'_defense_'+(g.date||'').slice(0,10)+'.csv';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)};
 
+$('tofilm').onclick=()=>{const g=G();if(!g||!PL(g).length){toast('No plays to send');return}
+ if(window.parent===window){toast('Open the Defensive Almanac inside the suite to send to Film Room');return}
+ window.parent.postMessage({toFilmD:{opp:g.opp||'',id:g.id,plays:JSON.parse(JSON.stringify(g.plays))}},location.origin);toast('Sent '+(g.opp||'this game')+' to the Film Room')};
 addEventListener('storage',e=>{if(e.key===ST.KEY){renderEntry()}if(e.key==='glossary_v1_'+PROGRAM){DV.reload();renderEntry()}});
 load();if(!D.games.length&&ST.active()){const n=ST.active();D.games.push({id:'d'+Date.now(),opp:n,date:new Date().toISOString(),scout:n,pkg:'',plays:[]});D.cur=D.games[0].id;save()}
 resume();FOC="sit";renderAll();

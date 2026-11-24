@@ -269,28 +269,39 @@ function parseAlm(rows){
 }
 
 /* ================= align almanac rows to clips (sequence alignment on the spot) ================= */
-function align(){
-  const live=S.plays.filter(p=>(!p.skip||p.skipAlm)&&p.result!=='Timeout');
-  S.plays.forEach(p=>p._alm=null);
-  if(!S.alm.length){S.plays.forEach(p=>{if(p.skipAlm){p.skip=false;p.skipAlm=false}});return}
-  const A=S.alm, n=live.length, m=A.length, GAP=6;
-  const cost=(p,a)=>{ if(a.noplay)return 1; if(a.dn==null)return 9; const fy=p.film.yl; if(fy==null||a.yl==null)return 3;
-    const d=Math.abs(pos(fy)-pos(a.yl)), d2=Math.abs(pos(-fy)-pos(a.yl))+2; return Math.min(Math.min(d,d2),25)/2.5 };
-  // anchors: coach-set almanac rows split the problem into segments
-  const anchors=[];live.forEach((p,i)=>{if(p.almRow){const j=A.findIndex(a=>a.i===+p.almRow);if(j>=0)anchors.push([i,j])}});
-  const seg=(i0,i1,j0,j1)=>{ // align live[i0..i1) with A[j0..j1)
-    const N=i1-i0,M=j1-j0,D=Array.from({length:N+1},()=>new Float64Array(M+1)),B=Array.from({length:N+1},()=>new Int8Array(M+1));
+// Which side of the ball a clip is: O = our offense, D = our defense (their ball), K = kick, '' = not a snap.
+// Clips the AI set aside before the defense side existed carry it in their note.
+function sideOf(p){if(p.side)return p.side==='X'?'':p.side;if(!p.skip)return 'O';const n=p.note||'';
+  if(/other team has the ball/i.test(n))return 'D';if(/kick/i.test(n))return 'K';return ''}
+// Align clips with rows. Runs backwards so that, when the film gives no help (no spots yet), rows fill clips from the start
+// (or from an anchor) forward instead of piling up on the last clips.
+function seqAlign(live,A,cost,anchorKey,put){
+  const GAP=6,n=live.length,m=A.length;
+  const anchors=[];live.forEach((p,i)=>{if(p[anchorKey]){const j=A.findIndex(a=>a.i===+p[anchorKey]);if(j>=0)anchors.push([i,j])}});
+  const seg=(i0,i1,j0,j1)=>{const N=i1-i0,M=j1-j0;if(!N||!M)return;const X=k=>live[i1-1-k],Y=k=>A[j1-1-k];
+    const D=Array.from({length:N+1},()=>new Float64Array(M+1)),B=Array.from({length:N+1},()=>new Int8Array(M+1));
     for(let i=1;i<=N;i++){D[i][0]=i*GAP;B[i][0]=1} for(let j=1;j<=M;j++){D[0][j]=j*GAP;B[0][j]=2}
-    for(let i=1;i<=N;i++)for(let j=1;j<=M;j++){const a=D[i-1][j-1]+cost(live[i0+i-1],A[j0+j-1]),b=D[i-1][j]+GAP,c=D[i][j-1]+GAP;
+    for(let i=1;i<=N;i++)for(let j=1;j<=M;j++){const a=D[i-1][j-1]+cost(X(i-1),Y(j-1)),b=D[i-1][j]+GAP,c=D[i][j-1]+GAP;
       if(a<=b&&a<=c){D[i][j]=a;B[i][j]=0}else if(b<=c){D[i][j]=b;B[i][j]=1}else{D[i][j]=c;B[i][j]=2}}
-    let i=N,j=M;while(i>0||j>0){const t=B[i][j];if(i>0&&j>0&&t===0){live[i0+i-1]._alm=A[j0+j-1];i--;j--}else if(i>0&&(j===0||t===1))i--;else j--}
-  };
+    let i=N,j=M;while(i>0||j>0){const t=B[i][j];if(i>0&&j>0&&t===0){put(X(i-1),Y(j-1));i--;j--}else if(i>0&&(j===0||t===1))i--;else j--}};
   let pi=0,pj=0;
-  for(const [ai,aj] of anchors){ if(ai<pi||aj<pj)continue; seg(pi,ai,pj,aj); live[ai]._alm=A[aj]; pi=ai+1; pj=aj+1; }
+  for(const [ai,aj] of anchors){if(ai<pi||aj<pj)continue;seg(pi,ai,pj,aj);put(live[ai],A[aj]);pi=ai+1;pj=aj+1}
   seg(pi,n,pj,m);
-  // clips matched to an Almanac "No play" row (timeouts) are set aside automatically; unmatched ones come back
-  live.forEach(p=>{const np=p._alm&&p._alm.noplay;if(np&&!p.skip){p.skip=true;p.skipAlm=true}else if(!np&&p.skipAlm){p.skip=false;p.skipAlm=false}});
 }
+const spotCost=(fy,ay)=>{if(fy==null||ay==null)return 3;const d=Math.abs(pos(fy)-pos(ay)),d2=Math.abs(pos(-fy)-pos(ay))+2;return Math.min(Math.min(d,d2),25)/2.5};
+function align(){
+  const live=S.plays.filter(p=>(!p.skip||p.skipAlm)&&p.result!=='Timeout'&&sideOf(p)!=='D'&&sideOf(p)!=='K');
+  S.plays.forEach(p=>{p._alm=null;p._dalm=null});
+  if(S.alm.length){
+    seqAlign(live,S.alm,(p,a)=>a.noplay?1:a.dn==null?9:spotCost(p.film.yl,a.yl),'almRow',(p,a)=>{p._alm=a});
+    // clips matched to an Almanac "No play" row (timeouts) are set aside automatically; unmatched ones come back
+    live.forEach(p=>{const np=p._alm&&p._alm.noplay;if(np&&!p.skip){p.skip=true;p.skipAlm=true}else if(!np&&p.skipAlm){p.skip=false;p.skipAlm=false}});
+  }else S.plays.forEach(p=>{if(p.skipAlm){p.skip=false;p.skipAlm=false}});
+  alignD();
+}
+// Our defense: clips marked D line up with the defensive Almanac's plays (its timeouts / no plays are left out).
+function alignD(){const rows=(S.dalm||[]).filter(r=>!r.noplay);if(!rows.length)return;
+  seqAlign(S.plays.filter(p=>sideOf(p)==='D'),rows,(p,a)=>spotCost(p.dyl,a.yl),'dalmRow',(p,a)=>{p._dalm=a})}
 
 /* ================= reconciliation + engine ================= */
 const isEff=(dn,dist,g)=>dn===1&&dist>=10?g>=4:dn===2?g>=dist/2:g>=dist;
@@ -388,7 +399,7 @@ function renderTable(){
     const cls=['play'];if(i===S.sel)cls.push('sel');if(p.skip)cls.push('skip');if(c.drive)cls.push('drive');if(rev)cls.push('flag');
     const src=p.src==='human'?'<span class="pill coach">coach</span>':p.conf?`<span class="pill ${p.conf==='low'?'lo':'hi'}">AI ${p.conf}</span>`:'';
     h+=`<tr class="${cls.join(' ')}" data-i="${i}"><td class="n">${p.n}${p.h2?' <span class="pill">2H</span>':''}</td><td class="n">${ylTxt(c.yl)}</td><td>${esc(p.hash)}</td><td class="n">${c.dn??''}</td><td class="n">${c.dist??''}</td><td class="n">${c.gn??''}</td>
-    <td>${p.skip?'Skip':esc(c.type||'')}</td><td>${esc((c.result||'')+(c.td?', TD':''))}</td><td>${c.eff||''}</td><td>${c.exp?'<span class="pill hi">YES</span>':''}</td>${OPP()?`<td>${esc(p.box)}</td><td>${esc(p.mof)}</td><td>${esc(p.cov)}</td><td class="n">${p.press??''}</td>`:`<td>${esc(c.call||'')}</td><td>${c.player?'#'+esc(c.player):''}</td>`}<td>${src}</td><td class="fl">${rev?'⚑':''}</td></tr>`});
+    <td>${(()=>{const sd=sideOf(p);return sd==='D'?'<span class="pill">D</span>'+(p._dalm?' '+esc(p._dalm.dn+'&'+p._dalm.dist):''):sd==='K'?'<span class="pill">K</span>':p.skip?'Skip':esc(c.type||'')})()}</td><td>${esc((c.result||'')+(c.td?', TD':''))}</td><td>${c.eff||''}</td><td>${c.exp?'<span class="pill hi">YES</span>':''}</td>${OPP()?`<td>${esc(p.box)}</td><td>${esc(p.mof)}</td><td>${esc(p.cov)}</td><td class="n">${p.press??''}</td>`:`<td>${esc(c.call||'')}</td><td>${c.player?'#'+esc(c.player):''}</td>`}<td>${src}</td><td class="fl">${rev?'⚑':''}</td></tr>`});
   $('#tableWrap').innerHTML=h+'</tbody></table>';
 }
 $('#tableWrap').onclick=e=>{const tr=e.target.closest('tr.play');tr&&select(+tr.dataset.i)};
@@ -416,7 +427,8 @@ function renderDetail(){const i=S.sel,p=S.plays[i];if(!p)return;const c=p.calc||
   <div class="bar"><label class="c"><input type="checkbox" id="td" ${p.td?'checked':''}>TD</label><label class="c"><input type="checkbox" id="nd" ${p.nd?'checked':''}>New drive</label>
    <label class="c"><input type="checkbox" id="h2" ${p.h2?'checked':''}>2nd half starts here</label><label class="c"><input type="checkbox" id="skip" ${p.skip?'checked':''}>Not a snap (skip)</label>
    <label class="c"><input type="checkbox" id="star" ${p.star?'checked':''}>Turned the tide</label></div>
-  ${OPP()?defEditor(p):almOpts}
+  ${OPP()?'':`<div class="bar"><span class="meta">Side</span>${seg('side',['Offense','Defense','Kick','Not a snap'],{O:'Offense',D:'Defense',K:'Kick'}[sideOf(p)]||(p.skip?'Not a snap':''))}</div>`}
+  ${OPP()?defEditor(p):sideOf(p)==='D'?dalmOpts(p):almOpts}
   <div class="calc"><div>Down<b>${c.dn??'–'}</b></div><div>Dist<b>${c.dist??'–'}</b></div><div>GN/LS<b>${c.gn??'–'}</b></div><div>Eff<b>${c.eff||'–'}</b></div><div>Expl<b>${c.exp||'NO'}</b></div></div>
   ${c.call?`<div class="note"><b>Almanac:</b> ${esc(c.call)}${c.player?' · #'+esc(c.player):''} · ${esc(p._alm?p._alm.result:'')}</div>`:''}
   ${c.flags&&c.flags.length?`<div class="flags">⚑ ${c.flags.map(esc).join('<br>⚑ ')}</div>`:''}
@@ -428,11 +440,17 @@ function renderDetail(){const i=S.sel,p=S.plays[i];if(!p)return;const c=p.calc||
   $('#ok').onclick=()=>{p.src='human';refresh();select(i+1)};
   const num=v=>v===''?null:+v;
   $('#yl').onchange=e=>edit({yl:num(e.target.value)});$('#gov').onchange=e=>edit({gainOverride:e.target.value});$('#be').onchange=e=>edit({ballEnd:num(e.target.value)});
-  ['td','nd','h2','skip','star'].forEach(k=>$('#'+k).onchange=e=>edit(k==='skip'?{skip:e.target.checked,skipAlm:false}:{[k]:e.target.checked},k==='star'));
+  ['td','nd','h2','skip','star'].forEach(k=>$('#'+k).onchange=e=>edit(k==='skip'?{skip:e.target.checked,skipAlm:false,side:e.target.checked?'X':'O'}:{[k]:e.target.checked},k==='star'));
   const ar=$('#almRow');if(ar)ar.onchange=e=>edit({almRow:e.target.value?+e.target.value:null},true);
-  $$('#detail .seg[data-f]').forEach(s=>s.onclick=e=>{const v=e.target.dataset.v;if(!v)return;const f=s.dataset.f;edit({[f]:p[f]===v?'':v})});
+  $$('#detail .seg[data-f]').forEach(s=>s.onclick=e=>{const v=e.target.dataset.v;if(!v)return;const f=s.dataset.f;
+    if(f==='side'){const k={Offense:'O',Defense:'D',Kick:'K','Not a snap':'X'}[v];edit({side:k,skip:k!=='O',skipAlm:false});return}
+    edit({[f]:p[f]===v?'':v})});
+  const dr=$('#dalmRow');if(dr)dr.onchange=e=>edit({dalmRow:e.target.value?+e.target.value:null},true);
   $$('#detail .frames img').forEach(im=>im.onclick=()=>{$('#zoom img').src=im.src;$('#zoom').style.display='flex'});
 }
+function dalmOpts(p){const rows=(S.dalm||[]).filter(r=>!r.noplay);if(!rows.length)return '<div class="note">Our defense. Send the game from the Defensive Almanac (→ Film Room) to line these clips up with its plays.</div>';
+  const a=p._dalm;return `<label class="f">Defensive Almanac row<select id="dalmRow"><option value="">Auto${a?' (row '+a.i+')':' (none)'}</option>${rows.map(r=>`<option value="${r.i}" ${+p.dalmRow===r.i?'selected':''}>${r.i}: ${r.dn??'-'}&${r.dist??'-'} ${esc(r.form||'')} ${esc(r.result)} ${r.gain>0?'+':''}${r.gain} @${ylTxt(r.yl)}</option>`).join('')}</select></label>
+  ${a?`<div class="note"><b>Defense:</b> ${esc([a.front,a.cov,a.press].filter(Boolean).join(' · ')||'no call logged')} · ${esc(a.form||'')} ${esc(a.call||'')} · ${esc(a.result)} ${a.gain>0?'+':''}${a.gain}${a.td?', TD':''}</div>`:''}`}
 function edit(ch,keepSrc){const p=S.plays[S.sel];Object.assign(p,ch);if(!keepSrc)p.src='human';refresh();renderDetail()}
 $('#zoom').onclick=()=>$('#zoom').style.display='none';
 document.addEventListener('keydown',e=>{if(TAB!=='tagger'||!G||!G.local||e.target.matches('input,select,textarea')||S.sel<0)return;const p=S.plays[S.sel],k=e.key.toLowerCase();
@@ -497,6 +515,7 @@ Reply with only JSON: {"snap":true,"play_type":"Pass","result":"Complete","carri
 const signed=(num,side,dir)=>{if(!num)return null;num=Math.max(1,Math.min(50,Math.round(num)));if(num===50||side==='mid')return 50;return side===dir?num:-num};
 async function aiTag(idx){
   if(!S.sample){toast('AI tagging is not available in this view');return}
+  if(S.aiCtl){toast('AI is already reading; wait for it or press Stop');return}
   const ctl=new AbortController();S.aiCtl=ctl;$('#aiStop').hidden=false;$('#aiAll').disabled=true;let done=0;
   for(const i of idx){if(ctl.signal.aborted)break;const p=S.plays[i];
     $('#aiStatus').textContent=`Reading clip ${p.n} (${done+1}/${idx.length})…`;
@@ -505,7 +524,10 @@ async function aiTag(idx){
       if(!OPP()&&fa.length){A0=await S.sample.json(promptA(fa),{modelTier:$('#tier').value,signal:ctl.signal,images:fa.map(f=>f.blob)});
         const poss=String(A0.possession||'').toLowerCase();
         if(['theirs','kick','none'].includes(poss)&&A0.confidence!=='low'){
-          Object.assign(p,{skip:true,conf:A0.confidence||'med',src:'ai',note:'Auto-skipped: '+({theirs:'other team has the ball (our defense)',kick:'kick / special teams',none:'no live play'}[poss])+(A0.note?' · '+A0.note:'')});
+          const dA=A0.direction==='screen_left'?'screen_left':'screen_right';
+          Object.assign(p,{skip:true,side:poss==='theirs'?'D':poss==='kick'?'K':'X',dyl:poss==='theirs'?signed(+A0.yard_number,A0.ball_side,dA):null,
+            hash:poss==='theirs'?(A0.hash==='middle'?'M':A0.hash==='near'?(dA==='screen_right'?'R':'L'):A0.hash==='far'?(dA==='screen_right'?'L':'R'):p.hash):p.hash,
+            conf:A0.confidence||'med',src:'ai',note:'Auto-skipped: '+({theirs:'other team has the ball (our defense, D)',kick:'kick / special teams (K)',none:'no live play'}[poss])+(A0.note?' · '+A0.note:'')});
           p._frames=fa.map(f=>({label:f.label,u:URL.createObjectURL(f.blob)}));done++;refresh();if(S.sel===i)renderDetail();continue}}
       const fb=await playSet(p);
       if(!fa.length&&!fb.length){p.conf='low';p.note="Couldn't pull frames";continue}
@@ -514,6 +536,7 @@ async function aiTag(idx){
       const fc=OPP()?await defSet(p):[];if(fc.length)p._frames.push(...fc.map(f=>({label:f.label,u:URL.createObjectURL(f.blob)})));
       const [A,B,Cd]=await Promise.all([(A0||S.sample.json(promptA(fa),{...opt,images:fa.map(f=>f.blob)})),S.sample.json(promptB(fb),{...opt,images:fb.map(f=>f.blob)}),fc.length?S.sample.json(promptC(fc),{...opt,images:fc.map(f=>f.blob)}):null]);
       if(p.src==='human')continue;
+      if(!OPP())p.side='O';
       const dir=A.direction==='screen_left'?'screen_left':'screen_right';
       const hash=A.hash==='middle'?'M':A.hash==='near'?(dir==='screen_right'?'R':'L'):A.hash==='far'?(dir==='screen_right'?'L':'R'):'';
       const sb=A.scoreboard&&A.scoreboard.down?A.scoreboard:null;
@@ -708,7 +731,7 @@ function mgRemove(ids){if(!ids.length)return;
   if(CUR&&ids.includes(CUR)){CUR=null;fillPicker();startPick()}else fillPicker();
   renderMg();toast(ids.length>1?'Deleted '+ids.length+' games':'Game deleted')}
 function show5012(){try{const A=JSON.parse(localStorage.getItem(SIGNED?'almanac_v1':'almanac_demo'));const v=A&&A.lists&&A.lists.show5012;return v==null?SIGNED:!!v}catch(e){return SIGNED}}
-const TABSETS={self:[['result','Game Result &amp; Why'],['fiftytwelve','50 / 12'],['stats','Stats'],['tagger','Film Tagger'],['hudl','Export to Hudl']],
+const TABSETS={self:[['result','Game Result &amp; Why'],['fiftytwelve','50 / 12'],['stats','Stats'],['defense','Defense'],['tagger','Film Tagger'],['hudl','Export to Hudl']],
   opp:[['overview','Their Defense'],['situation','By Situation'],['hurt','What Hurt Them'],['tagger','Film Tagger'],['hudl','Export to Hudl']]};
 function setTabs(){const set=TABSETS[G&&G.kind==='opp'?'opp':'self'].filter(t=>show5012()||t[0]!=='fiftytwelve');   // 50 / 12 is not part of the booth demo
   if(!set.some(t=>t[0]===TAB))TAB=set[0][0];
@@ -720,25 +743,25 @@ function pick(v){
   if(v.startsWith('emb:')){CUR=null;S.kind='self';G=EMB.games[v.slice(4)];render();return}
   openLocal(v.slice(4));render();
 }
-function openLocal(id,fresh,kind){CUR=id;S.kind=kind||(SAVED().find(g=>g.id===id)||{}).kind||'self';S.plays=[];S.alm=[];S.sel=-1;S.drv={};S.summary='';S.tideOff=[];
+function openLocal(id,fresh,kind){CUR=id;S.kind=kind||(SAVED().find(g=>g.id===id)||{}).kind||'self';S.plays=[];S.alm=[];S.dalm=[];S.sel=-1;S.drv={};S.summary='';S.tideOff=[];
   $('#clipStatus').textContent='';$('#almStatus').textContent='';
   let s=null;try{s=JSON.parse(localStorage.getItem(LS())||'null')}catch(e){}
   const c=(s&&s.cfg)||{};const set=(k,v)=>{$('#'+k).value=v??''};
   set('game',c.game);set('opp',c.opp);set('offTeam',c.offTeam);set('ourJersey',c.our);set('oppJersey',c.their);set('scoreUs',c.us);set('scoreThem',c.them);
   if(c.qbs)set('qbs',c.qbs.join(', '));if(c.rbs)set('rbs',c.rbs.join(', '));['goalEff','goalExp','expRun','expPass'].forEach(k=>{if(c[k])set(k,c[k])});
   if(s&&s.roster)$('#roster').value=s.roster;else if(!SIGNED&&window.DemoSeed){$('#roster').value=DemoSeed.rosterText();if(!c.qbs)set('qbs','7, 10');if(!c.rbs)set('rbs','22, 28, 34')}
-  if(s){if(s.kind)S.kind=s.kind;S.alm=s.alm||[];S.drv=s.drv||{};S.summary=s.summary||'';S.tideOff=s.tideOff||[];
+  if(s){if(s.kind)S.kind=s.kind;S.alm=s.alm||[];S.dalm=s.dalm||[];S.drv=s.drv||{};S.summary=s.summary||'';S.tideOff=s.tideOff||[];
     S.plays=(s.plays||[]).map(t=>{const p=newPlay(t.n);TAGK.forEach(k=>{if(t[k]!==undefined)p[k]=t[k]});return p});
-    if(S.alm.length)$('#almStatus').textContent=`${S.alm.length} almanac plays saved`;
+    if(S.alm.length)$('#almStatus').textContent=`${S.alm.length} almanac plays saved`;dalmStatus();
     if(S.plays.length)$('#clipStatus').textContent=`${S.plays.length} plays saved. Load the clips again to watch film or run AI tagging.`}
   $('#setupBox').open=fresh||!S.plays.length;
   G=buildG();
 }
-const TAGK=['yl','hash','type','result','td','nd','h2','gainOverride','skip','skipAlm','almRow','conf','src','note','star','carrier','ballEnd','film','box','mof','cov','press'];
+const TAGK=['side','dyl','dalmRow','yl','hash','type','result','td','nd','h2','gainOverride','skip','skipAlm','almRow','conf','src','note','star','carrier','ballEnd','film','box','mof','cov','press'];
 function mergeSaved(){ // new clips loaded: keep saved tags by clip number
   let s=null;try{s=JSON.parse(localStorage.getItem(LS())||'null')}catch(e){} if(!s||!s.plays)return;
   const by=new Map(s.plays.map(p=>[p.n,p]));let k=0;S.plays.forEach(p=>{const t=by.get(p.n);if(t){TAGK.forEach(x=>{if(t[x]!==undefined)p[x]=t[x]});k++}});if(k)toast('Kept saved tags for '+k+' plays')}
-function save(){if(!CUR)return;try{localStorage.setItem(FP+'upd:'+CUR,String(Date.now()));localStorage.setItem(LS(),JSON.stringify({kind:KIND(),cfg:CFG(),roster:$('#roster').value,alm:S.alm,drv:S.drv,summary:S.summary,tideOff:S.tideOff,
+function save(){if(!CUR)return;try{localStorage.setItem(FP+'upd:'+CUR,String(Date.now()));localStorage.setItem(LS(),JSON.stringify({kind:KIND(),cfg:CFG(),roster:$('#roster').value,alm:S.alm,dalm:S.dalm||[],drv:S.drv,summary:S.summary,tideOff:S.tideOff,
   plays:S.plays.map(p=>{const o={n:p.n};TAGK.forEach(k=>o[k]=p[k]);return o})}));
   const c=CFG(),sv=SAVED(),e=sv.find(g=>g.id===CUR);if(e){const lab=OPP()?'Opp scout: '+(c.opp||c.game||'new')+(c.offTeam?' vs '+c.offTeam:''):(c.game||c.opp||'New game')+(c.us!==''&&c.them!==''?` (${+c.us>+c.them?'W':+c.us<+c.them?'L':'T'} ${c.us}-${c.them})`:' (in progress)');
     if(e.label!==lab){e.label=lab;setSaved(sv);const o=$('#gamePick').querySelector(`option[value="loc:${CUR}"]`);if(o)o.textContent=lab}}}catch(e){}}
@@ -779,7 +802,7 @@ function buildG(){compute();const c=CFG(),R=rosterMap(),QB=new Set(c.qbs);
   const s=stats.full,ef=pct(s.effN,s.effD),ex=pct(s.explN,s.explD);
   const summary=S.summary||(plays.length?`${us!=null?`${TEAM} ${us}, ${c.opp||'opponent'} ${them}. `:''}Offense: ${s.snaps} snaps, ${s.yards} yards, ${ef}% efficient (goal ${c.goalEff}%), ${ex}% explosive (goal ${c.goalExp}%), ${s.third} on 3rd down. ${drives.filter(d=>d.result==='TD').length} TD drives in ${drives.length}.`:'No plays tagged yet. Open Film Tagger to load clips.');
   const nRev=S.plays.filter(needsReview).length;
-  return {id:CUR,local:true,clipBase:cloudBase(CUR),kind:KIND(),view:'staff',title:c.game||(TEAM+' vs '+(c.opp||'opponent')),opponent:c.opp||'Opponent',final:{us:us??'–',them:them??'–',result:res},
+  return {id:CUR,local:true,clipBase:cloudBase(CUR),kind:KIND(),dalm:(S.dalm||[]).map(r=>({...r})),view:'staff',title:c.game||(TEAM+' vs '+(c.opp||'opponent')),opponent:c.opp||'Opponent',final:{us:us??'–',them:them??'–',result:res},
     scoreTimeline:us!=null?[{when:'Final',us,them}]:[],goals:{eff:c.goalEff,expl:c.goalExp},plays,drives,stats,byDown,explosives,turningPoints,summary,
     why:autoWhy(plays,drives,s,c,R,QB),notes:[S.alm.length?'Tags: film plus almanac (down, distance and spot from the almanac; hash and checks from film).':'Tags: film only (opponent scout mode); down and distance are worked out from the spots.',
       nRev?`${nRev} plays still flagged for review in Film Tagger.`:'Review queue is clear.','"Plays that turned the tide" are picked automatically; select or clear "Turned the tide" on a play to change them.'],accuracy:null};
@@ -839,7 +862,7 @@ async function render(soft){
   $('#tw').hidden=!(TAB==='tagger'&&G&&G.local);
   if(TAB==='tagger'&&G&&G.local){$('#out').innerHTML='';renderTable();return}
   if(G&&G.local&&!soft)await(G.kind==='opp'?hydrateOpp():hydrate());
-  $('#out').innerHTML=!G?'':({result:renderResult,fiftytwelve:render5012,stats:renderStats,tagger:renderTaggerRO,hudl:renderHudl,overview:renderOppOverview,situation:renderOppSituation,hurt:renderOppHurt}[TAB])();wire();wireVids();
+  $('#out').innerHTML=!G?'':({result:renderResult,fiftytwelve:render5012,stats:renderStats,tagger:renderTaggerRO,hudl:renderHudl,defense:renderDefense,overview:renderOppOverview,situation:renderOppSituation,hurt:renderOppHurt}[TAB])();wire();wireVids();
   $('#hdrStats').textContent=G&&G.local?`${S.plays.length} clips · ${S.plays.filter(needsReview).length} need review`:'';
 }
 async function hydrate(){ // make clip URLs for the clips this tab shows
@@ -851,6 +874,7 @@ function wire(){
   $$('select[data-drv]').forEach(sl=>sl.onchange=()=>{S.drv[sl.dataset.drv]=sl.value;refresh()});
   $$('[data-tideoff]').forEach(b=>b.onclick=()=>{const c=+b.dataset.tideoff;S.tideOff=[...(S.tideOff||[]),c];const p=S.plays.find(q=>q.n===c);if(p)p.star=false;refresh();render()});
   const aw=$('#aiWhy');if(aw)aw.onclick=draftWhy;
+  $$('[data-goclip]').forEach(b=>b.onclick=()=>{TAB='tagger';render();select(+b.dataset.goclip)});
   const hs=$('#hStart');if(hs)wireHudl();
 }
 function tile(k,v,d,cls=''){return `<div class="tile"><span class="k">${k}</span><span class="v ${cls}">${v}</span>${d?`<span class="d">${d}</span>`:''}</div>`}
@@ -883,6 +907,26 @@ function render5012(){
   <div class="panel"><h3>Efficiency by down</h3><div class="tablewrap"><table><thead><tr><th>Down</th><th class="n">Eff</th><th class="n">Rate</th></tr></thead><tbody>${bd}</tbody></table></div><p class="sub" style="font-size:13px">Efficient: 1st and 10 gains 4+, 2nd down gains half the distance, 3rd and 4th down convert.</p></div></div>
   <h2>Explosive plays (${ex.length})</h2><div class="clips">${ex.map(t=>`<div class="clip good">${vid(t)}<div class="cap"><strong>${esc(t.title)}</strong><span class="meta">Clip ${t.clip} · ${esc(t.when)}</span>${t.note?`<span class="sub" style="font-size:13px">${esc(t.note)}</span>`:''}</div></div>`).join('')}</div></section>`;
 }
+/* ---------- Defense (our defense, from the Defensive Almanac) ---------- */
+const dEff=(dn,di,g)=>dn===1?g>=4:dn===2?g>=Math.ceil((di||10)/2):g>=(di||0);
+function renderDefense(){
+  const rows=(G.local?(S.dalm||[]):(G.dalm||[])).filter(r=>!r.noplay&&r.result!=='Penalty');
+  if(!rows.length)return `<div class="panel empty">No defensive plays for this game yet. In the Defensive Almanac, open this game and tap <b>→ Film Room</b>.</div>`;
+  const half=HALF==='h1'?rows.filter(r=>!r.h2):HALF==='h2'?rows.filter(r=>r.h2):rows;
+  const sum=l=>{const n=l.length,y=l.reduce((a,r)=>a+r.gain,0),e=l.filter(r=>r.dn&&dEff(r.dn,r.dist,r.gain)).length,ed=l.filter(r=>r.dn).length,x=l.filter(r=>r.gain>=15).length;
+    return {n,y,ypp:n?(y/n).toFixed(1):'–',e,ed,ep:pct(e,ed),x,run:l.filter(r=>r.rp==='R').length,td:l.filter(r=>r.td).length,hv:l.filter(r=>r.havoc).length,to:l.filter(r=>/Interception|Fumble/.test(r.result)).length}};
+  const t=sum(half);
+  const by=(k,lab)=>{const m=new Map();half.forEach(r=>{const v=r[k]||'(none)';if(!m.has(v))m.set(v,[]);m.get(v).push(r)});
+    const tr=[...m.entries()].sort((a,b)=>b[1].length-a[1].length).map(([v,l])=>{const s=sum(l);return `<tr><td>${esc(v)}</td><td class="n">${s.n}</td><td class="n">${s.ypp}</td><td class="n">${s.ed?s.ep+'%':'–'}</td><td class="n">${s.x||''}</td></tr>`}).join('');
+    return `<div class="panel"><h3>By ${lab}</h3><div class="tablewrap"><table><thead><tr><th>${lab}</th><th class="n">Plays</th><th class="n">Yds/play</th><th class="n">Opp eff</th><th class="n">15+</th></tr></thead><tbody>${tr}</tbody></table></div></div>`};
+  const clipOf=r=>{const p=G.local&&S.plays.find(q=>q._dalm===r);return p?`<button data-goclip="${S.plays.indexOf(p)}">Clip ${p.n}</button>`:''};
+  const big=half.filter(r=>r.gain>=15||r.td).map(r=>`<tr><td>${r.dn??''}&amp;${r.dist??''}</td><td>${esc(r.form)} ${esc(r.call)}</td><td>${esc([r.front,r.cov,r.press].filter(Boolean).join(' · '))}</td><td>${esc(r.result)}${r.td?', TD':''}</td><td class="n">${r.gain}</td><td>${clipOf(r)}</td></tr>`).join('');
+  const seg=['h1','h2','full'].map(h=>`<button data-half="${h}" aria-pressed="${HALF===h}">${{h1:'1st half',h2:'2nd half',full:'Full game'}[h]}</button>`).join('');
+  return `<section style="display:flex;flex-direction:column;gap:20px"><div class="seg">${seg}</div>
+  <div class="tiles">${tile('Plays',t.n)}${tile('Yards allowed',t.y,t.ypp+' per play')}${tile('Opp efficiency',t.ed?t.ep+'%':'–',`${t.e}/${t.ed}`)}${tile('Explosives allowed',t.x,'15+ yards')}${tile('TDs allowed',t.td)}${tile('Havoc plays',t.hv)}${tile('Takeaways',t.to)}${tile('Run / pass',`${t.run} / ${t.n-t.run}`)}</div>
+  <div class="panel"><h3>Explosives and touchdowns allowed</h3>${big?`<div class="tablewrap"><table><thead><tr><th>Dn</th><th>Their play</th><th>Our call</th><th>Result</th><th class="n">Yds</th><th></th></tr></thead><tbody>${big}</tbody></table></div>`:'<p class="sub">None.</p>'}</div>
+  <div class="grid2">${by('front','Front')}${by('cov','Coverage')}${by('press','Pressure')}${by('form','Their formation')}</div>
+  <p class="sub">From the Defensive Almanac (${rows.length} plays; penalties left out). Opp efficiency: 4+ yards on 1st, half the distance on 2nd, the line to gain on 3rd and 4th.</p></section>`}
 function renderStats(){
   if(G.local&&!G.plays.length)return `<div class="panel empty">No plays tagged yet.</div>`;
   const s=G.stats[HALF]; const p=s.passing;
@@ -935,7 +979,12 @@ let HOPT={start:1,call:false,player:false};
 function hudlRows(){
   const src=G.local?S.plays.map(p=>p.calc&&!p.skip?{...p.calc,result:(p.calc.result||'')+(p.calc.td&&p.calc.result?', TD':''),player:p.calc.player||p.carrier,expl:p.calc.exp,box:p.box,mof:p.mof,cov:p.cov,press:p.press}:null)
     :G.plays.map(p=>({...p,exp:p.expl==='YES'?'YES':''}));
-  return src.map((c,k)=>{const r={'PLAY #':(G.local?+HOPT.start+k:(c.hudl??+HOPT.start+k)),'ODK':OPP()&&G.local?'D':'O'};if(!c)return r;
+  return src.map((c,k)=>{const r={'PLAY #':(G.local?+HOPT.start+k:(c.hudl??+HOPT.start+k)),'ODK':OPP()&&G.local?'D':'O'};
+    if(G.local&&!OPP()){const p=S.plays[k],sd=sideOf(p);
+      if(sd==='K'){r.ODK='K';return r}
+      if(sd==='D'){r.ODK='D';const a=p._dalm;if(!a)return r;Object.assign(r,{'YARD LN':a.yl??'','HASH':a.hash||p.hash||'','DN':a.dn??'','DIST':a.dist??'','GN/LS':a.gain,'EFF':a.result==='Penalty'||!a.dn?'':(dEff(a.dn,a.dist,a.gain)?'Y':'N'),
+        'EXPLOSIVE?':a.gain>=15?'YES':'','PLAY TYPE':a.rp==='R'?'Run':a.rp?'Pass':'','RESULT':a.result+(a.td?', TD':'')});if(HOPT.call)r['OFF PLAY']=[a.form,a.call].filter(Boolean).join(' ');return r}}
+    if(!c)return r;
     if(OPP()&&G.local)Object.assign(r,{'BOX':c.box||'','MOF':c.mof||'','COVERAGE':c.cov||'','PRESSURE BROUGHT':c.press??''});
     Object.assign(r,{'YARD LN':c.yl??'','HASH':c.hash||'','DN':c.dn??'','DIST':c.dist??'','GN/LS':c.gn??'','EFF':c.eff||'','EXPLOSIVE?':c.exp||c.expl==='YES'&&'YES'||'',
       'PLAY TYPE':/^(Penalty|Timeout)/.test(c.result)?'':c.type||'','RESULT':c.result||''});
@@ -984,13 +1033,28 @@ $('#impGame').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{cons
   if(!list.length)throw new Error('not a Film Room game file');
   for(const x of list){const g=x.g;g.id=g.id||('pub'+Date.now().toString(36));const lab=x.lab||g.title||g.opponent||g.id;EMB.games[g.id]=g;if(!EMB.index.some(i=>i.id===g.id))EMB.index.push({id:g.id,label:lab})}
   savePub();fillPicker();$('#gamePick').value='emb:'+list[0].g.id;pick($('#gamePick').value);toast('Imported '+list.length+' game'+(list.length>1?'s':''))}catch(err){toast("Couldn't import: "+err.message)}e.target.value=''};
+/* From the Defensive Almanac (KDNCE): our defense's plays for the same game, lined up with the clips marked D. */
+function dalmRows(plays){const out=[];let nd=true,h2=false;
+  for(const p of plays||[]){if(p.k==='d'){nd=true;continue}if(p.k==='h'){nd=true;h2=true;continue}if(p.k==='q')continue;
+    if(p.k==='x'){out.push({i:out.length+1,noplay:true,result:'NO PLAY'});continue}
+    const yd=+p.yd||0;out.push({i:out.length+1,dn:+p.dn||null,dist:+p.di||null,gain:+p.gain||0,yl:yd===50?50:(p.side==='Own'?-yd:yd),hash:p.hash||'',rp:p.rp||'',result:p.result||'',td:!!p.td,dtd:!!p.dtd,
+      front:[p.front,...(p.mods||[])].filter(Boolean).join(' '),cov:p.cov||'',press:p.press||'',pkg:p.pkg||'',form:p.form||'',call:p.call||'',havoc:(p.havoc||[]).length,nd,h2});nd=false}
+  return out}
+function dalmStatus(){let el=$('#dalmStatus');if(!el){el=document.createElement('span');el.id='dalmStatus';el.className='ok';el.style.display='block';$('#almStatus').after(el)}
+  const r=(S.dalm||[]).filter(x=>!x.noplay);el.textContent=r.length?`${r.length} defensive plays from the Defensive Almanac`:''}
+window.takeDalmanac=takeDalmanac;
+function takeDalmanac(d){const nm=String(d&&d.opp||'').trim();
+  const sv=SAVED();let id=null;if(G&&G.local&&KIND()==='self')id=CUR;else{const ex=sv.find(g=>g.kind!=='opp'&&nm&&g.label.toLowerCase().includes(nm.toLowerCase()));if(ex)id=ex.id}
+  if(id&&id!==CUR){openLocal(id);fillPicker();$('#gamePick').value='loc:'+id}else if(!id)pick('new:self'); // the open game keeps its loaded clips
+  if(nm){if(!$('#opp').value)$('#opp').value=nm;if(!$('#game').value)$('#game').value=ABBR+' v. '+nm}
+  S.dalm=dalmRows(d&&d.plays);dalmStatus();refresh();fillPicker();TAB='defense';render();toast(S.dalm.filter(x=>!x.noplay).length+' defensive plays loaded')}
 /* From the Almanac (KDNCE): the game arrives here directly, no copy and paste. */
 window.takeAlmanac=takeAlmanac;
 function takeAlmanac(txt){const nm=((txt.split('\n')[0]||'').split('\t')[1]||'').trim();
   const sv=SAVED();let id=null;if(G&&G.local&&KIND()==='self')id=CUR;else{const ex=sv.find(g=>g.kind!=='opp'&&nm&&g.label.toLowerCase().includes(nm.toLowerCase()));if(ex)id=ex.id}
   if(id){openLocal(id);fillPicker();$('#gamePick').value='loc:'+id}else pick('new:self');
   TAB='tagger';$('#setupBox').open=true;loadAlmText(txt);fillPicker();render()}
-addEventListener('message',e=>{if(e.origin!==location.origin||!e.data)return;if(e.data.almanac)takeAlmanac(e.data.almanac);if(e.data.film==='reload'){const busy=S.plays.some(p=>Object.keys(p.angles||{}).length);if(busy)toast('This game list changed on another iPad. Reopen the Film Room to see it.');else location.reload()}});
+addEventListener('message',e=>{if(e.origin!==location.origin||!e.data)return;if(e.data.almanac)takeAlmanac(e.data.almanac);if(e.data.dalmanac&&typeof e.data.dalmanac==='object')takeDalmanac(e.data.dalmanac);if(e.data.film==='reload'){const busy=S.plays.some(p=>Object.keys(p.angles||{}).length);if(busy)toast('This game list changed on another iPad. Reopen the Film Room to see it.');else location.reload()}});
 /* KDNCE AI reading: the server holds the Anthropic key; this adapter gives the tagger the same sample()/sample.json() calls it always used. */
 function mkSample(base,token,info){
   const b64=blob=>new Promise((res,rej)=>{const f=new FileReader();f.onload=()=>res(String(f.result).split(',')[1]);f.onerror=()=>rej(Object.assign(new Error('image'),{code:'images_unavailable'}));f.readAsDataURL(blob)});
