@@ -83,6 +83,10 @@ body.isdemo #home.th .ph{padding-top:18px}
 .cc .ph-l{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.75);padding:6px}
 .cc.ph0{background:repeating-linear-gradient(45deg,rgba(255,255,255,.06) 0 10px,transparent 10px 20px),linear-gradient(135deg,var(--t1) ,#0c141c);border:2px dashed rgba(255,255,255,.35);box-shadow:0 14px 34px rgba(0,0,0,.45)}
 .cc img{width:100%;height:100%;object-fit:cover}
+.cc.art{background:radial-gradient(circle at 50% 30%,var(--t1a),var(--t1) 75%)}.cc.art svg{width:86%;height:86%}.cc.stad.art svg{width:100%;height:100%}
+.cc .spot{position:absolute;left:6px;bottom:5px;font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.55);background:rgba(0,0,0,.35);border-radius:5px;padding:1px 5px}
+.beams{position:absolute;inset:-30px -10px 10%;z-index:0;pointer-events:none;background:conic-gradient(from 160deg at 18% 0%,transparent 0deg,rgba(255,249,214,.13) 8deg,transparent 18deg),conic-gradient(from 175deg at 82% 0%,transparent 0deg,rgba(255,249,214,.13) 10deg,transparent 20deg),conic-gradient(from 168deg at 50% -10%,transparent 0deg,rgba(255,249,214,.08) 12deg,transparent 24deg);filter:blur(2px)}
+.ph .facts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.ph .facts span{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);border:1px solid var(--t2);border-radius:999px;padding:3px 10px;background:rgba(0,0,0,.25)}
 .cc.helm{left:22%;top:8%;width:56%;height:62%;z-index:3;border-radius:22px;background:radial-gradient(circle at 50% 40%,var(--t1a),var(--t1) 70%)}
 .cc.helm svg{width:82%;height:82%}
 .cc.helm2{left:2%;top:0;width:30%;height:28%;transform:rotate(-8deg);z-index:2}
@@ -117,7 +121,7 @@ details{margin-top:14px}summary{color:var(--mut);font-size:13px}
 </style></head><body>
 <div id="home">
  <div class="dbar">DEMO MODE<small>Made-up program. Sign in to see your team.</small></div>
- <div class="ph" id="ph"><div class="hd"><img src="icon-192.png" alt=""><div><div class="app" id="appn">KDNCE</div><div class="pn" id="pn2"></div><div class="dt" id="dt2"></div></div></div>
+ <div class="ph" id="ph"><div class="hd"><img src="icon-192.png" alt=""><div><div class="app" id="appn">KDNCE</div><div class="pn" id="pn2"></div><div class="dt" id="dt2"></div><div class="facts" id="facts"></div></div></div>
   <div class="col" id="col"></div><div class="stats" id="stats2"></div><div class="left" id="left2"></div></div>
  <div class="hero"><img class="k" src="icon-192.png" alt=""><div class="brand">KDNCE</div><div><span class="prog" id="pname"></span></div><div class="date" id="psub"></div><div class="swit" id="swit" role="tablist" aria-label="Side of the ball"><span class="pill"></span><button data-side="O" role="tab">Offense</button><button data-side="D" role="tab">Defense</button></div></div>
  <div class="wrap"><div class="week" id="week"></div><div class="tiles" id="tiles"></div><div id="syncline"></div></div>
@@ -198,20 +202,37 @@ function nextGame(){try{const sy=JSON.parse(localStorage.getItem('suite_sync')),
 /* Program looks for the home screen. Pictures will come from each program's own server storage (not this public repo); until a program
    adds them, the spots show labeled placeholders. ?theme=demo or ?theme=deer-creek previews a look. */
 const THEMES={
- demo:{school:'Santa Barbara',sub:'Demo program',t1:'#0d4d6e',t1a:'rgba(43,179,192,.45)',t2:'#f4b942',t2ink:'#1d1400',shell:'#0d4d6e',stripe:'#f4b942',mask:'#e8eef4',champs:'3',champsLab:'State titles',pics:{}},
- 'deer-creek':{school:'Deer Creek',sub:'Football',t1:'#123c8c',t1a:'rgba(80,130,230,.45)',t2:'#ffffff',t2ink:'#0b1a3a',shell:'#123c8c',stripe:'#111111',mask:'#ffffff',champs:'#',champsLab:'State titles',pics:{}}};
+ demo:{school:'Santa Barbara',sub:'Demo program',ini:'SB',num:'7',facts:['Est. 1962','3 state titles','11 district titles','Made-up program'],t1:'#0d4d6e',t1a:'rgba(43,179,192,.45)',t2:'#f4b942',t2ink:'#1d1400',shell:'#0d4d6e',stripe:'#f4b942',mask:'#e8eef4',champs:'3',champsLab:'State titles',pics:{}},
+ 'deer-creek':{school:'Deer Creek',sub:'Football',ini:'DC',num:'1',facts:['Est. ____','# state titles','Add facts in Settings'],t1:'#123c8c',t1a:'rgba(80,130,230,.45)',t2:'#ffffff',t2ink:'#0b1a3a',shell:'#123c8c',stripe:'#111111',mask:'#ffffff',champs:'#',champsLab:'State titles',pics:{}}};
 function themeKey(){const q=new URLSearchParams(location.search).get('theme');if(q&&THEMES[q])return q;const s=SUITESYNC.status();return s.signedIn?(THEMES[s.program]?s.program:null):'demo'}
 /* a plain football helmet in the program's colors (no logo) */
 const helmetSVG=T=>`<svg viewBox="0 0 210 160" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="hg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".4"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
- <g stroke="${T.mask}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none">
-  <path d="M150 84 L198 84 Q204 84 204 92 L204 114 Q204 124 194 124 L150 126"/><path d="M150 104 L204 104"/><path d="M176 84 L176 125"/><path d="M134 118 L150 126"/></g>
+ <g stroke="${T.mask}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M150 84 Q186 82 196 94 Q200 110 190 122 Q170 130 140 124"/><path d="M152 102 Q178 100 198 104"/><path d="M182 86 Q186 106 178 126"/></g>
  <path d="M18 100 C14 52 52 16 102 16 C144 16 168 42 170 78 L170 92 C158 92 146 96 138 104 L126 120 C108 132 80 134 58 128 C34 122 20 114 18 100 Z" fill="${T.shell}" stroke="#000" stroke-opacity=".4" stroke-width="3"/>
  <path d="M18 100 C14 52 52 16 102 16 C144 16 168 42 170 78 L170 92 C158 92 146 96 138 104 L126 120 C108 132 80 134 58 128 C34 122 20 114 18 100 Z" fill="url(#hg)"/>
  <path d="M60 24 C96 12 140 22 162 52" fill="none" stroke="${T.stripe}" stroke-width="11" stroke-linecap="round"/>
  <circle cx="92" cy="92" r="10" fill="#000" fill-opacity=".38"/>
  <path d="M58 128 C66 140 86 144 100 138" fill="none" stroke="#000" stroke-opacity=".45" stroke-width="6" stroke-linecap="round"/></svg>`;
-function collage(T){const P=T.pics||{},ph=(cls,lab,key)=>P[key]?`<div class="cc ${cls}"><img src="${P[key]}" alt=""></div>`:`<div class="cc ${cls} ph0"><span class="ph-l">${lab}</span></div>`;
- return ph('helm2','Helmet photo','helm2')+ph('pic1','Photo','pic1')+ph('pic2','Photo 2','pic2')+ph('hero2','Hero player','hero')+ph('stad','Stadium','stadium')
+/* Art for the photo spots until a program adds its own pictures: drawn in the team colors (no logos) */
+const ART={
+ pennant:T=>`<svg viewBox="0 0 200 120"><path d="M14 14 L186 58 L14 104 Z" fill="${T.t2}" stroke="#000" stroke-opacity=".25" stroke-width="3"/><rect x="6" y="8" width="10" height="104" rx="4" fill="#d9d9d9"/><path d="M14 30 L120 58 L14 88 Z" fill="${T.shell}"/>
+  <text x="58" y="68" font-family="system-ui,sans-serif" font-weight="900" font-size="26" fill="${T.t2}" text-anchor="middle">${esc(T.ini||'')}</text></svg>`,
+ tower:T=>`<svg viewBox="0 0 80 150"><defs><linearGradient id="bm1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff9d6" stop-opacity=".75"/><stop offset="1" stop-color="#fff9d6" stop-opacity="0"/></linearGradient></defs>
+  <path d="M18 34 L-30 150 L110 150 L62 34 Z" fill="url(#bm1)"/><rect x="14" y="10" width="52" height="26" rx="3" fill="#2a3440" stroke="#fff" stroke-opacity=".6"/>
+  ${[0,1,2,3].map(i=>[0,1].map(j=>`<circle cx="${22+i*12}" cy="${17+j*12}" r="4.5" fill="#fffbe0"/>`).join('')).join('')}
+  <path d="M40 36 L34 150 M40 36 L46 150 M36 70 L44 90 M44 70 L36 90 M35 110 L45 130 M45 110 L35 130" stroke="#9aa7b4" stroke-width="3" fill="none"/></svg>`,
+ goalpost:T=>`<svg viewBox="0 0 200 130"><rect x="0" y="96" width="200" height="34" fill="#1d5a2c"/><path d="M0 104 H200 M0 118 H200" stroke="#fff" stroke-opacity=".35" stroke-width="2"/>
+  <path d="M100 100 L100 66 M60 66 H140 M60 66 V8 M140 66 V8" stroke="${T.t2}" stroke-width="7" stroke-linecap="round" fill="none"/><path d="M100 100 L100 66" stroke="#d9d9d9" stroke-width="8"/>
+  <ellipse cx="128" cy="34" rx="9" ry="6" transform="rotate(-30 128 34)" fill="#7a4a24"/><path d="M123 34 L133 34" stroke="#fff" stroke-width="1.5" transform="rotate(-30 128 34)"/></svg>`,
+ jersey:T=>`<svg viewBox="0 0 160 150"><path d="M54 10 Q80 26 106 10 L150 30 L138 66 L120 58 L120 142 L40 142 L40 58 L22 66 L10 30 Z" fill="${T.shell}" stroke="#000" stroke-opacity=".3" stroke-width="3"/>
+  <path d="M54 10 Q80 26 106 10" fill="none" stroke="${T.t2}" stroke-width="6"/><path d="M22 66 L10 30 M138 66 L150 30" stroke="${T.t2}" stroke-width="6"/>
+  <text x="80" y="118" font-family="system-ui,sans-serif" font-weight="900" font-size="62" fill="${T.t2}" text-anchor="middle" stroke="#000" stroke-opacity=".25" stroke-width="2">${esc(T.num||'1')}</text></svg>`,
+ towers:T=>`<svg viewBox="0 0 400 90" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="bm2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff9d6" stop-opacity=".55"/><stop offset="1" stop-color="#fff9d6" stop-opacity="0"/></linearGradient></defs>
+  <rect width="400" height="90" fill="#0a1220"/>${[16,96,176,256,336].map((x,i)=>`<path d="M${x+14} 20 L${x-30+i*4} 90 L${x+70-i*4} 90 Z" fill="url(#bm2)"/>`).join('')}
+  <rect x="0" y="74" width="400" height="16" fill="#1d5a2c"/><path d="M0 79 H400" stroke="#fff" stroke-opacity=".3"/>
+  ${[16,96,176,256,336].map(x=>`<rect x="${x}" y="6" width="28" height="14" rx="2" fill="#2a3440"/>${[0,1,2].map(k=>`<circle cx="${x+6+k*8}" cy="13" r="3" fill="#fffbe0"/>`).join('')}<path d="M${x+14} 20 V74" stroke="#9aa7b4" stroke-width="3"/>`).join('')}</svg>`};
+function collage(T){const P=T.pics||{},spot=(cls,lab,key,art)=>P[key]?`<div class="cc ${cls}"><img src="${P[key]}" alt=""></div>`:`<div class="cc ${cls} art">${art}<span class="spot">${lab}</span></div>`;
+ return `<div class="beams"></div>`+spot('helm2','Helmet photo','helm2',ART.pennant(T))+spot('pic1','Photo','pic1',ART.tower(T))+spot('pic2','Photo 2','pic2',ART.goalpost(T))+spot('hero2','Hero player','hero',ART.jersey(T))+spot('stad','Stadium photo','stadium',ART.towers(T))
   +`<div class="cc helm">${P.helmet?`<img src="${P.helmet}" alt="">`:helmetSVG(T)}</div><div class="cc champ"><div><b>${esc(T.champs)}</b><span>${esc(T.champsLab)}</span></div></div>`}
 function renderHome(){const s=SUITESYNC.status(),n=reviewCount(),ai=almInfo(),ng=nextGame();
  document.body.classList.toggle('isdemo',!s.signedIn);$('pname').innerHTML=s.signedIn&&s.name?esc(s.name)+' Football':'<button class="demob" id="demob2">Demo mode</button>';if($('demob2'))$('demob2').onclick=signInModal;
@@ -231,7 +252,7 @@ function renderHome(){const s=SUITESYNC.status(),n=reviewCount(),ai=almInfo(),ng
  $('syncbtn').onclick=signInModal;$('setbtn').onclick=toSettings;
  document.querySelectorAll('[data-side]').forEach(b=>{b.classList.toggle('on',b.dataset.side===SIDE);b.setAttribute('aria-selected',b.dataset.side===SIDE);b.onclick=()=>setSide(b.dataset.side)});$('swit').classList.toggle('d',SIDE==='D');
  const tk=themeKey(),T=tk&&THEMES[tk],H=$('home');H.classList.toggle('th',!!T);
- if(T){['t1','t1a','t2','t2ink'].forEach(k=>H.style.setProperty('--'+k,T[k]));$('pn2').innerHTML=esc(T.school)+' <span>'+esc(T.sub)+'</span>';$('dt2').textContent=$('psub').textContent;$('col').innerHTML=collage(T);
+ if(T){['t1','t1a','t2','t2ink'].forEach(k=>H.style.setProperty('--'+k,T[k]));$('pn2').innerHTML=esc(T.school)+' <span>'+esc(T.sub)+'</span>';$('facts').innerHTML=(T.facts||[]).map(f=>`<span>${esc(f)}</span>`).join('');$('dt2').textContent=$('psub').textContent;$('col').innerHTML=collage(T);
   $('stats2').appendChild($('week'));const L=$('left2');L.appendChild($('swit'));L.appendChild($('tiles'));L.appendChild($('syncline'))}
  else{const w=document.querySelector('.wrap');w.prepend($('tiles'));w.prepend($('week'));w.appendChild($('syncline'));document.querySelector('.hero').appendChild($('swit'))}}
 function setSide(v){SIDE=v;try{localStorage.setItem('suite_side',v)}catch(e){}renderHome()}
