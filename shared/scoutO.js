@@ -140,6 +140,11 @@ function store(program){const KEY='oscout_v1_'+program;
    let i=e.games.findIndex(g=>g.typed);if(i<0){e.games.push({name:'Typed plays',rows:[],off:false,typed:true,draft:[]});i=e.games.length-1}
    e.upd=Date.now();if(o.del)delete o.del[name];o.active=name;write(o);return i},
   setDraft:(name,i,draft)=>{const o=read(),e=o.opps[name];if(!e||!e.games[i])return false;e.games[i].draft=draft;e.games[i].rows=typedRows(draft,i);e.upd=Date.now();return write(o)},
+  /* delete one game of an opponent; the opponent goes too when it was the last game. Typed games re-number their rows. */
+  removeGame:(name,i)=>{const o=read(),e=o.opps[name];if(!e||!e.games[i])return false;e.games.splice(i,1);
+   if(!e.games.length){delete o.opps[name];(o.del=o.del||{})[name]=Date.now();if(o.active===name)o.active=''}
+   else{e.games.forEach((g,k)=>{if(g.typed)g.rows=typedRows(g.draft||[],k)});e.upd=Date.now()}
+   return write(o)},
   remove:n=>{const o=read();delete o.opps[n];(o.del=o.del||{})[n]=Date.now();if(o.active===n)o.active='';write(o)},
   rows:n=>{const e=read().opps[n];return e?e.games.filter(g=>!g.off).flatMap(g=>g.rows):[]}}}
 

@@ -18,7 +18,7 @@ input[type=text],input[type=number],input[type=search],select{background:var(--c
 .chip{background:#223140;border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-height:40px;font-weight:600;text-transform:uppercase}
 .chip.on{background:var(--acc);border-color:var(--acc);color:#fff}
 main{padding:10px 12px;max-width:1100px;margin:0 auto}
-.card{background:#102030;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px}
+.card{background:#102030;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px;overflow-x:auto}
 .lab{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:0 0 6px}
 .mut,.note{color:var(--mut);font-size:12px}
 table{width:100%;border-collapse:collapse;font-size:14px}
@@ -52,6 +52,8 @@ td.n,th.n{text-align:right;white-space:nowrap}
 </main>
 <div id="toast"></div>
 <script src="../shared/glossary.js"></script>
+<script src="../shared/autocap.js"></script>
+<script src="../shared/ask.js"></script>
 <script src="../shared/scout.js"></script>
 <script src="../shared/scoutO.js"></script>
 <script src="../shared/demoseedD.js"></script>
@@ -122,7 +124,7 @@ function lookView(rows){const fams={};rows.forEach(r=>{if(r.fam)fams[r.fam]=(fam
  return h}
 
 function gamesView(){const e=ST.get(OPP);
- return`<div class="card"><div class="lab">Games (switch one off to leave it out of the tendencies)</div><table>`+e.games.map((g,i)=>`<tr><td>${esc(g.name)}</td><td class="n">${g.rows.length} plays</td><td class="n"><button class="chip ${g.off?'':'on'}" data-g="${i}">${g.off?'Off':'In use'}</button></td></tr>`).join('')+`</table>
+ return`<div class="card"><div class="lab">Games (switch one off to leave it out of the tendencies, or delete it)</div><table>`+e.games.map((g,i)=>`<tr><td>${esc(g.name)}</td><td class="n">${g.rows.length} plays</td><td class="n"><button class="chip ${g.off?'':'on'}" data-g="${i}">${g.off?'Off':'In use'}</button></td><td class="n"><button class="chip" data-gdel="${i}" title="Delete this game">Delete</button></td></tr>`).join('')+`</table>
   <div class="row" style="margin-top:10px"><button class="btn bad" id="del">Delete ${esc(OPP)}</button></div></div>`}
 
 function renderAll(){renderTop();const b=$('body');
@@ -133,6 +135,8 @@ function renderAll(){renderTop();const b=$('body');
  b.querySelectorAll('[data-t]').forEach(x=>x.onclick=()=>{TAB=x.dataset.t;renderAll()});
  b.querySelectorAll('[data-dn]').forEach(x=>x.onclick=()=>{LK.down=+x.dataset.dn;renderAll()});
  b.querySelectorAll('[data-g]').forEach(x=>x.onclick=()=>{const i=+x.dataset.g,g=ST.get(OPP).games[i];ST.setGameOff(OPP,i,!g.off);renderAll()});
+ b.querySelectorAll('[data-gdel]').forEach(x=>x.onclick=()=>{const i=+x.dataset.gdel,e=ST.get(OPP),g=e&&e.games[i];if(!g)return;
+  const last=e.games.length===1;if(confirm('Delete "'+g.name+'" ('+g.rows.length+' plays) from '+OPP+(last?'? It is the only game, so the opponent goes too':'')+'? This cannot be undone.')){ST.removeGame(OPP,i);OPP=ST.active();renderAll()}});
  const g=id=>$(id);if(g('lkf'))g('lkf').onchange=e=>{LK.formation=e.target.value;renderAll()};
  if(g('lkd'))g('lkd').onchange=e=>{LK.dist=Math.max(1,+e.target.value||1);renderAll()};
  if(g('lks'))g('lks').onchange=e=>{LK.side=e.target.value;renderAll()};
@@ -143,7 +147,7 @@ function renderAll(){renderTop();const b=$('body');
 $('opp').onchange=e=>{OPP=e.target.value;ST.setActive(OPP);renderAll()};
 $('newopp').onclick=()=>{$('imp').scrollIntoView();toast('Choose a file below, then type the opponent name (no Hudl: use Type it in)')};
 /* ---------- type it in (no Hudl): a table, one line per play ---------- */
-function startTyped(){const n=prompt('Opponent name',OPP||'');if(n==null||!n.trim())return;OPP=n.trim();ST.typed(OPP);TAB='type';renderAll()}
+function startTyped(){ASK('Opponent name',OPP||'',n=>{OPP=n;ST.typed(OPP);TAB='type';renderAll()})}
 const TG=()=>{const e=ST.get(OPP);if(!e)return null;let i=e.games.findIndex(g=>g.typed);return i<0?null:{i,g:e.games[i]}};
 const rid=()=>'t'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
 function fmOptions(){const s=new Set();try{const g=GL.load(PROGRAM);if(g)GL.active(g,'formation').forEach(t=>s.add(t.name.toUpperCase()))}catch(e){}
