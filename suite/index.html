@@ -82,7 +82,7 @@ body.isdemo #home.th .ph{padding-top:18px}
 .cc{position:absolute;border-radius:14px;overflow:hidden;box-shadow:0 14px 34px rgba(0,0,0,.5),0 0 0 3px rgba(255,255,255,.9);background:#1a2430;display:grid;place-items:center;text-align:center}
 .cc .ph-l{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.75);padding:6px}
 .cc.ph0{background:repeating-linear-gradient(45deg,rgba(255,255,255,.06) 0 10px,transparent 10px 20px),linear-gradient(135deg,var(--t1) ,#0c141c);border:2px dashed rgba(255,255,255,.35);box-shadow:0 14px 34px rgba(0,0,0,.45)}
-.cc img{width:100%;height:100%;object-fit:cover}
+.cc img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;user-select:none;-webkit-user-select:none}
 .cc.art{background:radial-gradient(circle at 50% 30%,var(--t1a),var(--t1) 75%)}.cc.art svg{width:86%;height:86%}.cc.stad.art svg{width:100%;height:100%}
 .cc .spot{position:absolute;left:6px;bottom:5px;font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.55);background:rgba(0,0,0,.35);border-radius:5px;padding:1px 5px}
 .beams{position:absolute;inset:-30px -10px 10%;z-index:0;pointer-events:none;background:conic-gradient(from 160deg at 18% 0%,transparent 0deg,rgba(255,249,214,.13) 8deg,transparent 18deg),conic-gradient(from 175deg at 82% 0%,transparent 0deg,rgba(255,249,214,.13) 10deg,transparent 20deg),conic-gradient(from 168deg at 50% -10%,transparent 0deg,rgba(255,249,214,.08) 12deg,transparent 24deg);filter:blur(2px)}
@@ -90,8 +90,9 @@ body.isdemo #home.th .ph{padding-top:18px}
 .cc.helm{left:22%;top:8%;width:56%;height:62%;z-index:3;border-radius:22px;background:radial-gradient(circle at 50% 40%,var(--t1a),var(--t1) 70%)}
 .cc.helm svg{width:82%;height:82%}
 .cc.helm2{left:2%;top:0;width:30%;height:28%;transform:rotate(-8deg);z-index:2}
-.cc.champ{right:1%;top:2%;width:30%;height:28%;transform:rotate(7deg);z-index:4;background:var(--t2);color:var(--t2ink)}
-.cc.champ b{display:block;font-size:clamp(28px,7vw,52px);line-height:1;font-weight:900}.cc.champ span{font-size:11px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}
+.cc.pic3{right:1%;top:2%;width:30%;height:28%;transform:rotate(7deg);z-index:4}
+.col.edit .cc{cursor:pointer;box-shadow:0 14px 34px rgba(0,0,0,.5),0 0 0 3px var(--t2)}.col.edit .cc::after{content:'Tap to edit';position:absolute;inset:auto 0 0 0;padding:4px;font-size:10px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;background:rgba(0,0,0,.65);color:#fff}
+.col.edit .cc.busy::after{content:'Uploading…'}.col.edit{margin-bottom:34px}.col .phnote{position:absolute;left:0;right:0;top:calc(100% + 8px);line-height:1.3;text-align:center;font-size:11px;color:var(--mut,#9fb0c0)}
 .cc.pic2{right:0;top:34%;width:26%;height:24%;transform:rotate(4deg);z-index:2}
 .cc.hero2{right:3%;top:58%;width:28%;height:26%;transform:rotate(-5deg);z-index:4}
 .cc.pic1{left:3%;top:36%;width:17%;height:30%;transform:rotate(-4deg);z-index:2}
@@ -203,7 +204,7 @@ function nextGame(){try{const sy=JSON.parse(localStorage.getItem('suite_sync')),
    adds them, the spots show labeled placeholders. ?theme=demo or ?theme=deer-creek previews a look. */
 const THEMES={
  demo:{school:'Santa Barbara',sub:'Demo program',ini:'SB',num:'7',facts:['Est. 1962','3 state titles','11 district titles','Made-up program'],t1:'#0d4d6e',t1a:'rgba(43,179,192,.45)',t2:'#f4b942',t2ink:'#1d1400',shell:'#0d4d6e',stripe:'#f4b942',mask:'#e8eef4',champs:'3',champsLab:'State titles',pics:{}},
- 'deer-creek':{school:'Deer Creek',sub:'Football',ini:'DC',num:'1',facts:['Est. ____','# state titles','Add facts in Settings'],t1:'#123c8c',t1a:'rgba(80,130,230,.45)',t2:'#ffffff',t2ink:'#0b1a3a',shell:'#123c8c',stripe:'#111111',mask:'#ffffff',champs:'#',champsLab:'State titles',pics:{}}};
+ 'deer-creek':{school:'Deer Creek',sub:'Football',ini:'DC',num:'1',facts:['Est. 1976','1 state title · 2000'],t1:'#123c8c',t1a:'rgba(80,130,230,.45)',t2:'#ffffff',t2ink:'#0b1a3a',shell:'#123c8c',stripe:'#111111',mask:'#ffffff',champs:'#',champsLab:'State titles',pics:{}}};
 function themeKey(){const q=new URLSearchParams(location.search).get('theme');if(q&&THEMES[q])return q;const s=SUITESYNC.status();return s.signedIn?(THEMES[s.program]?s.program:null):'demo'}
 /* a plain football helmet in the program's colors (no logo) */
 const helmetSVG=T=>`<svg viewBox="0 0 210 160" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="hg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".4"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
@@ -227,13 +228,66 @@ const ART={
  jersey:T=>`<svg viewBox="0 0 160 150"><path d="M54 10 Q80 26 106 10 L150 30 L138 66 L120 58 L120 142 L40 142 L40 58 L22 66 L10 30 Z" fill="${T.shell}" stroke="#000" stroke-opacity=".3" stroke-width="3"/>
   <path d="M54 10 Q80 26 106 10" fill="none" stroke="${T.t2}" stroke-width="6"/><path d="M22 66 L10 30 M138 66 L150 30" stroke="${T.t2}" stroke-width="6"/>
   <text x="80" y="118" font-family="system-ui,sans-serif" font-weight="900" font-size="62" fill="${T.t2}" text-anchor="middle" stroke="#000" stroke-opacity=".25" stroke-width="2">${esc(T.num||'1')}</text></svg>`,
+ trophy:T=>`<svg viewBox="0 0 160 150"><path d="M46 18 H114 V52 Q114 92 80 98 Q46 92 46 52 Z" fill="${T.t2}" stroke="#000" stroke-opacity=".25" stroke-width="3"/><path d="M46 30 Q18 30 22 54 Q26 72 50 74 M114 30 Q142 30 138 54 Q134 72 110 74" fill="none" stroke="${T.t2}" stroke-width="7"/>
+  <rect x="72" y="96" width="16" height="18" fill="${T.t2}"/><rect x="50" y="114" width="60" height="16" rx="3" fill="${T.shell}" stroke="${T.t2}" stroke-width="3"/><path d="M62 36 Q66 60 80 68" stroke="#fff" stroke-opacity=".45" stroke-width="5" fill="none" stroke-linecap="round"/></svg>`,
  towers:T=>`<svg viewBox="0 0 400 90" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="bm2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff9d6" stop-opacity=".55"/><stop offset="1" stop-color="#fff9d6" stop-opacity="0"/></linearGradient></defs>
   <rect width="400" height="90" fill="#0a1220"/>${[16,96,176,256,336].map((x,i)=>`<path d="M${x+14} 20 L${x-30+i*4} 90 L${x+70-i*4} 90 Z" fill="url(#bm2)"/>`).join('')}
   <rect x="0" y="74" width="400" height="16" fill="#1d5a2c"/><path d="M0 79 H400" stroke="#fff" stroke-opacity=".3"/>
   ${[16,96,176,256,336].map(x=>`<rect x="${x}" y="6" width="28" height="14" rx="2" fill="#2a3440"/>${[0,1,2].map(k=>`<circle cx="${x+6+k*8}" cy="13" r="3" fill="#fffbe0"/>`).join('')}<path d="M${x+14} 20 V74" stroke="#9aa7b4" stroke-width="3"/>`).join('')}</svg>`};
-function collage(T){const P=T.pics||{},spot=(cls,lab,key,art)=>P[key]?`<div class="cc ${cls}"><img src="${P[key]}" alt=""></div>`:`<div class="cc ${cls} art">${art}<span class="spot">${lab}</span></div>`;
- return `<div class="beams"></div>`+spot('helm2','Helmet photo','helm2',ART.pennant(T))+spot('pic1','Photo','pic1',ART.tower(T))+spot('pic2','Photo 2','pic2',ART.goalpost(T))+spot('hero2','Hero player','hero',ART.jersey(T))+spot('stad','Stadium photo','stadium',ART.towers(T))
-  +`<div class="cc helm">${P.helmet?`<img src="${P.helmet}" alt="">`:helmetSVG(T)}</div><div class="cc champ"><div><b>${esc(T.champs)}</b><span>${esc(T.champsLab)}</span></div></div>`}
+const FST=f=>f?`object-position:${+f[0]}% ${+f[1]}%;transform:scale(${+(f[2]||1)});transform-origin:${+f[0]}% ${+f[1]}%`:'';
+const FOC=k=>{const f=(HP.focus||{})[k];return f?`style="${FST(f)}"`:''};
+function collage(T,P){P=Object.assign({},P||T.pics||{});Object.entries(HP.focus||{}).forEach(([k,f])=>{if(f&&f[3])delete P[k]});const spot=(cls,lab,key,art)=>`<div class="cc ${cls}${P[key]?'':' art'}" data-slot="${key}">${P[key]?`<img src="${esc(P[key])}" alt="" draggable="false" ${FOC(key)} onerror="this.remove()">`:art+`<span class="spot">${lab}</span>`}</div>`;
+ return `<div class="beams"></div>`+spot('helm2','Photo','helm2',ART.pennant(T))+spot('pic1','Photo','pic1',ART.tower(T))+spot('pic2','Photo','pic2',ART.goalpost(T))+spot('hero2','Hero player','hero',ART.jersey(T))+spot('stad','Stadium photo','stadium',ART.towers(T))
+  +`<div class="cc helm" data-slot="helmet">${P.helmet?`<img src="${esc(P.helmet)}" alt="" draggable="false" ${FOC('helmet')} onerror="this.remove()">`:helmetSVG(T)}</div>`+spot('pic3','Photo','pic3',ART.trophy(T))}
+/* Home photos: each program's pictures live in its own server storage as _home/<spot>.jpg (never in this public repo).
+   Signed-in coaches tap Photos, then tap a spot to pick a picture; it is shrunk on the device before upload. */
+const HPK='home_pics_v1';let HP=(()=>{try{return JSON.parse(localStorage.getItem(HPK))||{}}catch(e){return{}}})(),HPEDIT=false,HPBUSY=false;
+const SYX=()=>{try{const s=JSON.parse(localStorage.getItem('suite_sync'));return s&&s.token&&s.exp>Date.now()?s:null}catch(e){return null}};
+const hpSave=()=>{try{localStorage.setItem(HPK,JSON.stringify(HP))}catch(e){}};
+function picsFor(tk){const s=SYX();if(!s||tk!==s.program||HP.prog!==s.program||!HP.list||!HP.ct||HP.exp<Date.now())return null;const o={};
+ Object.entries(HP.list).forEach(([k,sz])=>o[k]=`${HP.url}/clip?key=${encodeURIComponent('_home/'+k+'.jpg')}&ct=${encodeURIComponent(HP.ct)}&v=${sz}-${(HP.bump||{})[k]||0}`);return o}
+async function homePics(force){const s=SYX();if(!s||HPBUSY)return;const url=(s.url||DEFAULT_SERVER).replace(/\/$/,''),H={Authorization:'Bearer '+s.token};let ch=false;
+ try{if(!HP.ct||HP.exp<Date.now()+3600000||HP.prog!==s.program){const r=await fetch(url+'/cliptoken',{headers:H}),j=await r.json();if(!r.ok||!j.ready)return;HP={ct:j.ct,exp:j.exp,prog:s.program,url,bump:HP.prog===s.program?HP.bump:{},focus:HP.prog===s.program?HP.focus:{}};ch=true}
+  if(!HP.list||force||ch){const r=await fetch(url+'/clips?game=_home',{headers:H}),j=await r.json();if(!r.ok)return;const L={};let fz=0;(j.clips||[]).forEach(c=>{const m=c.key.match(/^_home\/([a-z0-9]+)\.jpg$/);if(m)L[m[1]]=c.size;if(c.key==='_home/focus.json')fz=1});
+   if(fz){try{const f=await (await fetch(`${url}/clip?key=_home%2Ffocus.json&ct=${encodeURIComponent(HP.ct)}&t=${Date.now()}`,{cache:'no-store'})).json();if(JSON.stringify(f)!==JSON.stringify(HP.focus)){HP.focus=f;ch=true}}catch(e){}}
+   ch=ch||JSON.stringify(L)!==JSON.stringify(HP.list);HP.list=L}
+  hpSave();if(ch)renderHome()}catch(e){}}
+async function upPic(slot,file,el,quiet){const s=SYX();if(!s||!file)return;const url=(s.url||DEFAULT_SERVER).replace(/\/$/,'');HPBUSY=true;el.classList.add('busy');
+ try{const img=await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>no(new Error("Couldn't read that picture"));i.src=URL.createObjectURL(file)});
+  const k=Math.min(1,1600/Math.max(img.naturalWidth,img.naturalHeight)),c=document.createElement('canvas');c.width=Math.round(img.naturalWidth*k);c.height=Math.round(img.naturalHeight*k);c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+  const blob=await new Promise(ok=>c.toBlob(ok,'image/jpeg',.82));
+  const r=await fetch(url+'/clip?key='+encodeURIComponent('_home/'+slot+'.jpg'),{method:'PUT',headers:{Authorization:'Bearer '+s.token,'Content-Type':'image/jpeg'},body:blob});
+  const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Upload failed');HP.bump=HP.bump||{};HP.bump[slot]=Date.now()}
+ catch(e){alert(e.message||'Upload failed')}finally{HPBUSY=false;el.classList.remove('busy')}await homePics(true);if(!quiet)renderHome()}
+/* In Photos mode, tapping a spot opens its editor: choose a picture, drag to move it, zoom to crop, or remove it */
+const SPOTN={helmet:'Center',helm2:'Top left',pic1:'Left',pic2:'Right',hero:'Bottom right',stadium:'Bottom',pic3:'Top right'};
+async function saveFocus(){hpSave();const s=SYX();if(!s)return;try{await fetch((s.url||DEFAULT_SERVER).replace(/\/$/,'')+'/clip?key=_home%2Ffocus.json',{method:'PUT',headers:{Authorization:'Bearer '+s.token,'Content-Type':'application/json'},body:JSON.stringify(HP.focus||{})})}catch(e){}}
+function picEditor(el){const slot=el.dataset.slot,tk=themeKey(),T=THEMES[tk];if($('pedov'))return;
+ const ar=el.offsetWidth/el.offsetHeight,W=Math.min(innerWidth*.9,560),H=Math.min(W/ar,innerHeight*.5),FW=H*ar;
+ let f=((HP.focus||{})[slot]||[50,50,1,0]).slice();f[2]=f[2]||1;
+ const ov=document.createElement('div');ov.id='pedov';ov.style.cssText='position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.78);display:grid;place-items:center;padding:16px';
+ ov.innerHTML=`<div style="background:#16202b;border:1px solid #2c3a48;border-radius:16px;padding:16px;max-width:600px;width:100%;color:#e6edf3">
+  <div style="font-weight:900;letter-spacing:.06em;text-transform:uppercase;font-size:13px;margin-bottom:10px">${SPOTN[slot]||'Photo'} spot</div>
+  <div id="pfr" style="position:relative;width:${FW}px;height:${H}px;margin:0 auto;border-radius:12px;overflow:hidden;background:#0b1118;touch-action:none;cursor:grab;box-shadow:0 0 0 3px #fff"></div>
+  <div style="font-size:12px;color:#9fb0c0;text-align:center;margin:8px 0">Drag the picture to move it · slide to zoom in</div>
+  <label style="display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700">Zoom<input id="pz" type="range" min="1" max="3" step="0.02" style="flex:1"></label>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px"><button class="btn" id="pch">Choose picture</button><button class="btn" id="prm">Remove photo</button><span style="flex:1"></span><button class="btn" id="pcx">Cancel</button><button id="psv" class="btn pri">Save</button></div></div>`;
+ document.body.appendChild(ov);const fr=ov.querySelector('#pfr'),pz=ov.querySelector('#pz');
+ const draw=()=>{const P=picsFor(tk)||{};fr.innerHTML=P[slot]?`<img src="${esc(P[slot])}" draggable="false" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;user-select:none;${FST(f)}">`:'<div style="display:grid;place-items:center;height:100%;color:#9fb0c0;font-size:13px">No picture yet · tap Choose picture</div>';pz.value=f[2];
+  ov.querySelector('#prm').disabled=!P[slot]};
+ const img=()=>fr.querySelector('img'),upd=()=>{const i=img();if(i){i.style.objectPosition=f[0]+'% '+f[1]+'%';i.style.transform='scale('+f[2]+')';i.style.transformOrigin=f[0]+'% '+f[1]+'%'}};
+ draw();let d=null;const cl=v=>Math.max(0,Math.min(100,Math.round(v*10)/10));
+ fr.onpointerdown=e=>{if(!img())return;d={x:e.clientX,y:e.clientY,f0:f.slice()};fr.setPointerCapture(e.pointerId);e.preventDefault()};
+ fr.onpointermove=e=>{if(!d)return;const r=fr.getBoundingClientRect();f[0]=cl(d.f0[0]-(e.clientX-d.x)/r.width*100/f[2]);f[1]=cl(d.f0[1]-(e.clientY-d.y)/r.height*100/f[2]);upd()};
+ fr.onpointerup=fr.onpointercancel=()=>{d=null};
+ pz.oninput=()=>{f[2]=+pz.value;upd()};
+ const close=()=>ov.remove();ov.querySelector('#pcx').onclick=close;ov.onclick=e=>{if(e.target===ov)close()};
+ ov.querySelector('#psv').onclick=async()=>{HP.focus=Object.assign({},HP.focus,{[slot]:[f[0],f[1],f[2],0]});close();renderHome();await saveFocus()};
+ ov.querySelector('#prm').onclick=async()=>{HP.focus=Object.assign({},HP.focus,{[slot]:[50,50,1,1]});close();renderHome();await saveFocus()};
+ ov.querySelector('#pch').onclick=()=>{const fi=document.createElement('input');fi.type='file';fi.accept='image/*';
+  fi.onchange=async()=>{if(!fi.files[0])return;fr.innerHTML='<div style="display:grid;place-items:center;height:100%;color:#9fb0c0">Uploading…</div>';f=[50,50,1,0];
+   await upPic(slot,fi.files[0],el,true);HP.focus=Object.assign({},HP.focus,{[slot]:f.slice()});draw()};fi.click()}}
+$('col').addEventListener('click',e=>{if(!HPEDIT)return;const el=e.target.closest('[data-slot]');if(el)picEditor(el)});
 function renderHome(){const s=SUITESYNC.status(),n=reviewCount(),ai=almInfo(),ng=nextGame();
  document.body.classList.toggle('isdemo',!s.signedIn);$('pname').innerHTML=s.signedIn&&s.name?esc(s.name)+' Football':'<button class="demob" id="demob2">Demo mode</button>';if($('demob2'))$('demob2').onclick=signInModal;
  $('psub').textContent=new Date().toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'});
@@ -247,12 +301,13 @@ function renderHome(){const s=SUITESYNC.status(),n=reviewCount(),ai=almInfo(),ng
  const desc=t=>t.id==='almanac'&&ai&&!ai.demo?`${esc(ai.opp)} · ${ai.n} play${ai.n===1?'':'s'}${ai.scout?' · scout loaded':''}`:t.desc;
  $('tiles').innerHTML=(SIDE==='D'?DTOOLS:TOOLS).map(t=>{const[c,svg]=IC[t.id];return`<button class="tile ${t.soon?'soon':''}" data-t="${t.id}"><span class="ic" style="background:${c}22;color:${c}">${svg}</span><span class="tx"><b>${t.name}${t.soon?'<span class="tag">SOON</span>':''}</b><span class="d">${desc(t)}</span></span><span class="go">›</span>${t.id==='glossary'&&n?`<span class="dot">${n}</span>`:''}</button>`}).join('');
  const ago=s.last?Math.round((Date.now()-s.last)/60000):null,cls=!s.signedIn?'':s.busy?'busy':s.error?'bad':'ok';
- const txt=s.signedIn?(s.busy?'Syncing…':s.error?esc(s.error):'Synced '+(ago===0?'just now':ago+' min ago'))+(navigator.onLine?'':' · offline'):'This device only · not syncing';
+ const txt=s.signedIn?(s.busy?'Syncing…':s.error?esc(s.error):'Synced'+(ago==null?'':ago===0?' just now':' '+ago+' min ago'))+(navigator.onLine?'':' · offline'):'This device only · not syncing';
  $('syncline').innerHTML=`<span class="sd ${cls}"></span><span>${txt}</span><button id="syncbtn">${s.signedIn?'Sync':'Sign in'}</button><button id="setbtn">Settings</button>`;
  $('syncbtn').onclick=signInModal;$('setbtn').onclick=toSettings;
  document.querySelectorAll('[data-side]').forEach(b=>{b.classList.toggle('on',b.dataset.side===SIDE);b.setAttribute('aria-selected',b.dataset.side===SIDE);b.onclick=()=>setSide(b.dataset.side)});$('swit').classList.toggle('d',SIDE==='D');
  const tk=themeKey(),T=tk&&THEMES[tk],H=$('home');H.classList.toggle('th',!!T);
- if(T){['t1','t1a','t2','t2ink'].forEach(k=>H.style.setProperty('--'+k,T[k]));$('pn2').innerHTML=esc(T.school)+' <span>'+esc(T.sub)+'</span>';$('facts').innerHTML=(T.facts||[]).map(f=>`<span>${esc(f)}</span>`).join('');$('dt2').textContent=$('psub').textContent;$('col').innerHTML=collage(T);
+ if(T){['t1','t1a','t2','t2ink'].forEach(k=>H.style.setProperty('--'+k,T[k]));$('pn2').innerHTML=esc(T.school)+' <span>'+esc(T.sub)+'</span>';$('facts').innerHTML=(T.facts||[]).map(f=>`<span>${esc(f)}</span>`).join('');$('dt2').textContent=$('psub').textContent;const own=s.signedIn&&tk===s.program,P=own?picsFor(tk):null;$('col').innerHTML=collage(T,P||{})+(HPEDIT&&own?'<div class="phnote">Tap a spot to choose, move, zoom or remove its picture · Done when finished</div>':'');$('col').classList.toggle('edit',HPEDIT&&own);
+  if(own){const b=document.createElement('button');b.id='phbtn';b.textContent=HPEDIT?'Done':'Photos';b.onclick=()=>{HPEDIT=!HPEDIT;renderHome()};$('syncline').insertBefore(b,$('setbtn'));if(!P)homePics()}
   $('stats2').appendChild($('week'));const L=$('left2');L.appendChild($('swit'));L.appendChild($('tiles'));L.appendChild($('syncline'))}
  else{const w=document.querySelector('.wrap');w.prepend($('tiles'));w.prepend($('week'));w.appendChild($('syncline'));document.querySelector('.hero').appendChild($('swit'))}}
 function setSide(v){SIDE=v;try{localStorage.setItem('suite_side',v)}catch(e){}renderHome()}
