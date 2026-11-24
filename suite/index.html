@@ -59,6 +59,41 @@ button,input{font:inherit;color:var(--tx)}
 #syncline .sd{width:9px;height:9px;border-radius:50%;background:var(--mut)}
 #syncline .sd.ok{background:var(--ok);box-shadow:0 0 8px var(--ok)}#syncline .sd.bad{background:var(--bad)}#syncline .sd.busy{background:var(--warn)}
 #syncline button{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 12px;text-transform:uppercase;font-size:12px;font-weight:700}
+/* ---------- program home (College Football 25 style): name top left, O/D + tool tiles on the left, photo collage on the right, stats under it ---------- */
+#home.th{background:radial-gradient(120% 80% at 85% 10%,var(--t1a) 0%,transparent 60%),repeating-linear-gradient(135deg,rgba(255,255,255,.025) 0 2px,transparent 2px 22px),linear-gradient(160deg,var(--t1) 0%,#0b1118 70%);background-attachment:fixed}
+#home.th .hero{display:none}
+.dbar{display:none;position:sticky;top:0;z-index:5;background:#f2b632;color:#1a1300;text-align:center;font-weight:900;letter-spacing:.14em;font-size:12px;padding:6px 10px;padding-top:max(6px,env(safe-area-inset-top))}
+.dbar small{font-weight:700;letter-spacing:.02em;margin-left:8px}
+body.isdemo .dbar{display:block}
+.ph{display:none}#home.th .ph{display:grid;width:min(1180px,100%);margin:0 auto;padding:max(18px,calc(env(safe-area-inset-top) + 10px)) 20px 30px;gap:18px 26px;grid-template-columns:minmax(0,1fr);grid-template-areas:"hd" "col" "tools" "stats"}
+body.isdemo #home.th .ph{padding-top:18px}
+.ph .hd{grid-area:hd;display:flex;align-items:center;gap:14px}
+.ph .hd img{width:46px;height:46px;border-radius:12px;box-shadow:0 6px 16px rgba(0,0,0,.45)}
+.ph .app{font-size:13px;font-weight:900;letter-spacing:.3em;color:rgba(255,255,255,.75)}
+.ph .pn{font-size:clamp(28px,6vw,52px);font-weight:900;line-height:1;letter-spacing:.02em;text-transform:uppercase;color:#fff;text-shadow:0 3px 18px rgba(0,0,0,.5)}
+.ph .pn span{color:var(--t2)}
+.ph .dt{font-size:13px;color:rgba(255,255,255,.65);margin-top:4px}
+.ph .left{grid-area:tools;display:flex;flex-direction:column;gap:12px;min-width:0}
+.ph .left .swit{margin:0;align-self:flex-start}
+.ph .left .swit .pill{background:var(--t2);box-shadow:0 2px 10px rgba(0,0,0,.35)}.ph .left .swit.d .pill{background:#e0703a}.ph .left .swit button.on{color:var(--t2ink)}.ph .left .swit.d button.on{color:#fff}
+.ph .stats{grid-area:stats;min-width:0}
+.ph .tile{border-left:4px solid var(--t2)}
+.col{grid-area:col;position:relative;height:clamp(260px,62vw,420px);min-width:0}
+.cc{position:absolute;border-radius:14px;overflow:hidden;box-shadow:0 14px 34px rgba(0,0,0,.5),0 0 0 3px rgba(255,255,255,.9);background:#1a2430;display:grid;place-items:center;text-align:center}
+.cc .ph-l{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.75);padding:6px}
+.cc.ph0{background:repeating-linear-gradient(45deg,rgba(255,255,255,.06) 0 10px,transparent 10px 20px),linear-gradient(135deg,var(--t1) ,#0c141c);border:2px dashed rgba(255,255,255,.35);box-shadow:0 14px 34px rgba(0,0,0,.45)}
+.cc img{width:100%;height:100%;object-fit:cover}
+.cc.helm{left:22%;top:8%;width:56%;height:62%;z-index:3;border-radius:22px;background:radial-gradient(circle at 50% 40%,var(--t1a),var(--t1) 70%)}
+.cc.helm svg{width:82%;height:82%}
+.cc.helm2{left:2%;top:0;width:30%;height:28%;transform:rotate(-8deg);z-index:2}
+.cc.champ{right:1%;top:2%;width:30%;height:28%;transform:rotate(7deg);z-index:4;background:var(--t2);color:var(--t2ink)}
+.cc.champ b{display:block;font-size:clamp(28px,7vw,52px);line-height:1;font-weight:900}.cc.champ span{font-size:11px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}
+.cc.pic2{right:0;top:34%;width:26%;height:24%;transform:rotate(4deg);z-index:2}
+.cc.hero2{right:3%;top:58%;width:28%;height:26%;transform:rotate(-5deg);z-index:4}
+.cc.pic1{left:3%;top:36%;width:17%;height:30%;transform:rotate(-4deg);z-index:2}
+.cc.stad{left:12%;bottom:0;width:76%;height:30%;z-index:3;border-radius:16px}
+@media (min-width:900px){#home.th .ph{grid-template-columns:330px minmax(0,1fr);grid-template-areas:"hd hd" "tools col" "tools stats";align-items:start}
+ .col{height:430px}.ph .tile{height:74px}}
 /* tool view */
 #bar{display:none;align-items:center;gap:8px;padding:6px 8px;padding-top:max(6px,env(safe-area-inset-top));background:#070c12;border-bottom:1px solid var(--line);flex:none}
 #bar .home{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:6px 12px;min-height:36px;font-weight:700;text-transform:uppercase;font-size:13px}
@@ -81,6 +116,9 @@ body.tool #home{display:none}body.tool #bar{display:flex}body.tool #views{displa
 details{margin-top:14px}summary{color:var(--mut);font-size:13px}
 </style></head><body>
 <div id="home">
+ <div class="dbar">DEMO MODE<small>Made-up program. Sign in to see your team.</small></div>
+ <div class="ph" id="ph"><div class="hd"><img src="icon-192.png" alt=""><div><div class="app" id="appn">KDNCE</div><div class="pn" id="pn2"></div><div class="dt" id="dt2"></div></div></div>
+  <div class="col" id="col"></div><div class="stats" id="stats2"></div><div class="left" id="left2"></div></div>
  <div class="hero"><img class="k" src="icon-192.png" alt=""><div class="brand">KDNCE</div><div><span class="prog" id="pname"></span></div><div class="date" id="psub"></div><div class="swit" id="swit" role="tablist" aria-label="Side of the ball"><span class="pill"></span><button data-side="O" role="tab">Offense</button><button data-side="D" role="tab">Defense</button></div></div>
  <div class="wrap"><div class="week" id="week"></div><div class="tiles" id="tiles"></div><div id="syncline"></div></div>
 </div>
@@ -157,6 +195,24 @@ function theirD(opp){try{const A=JSON.parse(localStorage.getItem(ALMK()));const 
 function nextGame(){try{const sy=JSON.parse(localStorage.getItem('suite_sync')),signed=!!(sy&&sy.token&&sy.exp>Date.now()),p=signed?(sy.program||'deer-creek'):'demo';const S=JSON.parse(localStorage.getItem('schedule_v1_'+p));if(!S)return null;
  const today=new Date(new Date().toDateString()+' 12:00');const r=S.rows.find(r=>r.date&&new Date(r.date+'T12:00')>=today&&!(r.us!==''&&r.us!=null));if(!r)return null;
  const d=Math.round((new Date(r.date+'T12:00')-today)/864e5);return{opp:r.opp,ha:r.ha,date:r.date,logo:r.logo,color:r.color,when:d===0?'Today':d===1?'Tomorrow':'in '+d+' days'}}catch(e){return null}}
+/* Program looks for the home screen. Pictures will come from each program's own server storage (not this public repo); until a program
+   adds them, the spots show labeled placeholders. ?theme=demo or ?theme=deer-creek previews a look. */
+const THEMES={
+ demo:{school:'Santa Barbara',sub:'Demo program',t1:'#0d4d6e',t1a:'rgba(43,179,192,.45)',t2:'#f4b942',t2ink:'#1d1400',shell:'#0d4d6e',stripe:'#f4b942',mask:'#e8eef4',champs:'3',champsLab:'State titles',pics:{}},
+ 'deer-creek':{school:'Deer Creek',sub:'Football',t1:'#123c8c',t1a:'rgba(80,130,230,.45)',t2:'#ffffff',t2ink:'#0b1a3a',shell:'#123c8c',stripe:'#111111',mask:'#ffffff',champs:'#',champsLab:'State titles',pics:{}}};
+function themeKey(){const q=new URLSearchParams(location.search).get('theme');if(q&&THEMES[q])return q;const s=SUITESYNC.status();return s.signedIn?(THEMES[s.program]?s.program:null):'demo'}
+/* a plain football helmet in the program's colors (no logo) */
+const helmetSVG=T=>`<svg viewBox="0 0 210 160" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="hg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".4"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
+ <g stroke="${T.mask}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none">
+  <path d="M150 84 L198 84 Q204 84 204 92 L204 114 Q204 124 194 124 L150 126"/><path d="M150 104 L204 104"/><path d="M176 84 L176 125"/><path d="M134 118 L150 126"/></g>
+ <path d="M18 100 C14 52 52 16 102 16 C144 16 168 42 170 78 L170 92 C158 92 146 96 138 104 L126 120 C108 132 80 134 58 128 C34 122 20 114 18 100 Z" fill="${T.shell}" stroke="#000" stroke-opacity=".4" stroke-width="3"/>
+ <path d="M18 100 C14 52 52 16 102 16 C144 16 168 42 170 78 L170 92 C158 92 146 96 138 104 L126 120 C108 132 80 134 58 128 C34 122 20 114 18 100 Z" fill="url(#hg)"/>
+ <path d="M60 24 C96 12 140 22 162 52" fill="none" stroke="${T.stripe}" stroke-width="11" stroke-linecap="round"/>
+ <circle cx="92" cy="92" r="10" fill="#000" fill-opacity=".38"/>
+ <path d="M58 128 C66 140 86 144 100 138" fill="none" stroke="#000" stroke-opacity=".45" stroke-width="6" stroke-linecap="round"/></svg>`;
+function collage(T){const P=T.pics||{},ph=(cls,lab,key)=>P[key]?`<div class="cc ${cls}"><img src="${P[key]}" alt=""></div>`:`<div class="cc ${cls} ph0"><span class="ph-l">${lab}</span></div>`;
+ return ph('helm2','Helmet photo','helm2')+ph('pic1','Photo','pic1')+ph('pic2','Photo 2','pic2')+ph('hero2','Hero player','hero')+ph('stad','Stadium','stadium')
+  +`<div class="cc helm">${P.helmet?`<img src="${P.helmet}" alt="">`:helmetSVG(T)}</div><div class="cc champ"><div><b>${esc(T.champs)}</b><span>${esc(T.champsLab)}</span></div></div>`}
 function renderHome(){const s=SUITESYNC.status(),n=reviewCount(),ai=almInfo(),ng=nextGame();
  document.body.classList.toggle('isdemo',!s.signedIn);$('pname').innerHTML=s.signedIn&&s.name?esc(s.name)+' Football':'<button class="demob" id="demob2">Demo mode</button>';if($('demob2'))$('demob2').onclick=signInModal;
  $('psub').textContent=new Date().toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'});
@@ -173,7 +229,11 @@ function renderHome(){const s=SUITESYNC.status(),n=reviewCount(),ai=almInfo(),ng
  const txt=s.signedIn?(s.busy?'Syncing…':s.error?esc(s.error):'Synced '+(ago===0?'just now':ago+' min ago'))+(navigator.onLine?'':' · offline'):'This device only · not syncing';
  $('syncline').innerHTML=`<span class="sd ${cls}"></span><span>${txt}</span><button id="syncbtn">${s.signedIn?'Sync':'Sign in'}</button><button id="setbtn">Settings</button>`;
  $('syncbtn').onclick=signInModal;$('setbtn').onclick=toSettings;
- document.querySelectorAll('[data-side]').forEach(b=>{b.classList.toggle('on',b.dataset.side===SIDE);b.setAttribute('aria-selected',b.dataset.side===SIDE);b.onclick=()=>setSide(b.dataset.side)});$('swit').classList.toggle('d',SIDE==='D')}
+ document.querySelectorAll('[data-side]').forEach(b=>{b.classList.toggle('on',b.dataset.side===SIDE);b.setAttribute('aria-selected',b.dataset.side===SIDE);b.onclick=()=>setSide(b.dataset.side)});$('swit').classList.toggle('d',SIDE==='D');
+ const tk=themeKey(),T=tk&&THEMES[tk],H=$('home');H.classList.toggle('th',!!T);
+ if(T){['t1','t1a','t2','t2ink'].forEach(k=>H.style.setProperty('--'+k,T[k]));$('pn2').innerHTML=esc(T.school)+' <span>'+esc(T.sub)+'</span>';$('dt2').textContent=$('psub').textContent;$('col').innerHTML=collage(T);
+  $('stats2').appendChild($('week'));const L=$('left2');L.appendChild($('swit'));L.appendChild($('tiles'));L.appendChild($('syncline'))}
+ else{const w=document.querySelector('.wrap');w.prepend($('tiles'));w.prepend($('week'));w.appendChild($('syncline'));document.querySelector('.hero').appendChild($('swit'))}}
 function setSide(v){SIDE=v;try{localStorage.setItem('suite_side',v)}catch(e){}renderHome()}
 function barStatus(){const s=SUITESYNC.status();document.body.classList.toggle('isdemo',!s.signedIn);$('st').textContent=!navigator.onLine?'Offline':s.busy?'Syncing…':s.error?'Sync problem':s.signedIn?'Synced':''}
 $('tiles').onclick=e=>{const b=e.target.closest('[data-t]');if(b)open(b.dataset.t)};
