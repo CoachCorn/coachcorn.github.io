@@ -205,7 +205,10 @@ function nextGame(){try{const sy=JSON.parse(localStorage.getItem('suite_sync')),
 /* Program looks for the home screen. Pictures will come from each program's own server storage (not this public repo); until a program
    adds them, the spots show labeled placeholders. ?theme=demo or ?theme=deer-creek previews a look. */
 const THEMES={
- demo:{school:'Santa Barbara',sub:'Demo program',ini:'SB',num:'7',facts:['Est. 1962','3 state titles','11 district titles','Made-up program'],t1:'#0d4d6e',t1a:'rgba(43,179,192,.45)',t2:'#f4b942',t2ink:'#1d1400',shell:'#0d4d6e',stripe:'#f4b942',mask:'#e8eef4',champs:'3',champsLab:'State titles',pics:{}},
+ demo:{school:'Santa Barbara',sub:'Demo program',ini:'SB',num:'7',facts:['Est. 1962','3 state titles','11 district titles','Made-up program'],t1:'#0d4d6e',t1a:'rgba(43,179,192,.45)',t2:'#f4b942',t2ink:'#1d1400',shell:'#0d4d6e',stripe:'#f4b942',mask:'#e8eef4',champs:'3',champsLab:'State titles',
+  /* built-in demo pictures (made-up program, generated images); a device's own demo photos replace them */
+  pics:{helm2:'demo/helm2.jpg',helmet:'demo/helmet.jpg',pic3:'demo/pic3.jpg',pic1:'demo/pic1.jpg',pic2:'demo/pic2.jpg',hero:'demo/hero.jpg'},
+  focus:{helm2:[50,25,1,0],pic3:[50,30,1,0],pic1:[50,35,1,0],pic2:[40,50,1,0],hero:[55,35,1,0]}},
  'deer-creek':{school:'Deer Creek',sub:'Football',ini:'DC',num:'1',facts:['Est. 1976','1 state title · 2000'],t1:'#123c8c',t1a:'rgba(80,130,230,.45)',t2:'#ffffff',t2ink:'#0b1a3a',shell:'#123c8c',stripe:'#111111',mask:'#ffffff',champs:'#',champsLab:'State titles',pics:{}}};
 function themeKey(){const q=new URLSearchParams(location.search).get('theme');if(q&&THEMES[q])return q;const s=SUITESYNC.status();return s.signedIn?(THEMES[s.program]?s.program:null):'demo'}
 /* a plain football helmet in the program's colors (no logo) */
@@ -248,12 +251,12 @@ const SYX=()=>{try{const s=JSON.parse(localStorage.getItem('suite_sync'));return
 const hpSave=()=>{try{localStorage.setItem(HPK,JSON.stringify(HP))}catch(e){}};
 /* Demo-mode photos: saved on this device only (IndexedDB), framing in localStorage. Never sent to any server. */
 let DEMOP=false;const DFK='demo_pics_focus_v1',DMAP={};let DF=(()=>{try{return JSON.parse(localStorage.getItem(DFK))||{}}catch(e){return{}}})();
-const FGET=()=>DEMOP?DF:HP.focus,FSET=(k,v)=>{if(DEMOP)DF=Object.assign({},DF,{[k]:v});else HP.focus=Object.assign({},HP.focus,{[k]:v})};
+const FGET=()=>DEMOP?Object.assign({},THEMES.demo.focus,DF):HP.focus,FSET=(k,v)=>{if(DEMOP)DF=Object.assign({},DF,{[k]:v});else HP.focus=Object.assign({},HP.focus,{[k]:v})};
 const idb=()=>new Promise((ok,no)=>{try{const r=indexedDB.open('kdnce_demo_pics',1);r.onupgradeneeded=()=>r.result.createObjectStore('p');r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)}catch(e){no(e)}});
 async function idbPut(k,blob){const d=await idb();await new Promise((ok,no)=>{const t=d.transaction('p','readwrite');t.objectStore('p').put(blob,k);t.oncomplete=ok;t.onerror=()=>no(t.error)})}
 (async()=>{try{const d=await idb(),t=d.transaction('p'),st=t.objectStore('p'),ks=await new Promise(ok=>{const r=st.getAllKeys();r.onsuccess=()=>ok(r.result)}),vs=await new Promise(ok=>{const r=st.getAll();r.onsuccess=()=>ok(r.result)});
  ks.forEach((k,i)=>DMAP[k]=URL.createObjectURL(vs[i]));if(ks.length)renderHome()}catch(e){}})();
-function picsFor(tk){if(tk==='demo'&&DEMOP)return Object.assign({},DMAP);const s=SYX();if(!s||tk!==s.program||HP.prog!==s.program||!HP.list||!HP.ct||HP.exp<Date.now())return null;const o={};
+function picsFor(tk){if(tk==='demo'&&DEMOP)return Object.assign({},THEMES.demo.pics,DMAP);const s=SYX();if(!s||tk!==s.program||HP.prog!==s.program||!HP.list||!HP.ct||HP.exp<Date.now())return null;const o={};
  Object.entries(HP.list).forEach(([k,sz])=>o[k]=`${HP.url}/clip?key=${encodeURIComponent('_home/'+k+'.jpg')}&ct=${encodeURIComponent(HP.ct)}&v=${sz}-${(HP.bump||{})[k]||0}`);return o}
 async function homePics(force){const s=SYX();if(!s||HPBUSY)return;const url=(s.url||DEFAULT_SERVER).replace(/\/$/,''),H={Authorization:'Bearer '+s.token};let ch=false;
  try{if(!HP.ct||HP.exp<Date.now()+3600000||HP.prog!==s.program){const r=await fetch(url+'/cliptoken',{headers:H}),j=await r.json();if(!r.ok||!j.ready)return;HP={ct:j.ct,exp:j.exp,prog:s.program,url,bump:HP.prog===s.program?HP.bump:{},focus:HP.prog===s.program?HP.focus:{}};ch=true}
